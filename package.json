@@ -10,7 +10,6 @@
     "test": "node scripts/verify-system.js",
     "test:verify": "node scripts/verify-system.js",
     "test:integration": "node scripts/test-integration.js",
-    "test:mcp": "node scripts/test-mcp-client.js",
     "test:mcp": "node scripts/test-mcp-client.js"
   },
   "dependencies": {
