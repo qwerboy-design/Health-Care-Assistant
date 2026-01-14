@@ -258,7 +258,7 @@ export async function testAIClient() {
     console.log('✅ 成功收到回應:');
     console.log('  內容:', response.content.substring(0, 200) + '...');
     console.log('  使用的 skills:', response.skillsUsed);
-    console.log('  Token 使用:', response.metadata.usage);
+    console.log('  Token 使用:', response.metadata?.usage);
     console.log('');
     
     // 測試 2: 繼續對話
