@@ -121,12 +121,14 @@ export class MCPClient {
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_fetch',message:'Before fetch request',data:headersInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       
+      // 添加 User-Agent 和其他請求頭，確保符合 Anthropic API 的要求
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKeyToUse,
           'anthropic-version': '2023-06-01',
+          'User-Agent': 'Health-Care-Assistant/1.0',
         },
         body: JSON.stringify(apiRequest),
       });
@@ -162,6 +164,15 @@ export class MCPClient {
         };
         
         console.error('❌ [MCP Client] Anthropic API 錯誤:', JSON.stringify(errorInfo, null, 2));
+        
+        // 檢查是否為 Claude Code subscription API Key 限制
+        if (response.status === 403 && parsedError?.error?.type === 'forbidden') {
+          console.error('⚠️ [MCP Client] 可能的問題:');
+          console.error('1. API Key 可能是 Claude Code subscription 類型（2026年1月9日後被限制）');
+          console.error('2. 請確認您的 API Key 是標準的 Anthropic API Key，而非 Claude Code subscription Key');
+          console.error('3. 如果是 Claude Code subscription Key，需要創建新的標準 API Key');
+          console.error('4. 創建位置: https://console.anthropic.com/settings/keys');
+        }
         
         // #region agent log
         fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:errorInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
