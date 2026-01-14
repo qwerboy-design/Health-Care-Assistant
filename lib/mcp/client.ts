@@ -64,31 +64,86 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
+      // 優先使用 claude-sonnet-4，如果失敗可以降級到 claude-3-7-sonnet
+      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
       const apiRequest = {
-        model: 'claude-sonnet-4-20250514',
+        model: modelToUse,
         max_tokens: 4096,
         system: systemPrompt,
         messages: messages,
       };
 
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_anthropic_api',message:'Before Anthropic API call',data:{model:apiRequest.model,messageCount:messages.length,hasSystem:!!systemPrompt},timestamp:Date.now()})}).catch(()=>{});
+      // 準備 API Key（清理空格和換行符）
+      const rawApiKey = this.config.apiKey || process.env.ANTHROPIC_API_KEY || process.env.MCP_API_KEY || '';
+      const apiKeyToUse = rawApiKey.trim();
+      
+      // #region agent log
+      const requestInfo = {
+        model: apiRequest.model,
+        messageCount: messages.length,
+        hasSystem: !!systemPrompt,
+        hasApiKey: !!apiKeyToUse,
+        apiKeyLength: apiKeyToUse.length,
+        apiKeyPrefix: apiKeyToUse.substring(0, Math.min(10, apiKeyToUse.length)),
+        hasCorrectPrefix: apiKeyToUse.startsWith('sk-ant-'),
+        anthropicVersion: '2023-06-01',
+        hasConfigApiKey: !!this.config.apiKey,
+        hasEnvAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+        hasEnvMCPKey: !!process.env.MCP_API_KEY,
+        // 檢查格式問題
+        hasWhitespace: rawApiKey !== rawApiKey.trim() || /\n|\r/.test(rawApiKey),
+        isEmpty: apiKeyToUse.length === 0,
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_anthropic_api',message:'Before Anthropic API call',data:requestInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      if (!apiKeyToUse) {
+        throw new Error('ANTHROPIC_API_KEY 未設定。請在 Vercel Dashboard → Settings → Environment Variables 中設定（生產環境）或在 .env.local 中設定（本地開發）');
+      }
+      
+      if (!apiKeyToUse.startsWith('sk-ant-')) {
+        throw new Error(`API Key 格式不正確，應以 "sk-ant-" 開頭。當前前綴: ${apiKeyToUse.substring(0, 7)}`);
+      }
 
       // 呼叫 Anthropic API
+      // #region agent log
+      const headersInfo = {
+        hasContentType: true,
+        hasXApiKey: !!apiKeyToUse,
+        xApiKeyLength: apiKeyToUse.length,
+        xApiKeyPrefix: apiKeyToUse.substring(0, Math.min(10, apiKeyToUse.length)),
+        hasAnthropicVersion: true,
+        anthropicVersion: '2023-06-01',
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_fetch',message:'Before fetch request',data:headersInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.config.apiKey || process.env.ANTHROPIC_API_KEY || '',
+          'x-api-key': apiKeyToUse,
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify(apiRequest),
       });
 
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:after_anthropic_api',message:'After Anthropic API call',data:{status:response.status,ok:response.ok},timestamp:Date.now()})}).catch(()=>{});
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:after_anthropic_api',message:'After Anthropic API call',data:{status:response.status,ok:response.ok,statusText:response.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '無法讀取錯誤訊息');
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:{status:response.status,errorText:errorText.substring(0,300)},timestamp:Date.now()})}).catch(()=>{});
+        
+        // #region agent log
+        let parsedError: any = null;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          // 無法解析為 JSON
+        }
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:{status:response.status,statusText:response.statusText,errorText:errorText.substring(0,500),parsedErrorType:parsedError?.error?.type,parsedErrorMessage:parsedError?.error?.message,hasApiKey:!!apiKeyToUse,apiKeyLength:apiKeyToUse.length,apiKeyPrefix:apiKeyToUse.substring(0,Math.min(10,apiKeyToUse.length)),hasCorrectPrefix:apiKeyToUse.startsWith('sk-ant-'),isVercel:!!process.env.VERCEL,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
         
         throw new Error(`AI 服務錯誤: ${response.status} ${errorText}`);
       }
@@ -213,14 +268,41 @@ export class MCPClient {
  */
 export function createMCPClient(): MCPClient {
   // 優先使用環境變數中的 Anthropic API Key
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.MCP_API_KEY;
+  const rawAnthropicKey = process.env.ANTHROPIC_API_KEY;
+  const rawMCPKey = process.env.MCP_API_KEY;
+  const apiKeyRaw = rawAnthropicKey || rawMCPKey;
+  // 清理 API key（移除前後空格和換行符）
+  const apiKey = apiKeyRaw?.trim() || '';
+  
+  // #region agent log
+  const apiKeyInfo = {
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey.length,
+    apiKeyPrefix: apiKey.substring(0, Math.min(7, apiKey.length)),
+    hasCorrectPrefix: apiKey.startsWith('sk-ant-'),
+    envSource: rawAnthropicKey ? 'ANTHROPIC_API_KEY' : (rawMCPKey ? 'MCP_API_KEY' : 'none'),
+    hasRawAnthropicKey: !!rawAnthropicKey,
+    hasRawMCPKey: !!rawMCPKey,
+    rawAnthropicKeyLength: rawAnthropicKey?.length || 0,
+    rawMCPKeyLength: rawMCPKey?.length || 0,
+    isVercel: !!process.env.VERCEL,
+    nodeEnv: process.env.NODE_ENV,
+    // 檢查是否有空格或換行符問題
+    hasWhitespace: apiKeyRaw ? (apiKeyRaw !== apiKeyRaw.trim() || /\n|\r/.test(apiKeyRaw)) : false,
+  };
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:createMCPClient',message:'createMCPClient config',data:apiKeyInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   
   if (!apiKey) {
     console.warn('⚠️  未設定 ANTHROPIC_API_KEY,AI 功能可能無法使用');
-    console.warn('請在 .env.local 中設定: ANTHROPIC_API_KEY=your-key-here');
+    if (process.env.VERCEL) {
+      console.warn('⚠️  檢測到 Vercel 環境，請在 Vercel Dashboard → Settings → Environment Variables 中設定 ANTHROPIC_API_KEY');
+    } else {
+      console.warn('請在 .env.local 中設定: ANTHROPIC_API_KEY=your-key-here');
+    }
+  } else if (!apiKey.startsWith('sk-ant-')) {
+    console.warn('⚠️  API Key 格式可能不正確，應以 "sk-ant-" 開頭');
   }
-  
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:createMCPClient',message:'createMCPClient config',data:{hasApiKey:!!apiKey,usingAnthropicAPI:true},timestamp:Date.now()})}).catch(()=>{});
 
   const config: MCPClientConfig = {
     serverUrl: 'https://api.anthropic.com/v1/messages', // 直接使用 Anthropic API
