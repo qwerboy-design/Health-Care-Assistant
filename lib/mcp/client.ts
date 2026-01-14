@@ -64,7 +64,7 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
-      // 使用 claude-sonnet-4 作為預設模型
+      // 使用最新的 Claude Sonnet 4 作為預設模型
       // 可以通過環境變數 ANTHROPIC_MODEL 自訂模型
       const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
       const apiRequest = {
