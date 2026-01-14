@@ -25,6 +25,8 @@ export const FUNCTION_MAPPINGS: Record<FunctionType, FunctionConfig> = {
       'generate-image',
       'clinical-decision-support',
       'scientific-critical-thinking',
+	  'pydicom',
+	  
     ],
   },
   medical_record: {

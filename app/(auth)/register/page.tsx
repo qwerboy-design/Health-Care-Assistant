@@ -52,15 +52,11 @@ export default function RegisterPage() {
       // #endregion
 
       if (data.success) {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:54',message:'Before router.push to /chat',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-        // #endregion
-        // 開發階段：註冊成功後直接登入並導向聊天頁面
-        router.push('/chat');
+        // 註冊成功，顯示等待審核訊息
+        setError('');
+        alert('註冊成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
+        router.push('/login');
         router.refresh();
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:58',message:'After router.push and refresh',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-        // #endregion
       } else {
         // #region agent log
         fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:60',message:'Registration failed',data:{error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
@@ -93,11 +89,22 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (data.success) {
-        router.push('/chat');
+        // OTP 驗證成功，但需要等待審核
+        setError('');
+        alert('驗證成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
+        router.push('/login');
         router.refresh();
       } else {
-        setError(data.error || '驗證失敗');
+        const errorMsg = data.error || '驗證失敗';
+        setError(errorMsg);
         setOtp('');
+        
+        // 如果是審核相關錯誤，顯示更詳細的提示
+        if (errorMsg.includes('待審核')) {
+          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+        } else if (errorMsg.includes('已拒絕')) {
+          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+        }
       }
     } catch (err) {
       setError('網路錯誤，請稍後再試');

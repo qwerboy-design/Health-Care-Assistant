@@ -102,27 +102,14 @@ export async function POST(request: NextRequest) {
 
     // 根據認證方式處理
     if (authProvider === 'password') {
-      // 密碼註冊：直接建立 Session 並登入
-      const clientIP = getClientIP(request);
-      const { token: sessionToken, expiresAt } = await createSession(customer.id, customer.email, clientIP);
-      
-      // 設定 Cookie
-      const cookieStore = await cookies();
-      cookieStore.set('session', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        expires: expiresAt,
-        path: '/',
-      });
-
+      // 密碼註冊：不自動登入，等待審核
       return successResponse(
         { 
           customerId: customer.id,
           email: customer.email,
           authProvider,
         },
-        '註冊成功（已自動登入）'
+        '註冊成功，請等待管理員審核'
       );
     } else {
       // OTP 註冊：發送 OTP，不建立 Session
@@ -138,7 +125,7 @@ export async function POST(request: NextRequest) {
           email: customer.email,
           authProvider,
         },
-        '註冊成功，請檢查您的 Email 以驗證帳號'
+        '註冊成功，請檢查您的 Email 以驗證帳號，並等待管理員審核'
       );
     }
   } catch (error) {

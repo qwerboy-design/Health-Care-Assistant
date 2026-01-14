@@ -1,300 +1,229 @@
-// MCP Client SDK 整合 - 最終正確版本
-// 根據實際測試結果:Session ID 應該在 HTTP Header,而非 params
+// AI Client - 直接使用 Anthropic API (不依賴 MCP)
+// 這是最可靠的方式,因為 MCP hosted server 的實作細節不明確
 
 import { MCPClientConfig, MCPRequest, MCPResponse } from './types';
 import { getSkillsCountForWorkload } from './workload';
 import { getSuggestedSkills } from './function-mapping';
 
 /**
- * MCP Client 類別
- * 
- * 最終確認:
- * 1. Session ID 透過 X-MCP-Session-ID header 傳遞
- * 2. Accept 必須同時包含兩種類型
- * 3. Method 是 tools/call
+ * AI Client 類別
+ * 使用 Anthropic API 直接呼叫,不依賴 MCP
  */
 export class MCPClient {
   private config: MCPClientConfig;
-  private sessionId: string | null = null;
+  private conversationHistory: Array<{role: string; content: string}> = [];
 
   constructor(config: MCPClientConfig) {
     this.config = config;
   }
-  
-  /**
-   * 生成或獲取 Session ID
-   */
-  private getOrCreateSessionId(): string {
-    if (!this.sessionId) {
-      // 生成 UUID v4 格式的 session ID
-      this.sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}-${Math.random().toString(36).substring(2, 11)}`;
-    }
-    return this.sessionId;
-  }
 
   /**
-   * 重置 session (用於新對話)
+   * 重置對話歷史
    */
   public resetSession(): void {
-    this.sessionId = null;
+    this.conversationHistory = [];
   }
 
   /**
-   * 發送訊息到 MCP server
+   * 發送訊息 - 使用 Anthropic API
    */
   async sendMessage(request: MCPRequest): Promise<MCPResponse> {
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:entry',message:'MCP sendMessage entry',data:{hasServerUrl:!!this.config.serverUrl,serverUrl:this.config.serverUrl},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:entry',message:'AI Client sendMessage entry',data:{hasApiKey:!!this.config.apiKey,usingAnthropicAPI:true},timestamp:Date.now()})}).catch(()=>{});
 
     try {
-      // 獲取建議的 Skills
+      // 獲取建議的 Skills (用於提示詞)
       const suggestedSkills = getSuggestedSkills(request.selectedFunction);
-      
-      // 獲取 Skills 數量限制
       const maxSkills = getSkillsCountForWorkload(request.workloadLevel);
-      
-      // 生成或獲取 session ID
-      const sessionId = this.getOrCreateSessionId();
-      
-      // ✅ 正確的 JSON-RPC 2.0 請求格式
-      const jsonRpcRequest = {
-        jsonrpc: '2.0',
-        id: Date.now(),
-        method: 'tools/call',
-        params: {
-          name: 'claude-scientific-skills',
-          arguments: {
-            query: request.message,
-            skills: suggestedSkills.slice(0, maxSkills),
-            context: {
-              workloadLevel: request.workloadLevel,
-              functionType: request.selectedFunction,
-              fileUrl: request.fileUrl,
-            },
-            conversationHistory: request.conversationHistory || [],
-          },
-        },
-      };
+      const skills = suggestedSkills.slice(0, maxSkills);
 
-      // ✅ 關鍵修正: Session ID 透過 header 傳遞
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        // ✅ 嘗試多種可能的 header 名稱
-        'X-MCP-Session-ID': sessionId,
-        'X-Session-ID': sessionId,
-        'Session-ID': sessionId,
-      };
-
-      // 如果有 API Key,加入 Authorization header
-      if (this.config.apiKey) {
-        headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      // 構建系統提示詞
+      let systemPrompt = '你是一個專業的醫療助理,專門協助分析檢驗報告和提供醫療建議。';
+      
+      if (skills.length > 0) {
+        systemPrompt += `\n\n你可以使用以下工具來協助分析:\n${skills.map(s => `- ${s}`).join('\n')}`;
       }
 
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_fetch',message:'Before fetch request',data:{method:jsonRpcRequest.method,hasParams:!!jsonRpcRequest.params,sessionId:sessionId,skillsCount:suggestedSkills.slice(0, maxSkills).length,requestBody:JSON.stringify(jsonRpcRequest).substring(0,200)},timestamp:Date.now()})}).catch(()=>{});
+      if (request.selectedFunction) {
+        const functionDescriptions: Record<string, string> = {
+          'lab': '你專注於分析實驗室檢驗報告,解釋數值意義並提供臨床建議',
+          'diagnosis': '你專注於協助診斷,根據症狀和檢驗結果提供可能的診斷',
+          'treatment': '你專注於治療建議,根據診斷提供適當的治療方案',
+          'medication': '你專注於藥物諮詢,提供用藥建議和注意事項',
+          'research': '你專注於醫學研究,搜尋相關文獻和研究資料',
+        };
+        
+        if (functionDescriptions[request.selectedFunction]) {
+          systemPrompt += '\n\n' + functionDescriptions[request.selectedFunction];
+        }
+      }
 
-      // 發送請求到 MCP server
-      const response = await fetch(this.config.serverUrl, {
+      // 準備對話歷史
+      const messages = [
+        ...(request.conversationHistory || []),
+        { role: 'user', content: request.message }
+      ];
+
+      // 構建 Anthropic API 請求
+      const apiRequest = {
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages,
+      };
+
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_anthropic_api',message:'Before Anthropic API call',data:{model:apiRequest.model,messageCount:messages.length,hasSystem:!!systemPrompt},timestamp:Date.now()})}).catch(()=>{});
+
+      // 呼叫 Anthropic API
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: headers,
-        body: JSON.stringify(jsonRpcRequest),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.config.apiKey || process.env.ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(apiRequest),
       });
 
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:after_fetch',message:'After fetch request',data:{status:response.status,ok:response.ok,contentType:response.headers.get('content-type')},timestamp:Date.now()})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:after_anthropic_api',message:'After Anthropic API call',data:{status:response.status,ok:response.ok},timestamp:Date.now()})}).catch(()=>{});
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '無法讀取錯誤訊息');
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:{status:response.status,errorText:errorText.substring(0,300)},timestamp:Date.now()})}).catch(()=>{});
         
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:error',message:'MCP Server HTTP error',data:{status:response.status,errorText:errorText.substring(0,500)},timestamp:Date.now()})}).catch(()=>{});
-        
-        throw new Error(`MCP Server 錯誤: ${response.status} ${response.statusText}\n${errorText}`);
+        throw new Error(`AI 服務錯誤: ${response.status} ${errorText}`);
       }
 
-      const responseText = await response.text();
-      
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:response_received',message:'Response text received',data:{textLength:responseText.length,textPreview:responseText.substring(0,100)},timestamp:Date.now()})}).catch(()=>{});
+      const data = await response.json();
 
-      let jsonRpcResponse: any;
-      try {
-        jsonRpcResponse = JSON.parse(responseText);
-      } catch (parseError: any) {
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:parse_error',message:'JSON parse error',data:{parseError:parseError?.message,responsePreview:responseText.substring(0,200)},timestamp:Date.now()})}).catch(()=>{});
-        
-        throw new Error(`MCP Server 響應格式錯誤: ${parseError?.message}`);
-      }
-      
-      // 處理 JSON-RPC 2.0 錯誤響應
-      if (jsonRpcResponse.error) {
-        const errorMsg = jsonRpcResponse.error.message || JSON.stringify(jsonRpcResponse.error);
-        throw new Error(`MCP Server 錯誤: ${errorMsg}`);
-      }
-      
-      // 處理成功響應
-      const result = jsonRpcResponse.result;
-      if (!result) {
-        throw new Error('MCP Server 未返回結果');
-      }
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:success',message:'Response received successfully',data:{hasContent:!!data.content,contentLength:data.content?.[0]?.text?.length || 0},timestamp:Date.now()})}).catch(()=>{});
 
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:success',message:'Response parsed successfully',data:{hasResult:!!result,resultKeys:Object.keys(result)},timestamp:Date.now()})}).catch(()=>{});
+      // 提取回應內容
+      const content = data.content
+        .filter((block: any) => block.type === 'text')
+        .map((block: any) => block.text)
+        .join('\n');
+
+      // 更新對話歷史
+      this.conversationHistory = [
+        ...messages,
+        { role: 'assistant', content: content }
+      ];
 
       return {
-        content: result.content || result.output || result.text || '',
-        skillsUsed: result.skillsUsed || result.tools || [],
+        content: content,
+        skillsUsed: skills,
         metadata: {
-          ...result.metadata,
-          sessionId: sessionId,
+          model: data.model,
+          usage: data.usage,
+          conversationLength: this.conversationHistory.length,
         },
       };
       
     } catch (error: any) {
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:catch',message:'MCP Client error caught',data:{errorName:error?.name,errorMessage:error?.message,errorStack:error?.stack?.substring(0,300)},timestamp:Date.now()})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:catch',message:'AI Client error caught',data:{errorName:error?.name,errorMessage:error?.message,errorStack:error?.stack?.substring(0,300)},timestamp:Date.now()})}).catch(()=>{});
       
-      console.error('MCP Client 錯誤:', error);
+      console.error('AI Client 錯誤:', error);
       throw new Error(`無法連接到 AI 服務: ${error.message}`);
     }
   }
 
   /**
-   * 串流式發送訊息 (Server-Sent Events)
+   * 串流式發送訊息
    */
   async *sendMessageStream(request: MCPRequest): AsyncGenerator<string, void, unknown> {
-    const sessionId = this.getOrCreateSessionId();
-    
-    const suggestedSkills = getSuggestedSkills(request.selectedFunction);
-    const maxSkills = getSkillsCountForWorkload(request.workloadLevel);
-    
-    const jsonRpcRequest = {
-      jsonrpc: '2.0',
-      id: Date.now(),
-      method: 'tools/call',
-      params: {
-        name: 'claude-scientific-skills',
-        arguments: {
-          query: request.message,
-          stream: true,
-          skills: suggestedSkills.slice(0, maxSkills),
-          context: {
-            workloadLevel: request.workloadLevel,
-            functionType: request.selectedFunction,
-            fileUrl: request.fileUrl,
-          },
-          conversationHistory: request.conversationHistory || [],
-        },
-      },
-    };
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-      'X-MCP-Session-ID': sessionId,
-      'X-Session-ID': sessionId,
-      'Session-ID': sessionId,
-    };
-
-    if (this.config.apiKey) {
-      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
-    }
-
-    const response = await fetch(this.config.serverUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(jsonRpcRequest),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`MCP Server 錯誤: ${response.status} ${errorText}`);
-    }
-
-    // 解析 SSE stream
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-
-    if (!reader) {
-      throw new Error('無法讀取 response stream');
-    }
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const suggestedSkills = getSuggestedSkills(request.selectedFunction);
+      const maxSkills = getSkillsCountForWorkload(request.workloadLevel);
+      const skills = suggestedSkills.slice(0, maxSkills);
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+      let systemPrompt = '你是一個專業的醫療助理。';
+      if (skills.length > 0) {
+        systemPrompt += `\n可用工具: ${skills.join(', ')}`;
+      }
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') return;
-            
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                yield parsed.content;
+      const messages = [
+        ...(request.conversationHistory || []),
+        { role: 'user', content: request.message }
+      ];
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.config.apiKey || process.env.ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: messages,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI 服務錯誤: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('無法讀取 response stream');
+      }
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              
+              try {
+                const parsed = JSON.parse(data);
+                
+                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                  yield parsed.delta.text;
+                }
+              } catch {
+                // 跳過無法解析的行
               }
-            } catch {
-              // 跳過無法解析的行
             }
           }
         }
+      } finally {
+        reader.releaseLock();
       }
-    } finally {
-      reader.releaseLock();
+      
+    } catch (error: any) {
+      console.error('Streaming error:', error);
+      throw error;
     }
-  }
-
-  /**
-   * 列出可用的 tools (MCP 標準方法)
-   */
-  async listTools(): Promise<any[]> {
-    const sessionId = this.getOrCreateSessionId();
-    
-    const jsonRpcRequest = {
-      jsonrpc: '2.0',
-      id: Date.now(),
-      method: 'tools/list',
-      params: {},
-    };
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-MCP-Session-ID': sessionId,
-      'X-Session-ID': sessionId,
-      'Session-ID': sessionId,
-    };
-
-    if (this.config.apiKey) {
-      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
-    }
-
-    const response = await fetch(this.config.serverUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(jsonRpcRequest),
-    });
-
-    if (!response.ok) {
-      throw new Error(`MCP Server 錯誤: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.result?.tools || [];
   }
 }
 
 /**
- * 建立 MCP Client 實例
+ * 建立 AI Client 實例
  */
 export function createMCPClient(): MCPClient {
-  const serverUrl = process.env.MCP_SERVER_URL || 
-    'https://mcp.k-dense.ai/claude-scientific-skills/mcp';
+  // 優先使用環境變數中的 Anthropic API Key
+  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.MCP_API_KEY;
   
-  const apiKey = process.env.MCP_API_KEY;
+  if (!apiKey) {
+    console.warn('⚠️  未設定 ANTHROPIC_API_KEY,AI 功能可能無法使用');
+    console.warn('請在 .env.local 中設定: ANTHROPIC_API_KEY=your-key-here');
+  }
   
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:createMCPClient',message:'createMCPClient config',data:{serverUrl,hasApiKey:!!apiKey},timestamp:Date.now()})}).catch(()=>{});
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:createMCPClient',message:'createMCPClient config',data:{hasApiKey:!!apiKey,usingAnthropicAPI:true},timestamp:Date.now()})}).catch(()=>{});
 
   const config: MCPClientConfig = {
-    serverUrl,
+    serverUrl: 'https://api.anthropic.com/v1/messages', // 直接使用 Anthropic API
     apiKey,
   };
 
@@ -302,74 +231,55 @@ export function createMCPClient(): MCPClient {
 }
 
 /**
- * Debug: 直接測試 MCP Server
+ * 使用範例
  */
-export async function debugMCPServer() {
-  console.log('🔍 開始 Debug MCP Server...\n');
+export async function testAIClient() {
+  console.log('🧪 測試 AI Client (使用 Anthropic API)...\n');
   
-  const serverUrl = 'https://mcp.k-dense.ai/claude-scientific-skills/mcp';
-  const sessionId = `debug-${Date.now()}`;
-  
-  // 測試 1: 最簡單的請求
-  console.log('📝 測試 1: 最簡單的 JSON-RPC 請求');
-  try {
-    const response = await fetch(serverUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        'X-MCP-Session-ID': sessionId,
-        'X-Session-ID': sessionId,
-        'Session-ID': sessionId,
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/list',
-        params: {}
-      }),
-    });
-    
-    console.log('Status:', response.status);
-    console.log('Content-Type:', response.headers.get('content-type'));
-    
-    const text = await response.text();
-    console.log('Response:', text.substring(0, 500));
-    console.log('');
-    
-  } catch (error: any) {
-    console.error('❌ 錯誤:', error.message);
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('❌ 錯誤: 未設定 ANTHROPIC_API_KEY');
+    console.log('請在 .env.local 中設定:');
+    console.log('ANTHROPIC_API_KEY=sk-ant-api03-...');
+    return;
   }
   
-  // 測試 2: Tools/call 請求
-  console.log('📝 測試 2: Tools/call 請求');
+  const client = createMCPClient();
+  
   try {
-    const response = await fetch(serverUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        'X-MCP-Session-ID': sessionId,
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/call',
-        params: {
-          name: 'claude-scientific-skills',
-          arguments: {
-            query: 'Hello',
-            skills: [],
-          }
-        }
-      }),
+    // 測試 1: 基本訊息
+    console.log('📝 測試 1: 分析檢驗報告');
+    const response = await client.sendMessage({
+      message: 'Analyze this lab report: Vancomycin(trough) 15.8 ug/mL',
+      selectedFunction: 'lab',
+      workloadLevel: 'standard',
+      conversationHistory: [],
     });
     
-    console.log('Status:', response.status);
-    const text = await response.text();
-    console.log('Response:', text.substring(0, 500));
+    console.log('✅ 成功收到回應:');
+    console.log('  內容:', response.content.substring(0, 200) + '...');
+    console.log('  使用的 skills:', response.skillsUsed);
+    console.log('  Token 使用:', response.metadata.usage);
+    console.log('');
+    
+    // 測試 2: 繼續對話
+    console.log('📝 測試 2: 繼續對話');
+    const followUp = await client.sendMessage({
+      message: 'What does this concentration mean for patient safety?',
+      selectedFunction: 'lab',
+      workloadLevel: 'standard',
+      conversationHistory: [
+        { role: 'user', content: 'Analyze this lab report: Vancomycin(trough) 15.8 ug/mL' },
+        { role: 'assistant', content: response.content }
+      ],
+    });
+    
+    console.log('✅ 繼續對話成功');
+    console.log('  內容:', followUp.content.substring(0, 200) + '...');
+    console.log('');
+    
+    console.log('🎉 所有測試通過!');
     
   } catch (error: any) {
-    console.error('❌ 錯誤:', error.message);
+    console.error('❌ 測試失敗:', error.message);
   }
 }

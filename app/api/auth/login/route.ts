@@ -65,6 +65,14 @@ export async function POST(request: NextRequest) {
       return errorResponse('請使用正確的登入方式', 400);
     }
 
+    // 檢查審核狀態
+    if (customer.approval_status === 'pending') {
+      return errorResponse(Errors.ACCOUNT_PENDING.message, 403);
+    }
+    if (customer.approval_status === 'rejected') {
+      return errorResponse(Errors.ACCOUNT_REJECTED.message, 403);
+    }
+
     // #region agent log
     fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/login/route.ts:57',message:'Before updateLastLogin',data:{customerId:customer.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion

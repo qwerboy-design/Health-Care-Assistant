@@ -85,6 +85,19 @@ NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 
 ---
 
+### 管理員初始化
+
+```env
+ADMIN_EMAIL=admin@example.com
+```
+
+**設定方式**:
+- 設定初始管理員的 Email 地址
+- 該 Email 的用戶必須已存在於資料庫中
+- 執行 `node scripts/init-admin.js` 將該用戶設為管理員並自動通過審核
+
+---
+
 ## 🔄 環境變數命名規則
 
 - `NEXT_PUBLIC_*`: 這些變數會暴露給瀏覽器，請勿包含敏感資訊

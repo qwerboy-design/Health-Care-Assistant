@@ -38,6 +38,9 @@ export const Errors = {
   INVALID_CREDENTIALS: new AppError(401, '帳號或密碼錯誤'),
   INVALID_OTP: new AppError(400, 'OTP 驗證碼錯誤或已過期'),
   INVALID_TOKEN: new AppError(401, 'Token 無效或已過期'),
+  ACCOUNT_PENDING: new AppError(403, '帳號待審核中，請等待管理員審核'),
+  ACCOUNT_REJECTED: new AppError(403, '帳號已被拒絕，無法登入'),
+  ADMIN_REQUIRED: new AppError(403, '需要管理員權限'),
   
   // 資源錯誤
   USER_NOT_FOUND: new AppError(404, '找不到用戶'),

@@ -7,6 +7,8 @@ export interface Customer {
   password_hash?: string;
   auth_provider: 'password' | 'otp' | 'google';
   oauth_id?: string;
+  approval_status: 'pending' | 'approved' | 'rejected';
+  role: 'user' | 'admin';
   created_at: string;
   updated_at: string;
   last_login_at?: string;

@@ -57,6 +57,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 檢查審核狀態
+    if (customer.approval_status === 'pending') {
+      return errorResponse(Errors.ACCOUNT_PENDING.message, 403);
+    }
+    if (customer.approval_status === 'rejected') {
+      return errorResponse(Errors.ACCOUNT_REJECTED.message, 403);
+    }
+
     // 更新最後登入時間
     await updateLastLogin(customer.id);
 

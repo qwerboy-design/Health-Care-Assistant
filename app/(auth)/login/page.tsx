@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { CountdownTimer } from '@/components/auth/CountdownTimer';
 
 export default function LoginPage() {
+  const [isAdminAccessible, setIsAdminAccessible] = useState(false);
+
+  useEffect(() => {
+    // 預先檢查 session 是否存在以及角色是否為 admin 可以導向後台，但這裡僅提供按鈕狀態控制
+    // 後端實際授權由按鈕觸發時再驗證
+  }, []);
+
   const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'input' | 'verify'>('input');
@@ -39,7 +46,15 @@ export default function LoginPage() {
         router.push('/chat');
         router.refresh();
       } else {
-        setError(data.error || '登入失敗');
+        const errorMsg = data.error || '登入失敗';
+        setError(errorMsg);
+        
+        // 如果是審核相關錯誤，顯示更詳細的提示
+        if (errorMsg.includes('待審核')) {
+          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+        } else if (errorMsg.includes('已拒絕')) {
+          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+        }
       }
     } catch (err) {
       setError('網路錯誤，請稍後再試');
@@ -94,8 +109,16 @@ export default function LoginPage() {
         router.push('/chat');
         router.refresh();
       } else {
-        setError(data.error || '驗證失敗');
+        const errorMsg = data.error || '驗證失敗';
+        setError(errorMsg);
         setOtp('');
+        
+        // 如果是審核相關錯誤，顯示更詳細的提示
+        if (errorMsg.includes('待審核')) {
+          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+        } else if (errorMsg.includes('已拒絕')) {
+          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+        }
       }
     } catch (err) {
       setError('網路錯誤，請稍後再試');

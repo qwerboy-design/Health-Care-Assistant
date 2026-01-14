@@ -1,8 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { deleteSession } from '@/lib/auth/session';
-import { errorResponse, successResponse } from '@/lib/errors';
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,12 +14,13 @@ export async function POST(request: NextRequest) {
     // 刪除 Cookie
     cookieStore.delete('session');
 
-    return successResponse({}, '登出成功');
+    // 重定向到登入頁面
+    return NextResponse.redirect(new URL('/login', request.url));
   } catch (error) {
     console.error('登出錯誤:', error);
-    // 即使錯誤也要刪除 Cookie
+    // 即使錯誤也要刪除 Cookie 並重定向
     const cookieStore = await cookies();
     cookieStore.delete('session');
-    return successResponse({}, '登出成功');
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }

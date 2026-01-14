@@ -88,6 +88,8 @@ export async function createCustomer(customer: {
   password_hash?: string;
   auth_provider: 'password' | 'otp' | 'google';
   oauth_id?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  role?: 'user' | 'admin';
 }): Promise<Customer> {
   // #region agent log
   fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/supabase/customers.ts:createCustomer',message:'Before supabase insert',data:{email:customer.email,hasSupabaseUrl:!!process.env.SUPABASE_URL},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
@@ -95,7 +97,11 @@ export async function createCustomer(customer: {
   
   const { data, error } = await supabaseAdmin
     .from('customers')
-    .insert(customer)
+    .insert({
+      ...customer,
+      approval_status: customer.approval_status || 'pending',
+      role: customer.role || 'user',
+    })
     .select()
     .single();
   
@@ -118,6 +124,8 @@ export async function createCustomer(customer: {
         password_hash: customer.password_hash,
         auth_provider: customer.auth_provider,
         oauth_id: customer.oauth_id,
+        approval_status: customer.approval_status || 'pending',
+        role: customer.role || 'user',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         last_login_at: undefined,
@@ -204,5 +212,86 @@ export async function checkPhoneExists(phone: string): Promise<boolean> {
       return false;
     }
     throw error;
+  }
+}
+
+/**
+ * 更新帳號審核狀態
+ */
+export async function updateApprovalStatus(
+  customerId: string,
+  status: 'pending' | 'approved' | 'rejected'
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('customers')
+    .update({ approval_status: status })
+    .eq('id', customerId);
+  
+  if (error) {
+    throw new Error(`更新審核狀態失敗: ${error.message}`);
+  }
+}
+
+/**
+ * 取得待審核用戶列表
+ */
+export async function getPendingCustomers(): Promise<Customer[]> {
+  const { data, error } = await supabaseAdmin
+    .from('customers')
+    .select('*')
+    .eq('approval_status', 'pending')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    throw new Error(`取得待審核用戶失敗: ${error.message}`);
+  }
+  
+  return (data || []) as Customer[];
+}
+
+/**
+ * 取得所有用戶（管理員用）
+ */
+export async function getAllCustomers(
+  filters?: {
+    approval_status?: 'pending' | 'approved' | 'rejected';
+    role?: 'user' | 'admin';
+  }
+): Promise<Customer[]> {
+  let query = supabaseAdmin
+    .from('customers')
+    .select('*');
+  
+  if (filters?.approval_status) {
+    query = query.eq('approval_status', filters.approval_status);
+  }
+  
+  if (filters?.role) {
+    query = query.eq('role', filters.role);
+  }
+  
+  const { data, error } = await query.order('created_at', { ascending: false });
+  
+  if (error) {
+    throw new Error(`取得用戶列表失敗: ${error.message}`);
+  }
+  
+  return (data || []) as Customer[];
+}
+
+/**
+ * 設定管理員角色（初始化用）
+ */
+export async function setAdminRole(customerId: string, isAdmin: boolean = true): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('customers')
+    .update({ 
+      role: isAdmin ? 'admin' : 'user',
+      approval_status: isAdmin ? 'approved' : 'pending',
+    })
+    .eq('id', customerId);
+  
+  if (error) {
+    throw new Error(`設定管理員角色失敗: ${error.message}`);
   }
 }
