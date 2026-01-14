@@ -78,7 +78,7 @@ export class MCPClient {
       const rawApiKey = this.config.apiKey || process.env.ANTHROPIC_API_KEY || process.env.MCP_API_KEY || '';
       const apiKeyToUse = rawApiKey.trim();
       
-      // #region agent log
+      // 診斷日誌 - 輸出到 Vercel 函數日誌
       const requestInfo = {
         model: apiRequest.model,
         messageCount: messages.length,
@@ -91,10 +91,12 @@ export class MCPClient {
         hasConfigApiKey: !!this.config.apiKey,
         hasEnvAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
         hasEnvMCPKey: !!process.env.MCP_API_KEY,
-        // 檢查格式問題
         hasWhitespace: rawApiKey !== rawApiKey.trim() || /\n|\r/.test(rawApiKey),
         isEmpty: apiKeyToUse.length === 0,
       };
+      console.log('[MCP Client] 準備呼叫 Anthropic API:', JSON.stringify(requestInfo, null, 2));
+      
+      // #region agent log
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_anthropic_api',message:'Before Anthropic API call',data:requestInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       
@@ -136,14 +138,33 @@ export class MCPClient {
       if (!response.ok) {
         const errorText = await response.text().catch(() => '無法讀取錯誤訊息');
         
-        // #region agent log
+        // 診斷日誌 - 輸出到 Vercel 函數日誌
         let parsedError: any = null;
         try {
           parsedError = JSON.parse(errorText);
         } catch {
           // 無法解析為 JSON
         }
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:{status:response.status,statusText:response.statusText,errorText:errorText.substring(0,500),parsedErrorType:parsedError?.error?.type,parsedErrorMessage:parsedError?.error?.message,hasApiKey:!!apiKeyToUse,apiKeyLength:apiKeyToUse.length,apiKeyPrefix:apiKeyToUse.substring(0,Math.min(10,apiKeyToUse.length)),hasCorrectPrefix:apiKeyToUse.startsWith('sk-ant-'),isVercel:!!process.env.VERCEL,nodeEnv:process.env.NODE_ENV},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        
+        const errorInfo = {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText.substring(0, 500),
+          parsedErrorType: parsedError?.error?.type,
+          parsedErrorMessage: parsedError?.error?.message,
+          hasApiKey: !!apiKeyToUse,
+          apiKeyLength: apiKeyToUse.length,
+          apiKeyPrefix: apiKeyToUse.substring(0, Math.min(10, apiKeyToUse.length)),
+          hasCorrectPrefix: apiKeyToUse.startsWith('sk-ant-'),
+          isVercel: !!process.env.VERCEL,
+          nodeEnv: process.env.NODE_ENV,
+          model: apiRequest.model,
+        };
+        
+        console.error('❌ [MCP Client] Anthropic API 錯誤:', JSON.stringify(errorInfo, null, 2));
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:api_error',message:'Anthropic API error',data:errorInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
         // #endregion
         
         throw new Error(`AI 服務錯誤: ${response.status} ${errorText}`);
@@ -275,11 +296,11 @@ export function createMCPClient(): MCPClient {
   // 清理 API key（移除前後空格和換行符）
   const apiKey = apiKeyRaw?.trim() || '';
   
-  // #region agent log
+  // 診斷日誌 - 輸出到 Vercel 函數日誌
   const apiKeyInfo = {
     hasApiKey: !!apiKey,
     apiKeyLength: apiKey.length,
-    apiKeyPrefix: apiKey.substring(0, Math.min(7, apiKey.length)),
+    apiKeyPrefix: apiKey.substring(0, Math.min(10, apiKey.length)),
     hasCorrectPrefix: apiKey.startsWith('sk-ant-'),
     envSource: rawAnthropicKey ? 'ANTHROPIC_API_KEY' : (rawMCPKey ? 'MCP_API_KEY' : 'none'),
     hasRawAnthropicKey: !!rawAnthropicKey,
@@ -288,21 +309,35 @@ export function createMCPClient(): MCPClient {
     rawMCPKeyLength: rawMCPKey?.length || 0,
     isVercel: !!process.env.VERCEL,
     nodeEnv: process.env.NODE_ENV,
-    // 檢查是否有空格或換行符問題
     hasWhitespace: apiKeyRaw ? (apiKeyRaw !== apiKeyRaw.trim() || /\n|\r/.test(apiKeyRaw)) : false,
   };
+  
+  // 輸出到 Vercel 函數日誌（可在 Vercel Dashboard 中查看）
+  console.log('[MCP Client] API Key 診斷:', JSON.stringify(apiKeyInfo, null, 2));
+  
+  // #region agent log
   fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:createMCPClient',message:'createMCPClient config',data:apiKeyInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
   
   if (!apiKey) {
-    console.warn('⚠️  未設定 ANTHROPIC_API_KEY,AI 功能可能無法使用');
+    console.error('❌ [MCP Client] ANTHROPIC_API_KEY 未設定');
+    console.error('環境變數檢查:', {
+      ANTHROPIC_API_KEY: rawAnthropicKey ? `已設定 (長度: ${rawAnthropicKey.length})` : '未設定',
+      MCP_API_KEY: rawMCPKey ? `已設定 (長度: ${rawMCPKey.length})` : '未設定',
+      VERCEL: process.env.VERCEL ? '是' : '否',
+      NODE_ENV: process.env.NODE_ENV,
+    });
     if (process.env.VERCEL) {
-      console.warn('⚠️  檢測到 Vercel 環境，請在 Vercel Dashboard → Settings → Environment Variables 中設定 ANTHROPIC_API_KEY');
+      console.error('⚠️  檢測到 Vercel 環境，請在 Vercel Dashboard → Settings → Environment Variables 中設定 ANTHROPIC_API_KEY');
     } else {
-      console.warn('請在 .env.local 中設定: ANTHROPIC_API_KEY=your-key-here');
+      console.error('請在 .env.local 中設定: ANTHROPIC_API_KEY=your-key-here');
     }
   } else if (!apiKey.startsWith('sk-ant-')) {
-    console.warn('⚠️  API Key 格式可能不正確，應以 "sk-ant-" 開頭');
+    console.error('❌ [MCP Client] API Key 格式不正確');
+    console.error('API Key 前綴:', apiKey.substring(0, Math.min(10, apiKey.length)));
+    console.error('預期前綴: sk-ant-');
+  } else {
+    console.log('✅ [MCP Client] API Key 已正確設定');
   }
 
   const config: MCPClientConfig = {
