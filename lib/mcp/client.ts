@@ -64,8 +64,9 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
-      // 優先使用 claude-sonnet-4，如果失敗可以降級到 claude-3-7-sonnet
-      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+      // 使用 claude-3-7-sonnet 作為預設模型（更廣泛的 API Key 支援）
+      // 如果 API Key 支援 claude-sonnet-4，可以通過環境變數設定
+      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219';
       const apiRequest = {
         model: modelToUse,
         max_tokens: 4096,
@@ -209,7 +210,7 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: process.env.ANTHROPIC_MODEL || 'claude-3-7-sonnet-20250219',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages,
