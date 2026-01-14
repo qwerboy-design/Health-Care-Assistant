@@ -4,6 +4,7 @@ import { verifySession } from '@/lib/auth/session';
 import { isAdmin } from '@/lib/auth/admin';
 import { findCustomerById } from '@/lib/supabase/customers';
 import { AdminButton } from '@/components/admin/AdminButton';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 
 export default async function MainLayout({
   children,
@@ -143,14 +144,7 @@ export default async function MainLayout({
                 對話記錄
               </a>
               {userIsAdmin && <AdminButton />}
-              <form action="/api/auth/logout" method="POST" className="inline">
-                <button
-                  type="submit"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  登出
-                </button>
-              </form>
+              <LogoutButton />
             </div>
           </div>
         </div>

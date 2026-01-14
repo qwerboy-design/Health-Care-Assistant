@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth/session';
 import { findCustomerById } from '@/lib/supabase/customers';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 
 /**
  * AdminLayout - 後台管理頁面保護
@@ -86,14 +87,7 @@ export default async function AdminLayout({
               >
                 返回前台
               </a>
-              <form action="/api/auth/logout" method="POST" className="inline">
-                <button
-                  type="submit"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  登出
-                </button>
-              </form>
+              <LogoutButton />
             </div>
           </div>
         </div>
