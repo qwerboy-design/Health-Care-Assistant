@@ -64,9 +64,9 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
-      // 使用最新的 Claude Sonnet 4 作為預設模型
+      // 使用 Claude 3.5 Sonnet 作為預設模型
       // 可以通過環境變數 ANTHROPIC_MODEL 自訂模型
-      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
       const apiRequest = {
         model: modelToUse,
         max_tokens: 4096,
@@ -242,7 +242,7 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+          model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages,

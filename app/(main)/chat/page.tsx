@@ -29,8 +29,14 @@ export default function ChatPage() {
 
   // 從 URL 參數獲取對話 ID（如果有）
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:31',message:'useEffect for URL params',data:{windowLocationSearch:window.location.search,windowLocationHref:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     const params = new URLSearchParams(window.location.search);
     const id = params.get('conversationId');
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:33',message:'Extracted conversationId from URL',data:{id,hasId:!!id,allParams:Object.fromEntries(params)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (id) {
       loadConversation(id);
     }
@@ -38,8 +44,14 @@ export default function ChatPage() {
 
   const loadConversation = async (id: string) => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:39',message:'Before fetch GET /api/chat',data:{id,apiUrl:`/api/chat?conversationId=${id}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       const res = await fetch(`/api/chat?conversationId=${id}`);
       const data = await res.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:42',message:'After fetch GET /api/chat',data:{success:data.success,error:data.error,hasMessages:!!data.data?.messages},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
 
       if (data.success && data.data.messages) {
         setMessages(

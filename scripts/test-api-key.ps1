@@ -42,7 +42,7 @@ $headers = @{
 }
 
 $body = @{
-    model = 'claude-sonnet-4-20250514'
+    model = 'claude-3-5-sonnet-20241022'
     max_tokens = 100
     system = '你是一個專業的醫療助理。'
     messages = @(

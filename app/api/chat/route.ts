@@ -144,6 +144,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:145',message:'GET /api/chat entry',data:{requestUrl:request.url,hasUrl:!!request.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // 驗證 Session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
@@ -158,9 +161,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:160',message:'Before extracting conversationId',data:{requestUrl:request.url,searchParamsKeys:Array.from(searchParams.keys()),searchParamsString:searchParams.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     const conversationId = searchParams.get('conversationId');
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:161',message:'After extracting conversationId',data:{conversationId,hasConversationId:!!conversationId,conversationIdLength:conversationId?.length,allParams:Object.fromEntries(searchParams)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (!conversationId) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:163',message:'Missing conversationId error',data:{requestUrl:request.url,searchParamsString:searchParams.toString(),allParams:Object.fromEntries(searchParams)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       return errorResponse('缺少 conversationId 參數', 400);
     }
 
