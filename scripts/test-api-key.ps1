@@ -1,4 +1,4 @@
-# 測試 Anthropic API Key
+/# 測試 Anthropic API Key
 # 使用方式: .\scripts\test-api-key.ps1
 
 Write-Host "🧪 測試 Anthropic API Key..." -ForegroundColor Cyan

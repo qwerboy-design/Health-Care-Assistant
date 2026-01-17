@@ -62,7 +62,47 @@ RESEND_API_KEY=re_your_resend_api_key
 
 ---
 
-### MCP Server (AI 整合)
+### Anthropic API (AI 整合) ⚠️ 重要
+
+```env
+ANTHROPIC_API_KEY=sk-ant-api03-your_api_key_here
+```
+
+**⚠️ 重要提醒**:
+- **必須使用「標準 API Key」**，不能使用 Claude Code subscription Key
+- Claude Code subscription Key 在 2026年1月9日後已被 Anthropic 限制，無法用於直接 API 調用
+- 標準 API Key 以 `sk-ant-api03-` 開頭
+
+**取得方式**:
+1. 前往 [Anthropic Console](https://console.anthropic.com/settings/keys)
+2. 點擊「Create Key」創建新的 API Key
+3. 選擇「API Key」類型（不是 Claude Code）
+4. 設定付費方式或確認有免費額度
+5. 複製生成的 API Key
+
+**驗證方式**:
+```bash
+# 使用 curl 測試 API Key 是否有效
+curl https://api.anthropic.com/v1/messages \
+  -H "content-type: application/json" \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{"model":"claude-3-haiku-20240307","max_tokens":1024,"messages":[{"role":"user","content":"Hello"}]}'
+```
+
+**可選：自訂模型**:
+```env
+# 如果您的帳戶支援更高級模型，可以設定此環境變數
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+# 或使用其他可用模型：
+# claude-3-opus-20240229 (最強大)
+# claude-3-sonnet-20240229 (平衡)
+# claude-3-haiku-20240307 (最快速、預設)
+```
+
+---
+
+### MCP Server (可選，進階功能)
 
 ```env
 MCP_SERVER_URL=https://mcp.k-dense.ai/claude-scientific-skills/mcp
@@ -70,6 +110,7 @@ MCP_API_KEY=  # 可選，如果 Server 需要認證
 ```
 
 **預設值**: 使用官方 MCP Server，通常無需 API Key
+**注意**: 目前系統直接使用 Anthropic API，此設定為未來擴展預留
 
 ---
 

@@ -64,9 +64,10 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
-      // 使用 Claude 3.5 Sonnet 作為預設模型
+      // 使用 Claude 3 Haiku 作為預設模型（穩定且廣泛支援）
       // 可以通過環境變數 ANTHROPIC_MODEL 自訂模型
-      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+      // 注意：如果您的帳戶支援更高級模型，可設定為 'claude-3-5-sonnet-20241022'
+      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
       const apiRequest = {
         model: modelToUse,
         max_tokens: 4096,
@@ -121,15 +122,21 @@ export class MCPClient {
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage:before_fetch',message:'Before fetch request',data:headersInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       
-      // 添加 User-Agent 和其他請求頭，確保符合 Anthropic API 的要求
+      // 準備請求標頭 - 使用 Anthropic SDK 推薦的配置
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKeyToUse,
+        'anthropic-version': '2023-06-01',
+      };
+      
+      // 在 Vercel 環境中添加額外的標頭以避免網絡限制
+      if (process.env.VERCEL) {
+        headers['anthropic-dangerous-direct-browser-access'] = 'true';
+      }
+      
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKeyToUse,
-          'anthropic-version': '2023-06-01',
-          'User-Agent': 'Health-Care-Assistant/1.0',
-        },
+        headers,
         body: JSON.stringify(apiRequest),
       });
 
@@ -167,11 +174,29 @@ export class MCPClient {
         
         // 檢查是否為 Claude Code subscription API Key 限制
         if (response.status === 403 && parsedError?.error?.type === 'forbidden') {
-          console.error('⚠️ [MCP Client] 可能的問題:');
-          console.error('1. API Key 可能是 Claude Code subscription 類型（2026年1月9日後被限制）');
-          console.error('2. 請確認您的 API Key 是標準的 Anthropic API Key，而非 Claude Code subscription Key');
-          console.error('3. 如果是 Claude Code subscription Key，需要創建新的標準 API Key');
-          console.error('4. 創建位置: https://console.anthropic.com/settings/keys');
+          console.error('');
+          console.error('❌❌❌ 重要：API Key 類型錯誤 ❌❌❌');
+          console.error('');
+          console.error('您使用的 API Key 無法用於此應用程式。');
+          console.error('');
+          console.error('📌 問題原因:');
+          console.error('  • 您的 API Key 可能是 "Claude Code subscription" 類型');
+          console.error('  • Anthropic 在 2026年1月9日後限制了此類型的 API Key');
+          console.error('  • 此類型的 Key 只能用於 Claude for Code/IDE，無法用於直接 API 調用');
+          console.error('');
+          console.error('✅ 解決方法:');
+          console.error('  1. 前往 Anthropic Console: https://console.anthropic.com/settings/keys');
+          console.error('  2. 創建一個新的「標準 API Key」（不是 Claude Code subscription）');
+          console.error('  3. 在 Vercel Dashboard → Settings → Environment Variables 中');
+          console.error('     更新 ANTHROPIC_API_KEY 為新的標準 API Key');
+          console.error('  4. 重新部署您的應用程式');
+          console.error('');
+          console.error('🔍 如何確認您的 API Key 類型:');
+          console.error('  • 標準 API Key: 以 "sk-ant-api03-" 開頭，可用於所有 API 調用');
+          console.error('  • Claude Code Key: 只能用於 IDE 和代碼編輯器整合');
+          console.error('');
+          console.error('💡 提示: 標準 API Key 需要設定付費方式或有免費額度');
+          console.error('');
         }
         
         // #region agent log
@@ -242,7 +267,7 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
+          model: process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages,
