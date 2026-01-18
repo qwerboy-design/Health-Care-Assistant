@@ -128,11 +128,9 @@ export class MCPClient {
         'x-api-key': apiKeyToUse,
         'anthropic-version': '2023-06-01',
       };
-      
-      // 在 Vercel 環境中添加額外的標頭以避免網絡限制
-      if (process.env.VERCEL) {
-        headers['anthropic-dangerous-direct-browser-access'] = 'true';
-      }
+
+      // 注意：不需要在服務器端添加 'anthropic-dangerous-direct-browser-access' 請求頭
+      // 該請求頭僅用於瀏覽器環境，在 Vercel (Node.js) 環境中會導致 403 錯誤
       
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
