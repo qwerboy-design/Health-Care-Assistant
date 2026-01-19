@@ -49,3 +49,8 @@ Thumbs.db
 
 # Supabase 敏感文件
 supabase/PW.txt
+
+# 臨時檔案
+tmp_*
+*.tmp
+test-api-key.*

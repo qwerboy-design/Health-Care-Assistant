@@ -57,10 +57,63 @@ export class MCPClient {
         }
       }
 
+      // 準備使用者訊息內容
+      // 如果有檔案 URL，需要將圖片加入到訊息中
+      let userContent: string | Array<any> = request.message;
+      
+      if (request.fileUrl) {
+        try {
+          // 下載圖片並轉換為 base64
+          const imageResponse = await fetch(request.fileUrl);
+          if (imageResponse.ok) {
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+            const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+            
+            // 構建包含圖片的訊息內容（符合 Anthropic API 格式）
+            userContent = [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: contentType,
+                  data: imageBase64,
+                },
+              },
+              {
+                type: 'text',
+                text: request.message || '請分析這張圖片',
+              },
+            ];
+            
+            console.log('[MCP Client] 已將圖片加入到訊息中:', {
+              fileUrl: request.fileUrl,
+              contentType,
+              imageSize: imageBuffer.byteLength,
+            });
+          } else {
+            console.warn('[MCP Client] 無法下載圖片:', {
+              fileUrl: request.fileUrl,
+              status: imageResponse.status,
+            });
+            // 如果無法下載圖片，至少將 URL 加入到文字訊息中
+            userContent = request.message 
+              ? `${request.message}\n\n[圖片連結: ${request.fileUrl}]`
+              : `請分析這張圖片: ${request.fileUrl}`;
+          }
+        } catch (error: any) {
+          console.error('[MCP Client] 處理圖片時發生錯誤:', error.message);
+          // 如果處理失敗，至少將 URL 加入到文字訊息中
+          userContent = request.message 
+            ? `${request.message}\n\n[圖片連結: ${request.fileUrl}]`
+            : `請分析這張圖片: ${request.fileUrl}`;
+        }
+      }
+
       // 準備對話歷史
       const messages = [
         ...(request.conversationHistory || []),
-        { role: 'user', content: request.message }
+        { role: 'user', content: userContent }
       ];
 
       // 構建 Anthropic API 請求

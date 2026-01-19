@@ -10,9 +10,11 @@
     "test": "node scripts/verify-system.js",
     "test:verify": "node scripts/verify-system.js",
     "test:integration": "node scripts/test-integration.js",
-    "test:mcp": "node scripts/test-mcp-client.js"
+    "test:mcp": "node scripts/test-mcp-client.js",
+    "check:env": "node scripts/check-env-safety.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.971.0",
     "@modelcontextprotocol/sdk": "^1.25.2",
     "@supabase/supabase-js": "^2.90.1",
     "bcryptjs": "^3.0.3",

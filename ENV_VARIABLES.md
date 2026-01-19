@@ -62,6 +62,36 @@ RESEND_API_KEY=re_your_resend_api_key
 
 ---
 
+### Cloudflare R2 物件儲存
+
+```env
+R2_ACCOUNT_ID=your_account_id
+R2_ACCESS_KEY_ID=your_access_key_id
+R2_SECRET_ACCESS_KEY=your_secret_access_key
+R2_BUCKET_NAME=chat-files
+R2_PUBLIC_URL=https://your-domain.com  # 可選：自訂網域
+```
+
+**取得方式**:
+1. 登入 [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. R2 → 選擇或建立 Bucket（例如：`chat-files`）
+3. 管理 API Tokens → 建立新 Token
+4. 複製 Account ID、Access Key ID、Secret Access Key
+
+**⚠️ 重要：憑證格式要求**:
+- `R2_ACCESS_KEY_ID`：**必須為 32 個字元**（小寫字母和數字）
+- `R2_SECRET_ACCESS_KEY`：**必須為 64 個字元**（小寫字母和數字）
+- Secret Access Key 僅在建立時顯示一次，請妥善保存
+- 如果長度不符合，請確認已完整複製，沒有遺漏字元
+
+**注意事項**:
+- `R2_BUCKET_NAME` 預設為 `chat-files`，如果未設定會使用預設值
+- `R2_PUBLIC_URL` 為可選，若未設定將使用預設 R2 網域格式：`https://{accountId}.r2.cloudflarestorage.com/{bucket}/{fileName}`
+- 如需公開存取檔案，需要在 R2 Bucket 設定中啟用公開存取或使用自訂網域
+- 使用自訂網域時，需要在 Cloudflare 中綁定網域並設定 DNS 記錄
+
+---
+
 ### Anthropic API (AI 整合) ⚠️ 重要
 
 ```env
