@@ -97,14 +97,52 @@ export default function ChatPage() {
         formData.append('conversationId', conversationId);
       }
       if (options.file) {
+        // #region agent log
+        const logDataFile = {
+          location: 'app/(main)/chat/page.tsx:handleSend',
+          message: 'Appending file to FormData',
+          data: { fileName: options.file.name, fileSize: options.file.size, fileType: options.file.type, isFileInstance: options.file instanceof File },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'B'
+        };
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFile) }).catch(() => {});
+        // #endregion
         formData.append('file', options.file);
       }
+
+      // #region agent log
+      const logDataBeforeFetch = {
+        location: 'app/(main)/chat/page.tsx:handleSend',
+        message: 'Before fetch POST /api/chat',
+        data: { hasFile: !!options.file, fileName: options.file?.name, messageLength: message.length, hasConversationId: !!conversationId },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBeforeFetch) }).catch(() => {});
+      // #endregion
 
       // 發送請求
       const res = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
       });
+
+      // #region agent log
+      const logDataAfterFetch = {
+        location: 'app/(main)/chat/page.tsx:handleSend',
+        message: 'After fetch POST /api/chat',
+        data: { status: res.status, statusText: res.statusText, ok: res.ok },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterFetch) }).catch(() => {});
+      // #endregion
 
       const data = await res.json();
 

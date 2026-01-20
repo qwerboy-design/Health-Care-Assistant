@@ -28,11 +28,43 @@ export async function POST(request: NextRequest) {
 
     // 解析請求
     const formData = await request.formData();
+    // #region agent log
+    const logDataFormData = {
+      location: 'app/api/chat/route.ts:POST',
+      message: 'FormData parsed',
+      data: { formDataKeys: Array.from(formData.keys()), hasFile: formData.has('file') },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'B'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFormData) }).catch(() => {});
+    // #endregion
     const message = formData.get('message') as string;
     const workloadLevel = formData.get('workloadLevel') as string;
     const selectedFunction = formData.get('selectedFunction') as string | null;
     const conversationId = formData.get('conversationId') as string | null;
     const file = formData.get('file') as File | null;
+    
+    // #region agent log
+    const logDataFile = {
+      location: 'app/api/chat/route.ts:POST',
+      message: 'File extracted from FormData',
+      data: { 
+        hasFile: !!file, 
+        fileName: file?.name || null, 
+        fileSize: file?.size || null, 
+        fileType: file?.type || null,
+        isFileInstance: file instanceof File,
+        fileConstructor: file?.constructor?.name || null
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'B'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFile) }).catch(() => {});
+    // #endregion
 
     // 驗證基本欄位
     if (!message?.trim() && !file) {
@@ -45,12 +77,48 @@ export async function POST(request: NextRequest) {
     let fileType: string | undefined;
 
     if (file && file.size > 0) {
+      // #region agent log
+      const logDataBeforeUpload = {
+        location: 'app/api/chat/route.ts:POST',
+        message: 'Before uploadFile call',
+        data: { fileName: file.name, fileSize: file.size, fileType: file.type, customerId: session.customerId },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'E'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBeforeUpload) }).catch(() => {});
+      // #endregion
       try {
         const uploadResult = await uploadFile(file, session.customerId);
+        // #region agent log
+        const logDataAfterUpload = {
+          location: 'app/api/chat/route.ts:POST',
+          message: 'After uploadFile success',
+          data: { url: uploadResult.url, fileName: uploadResult.fileName, fileType: uploadResult.fileType, fileSize: uploadResult.fileSize },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E'
+        };
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterUpload) }).catch(() => {});
+        // #endregion
         fileUrl = uploadResult.url;
         fileName = uploadResult.fileName;
         fileType = uploadResult.fileType;
       } catch (error: any) {
+        // #region agent log
+        const logDataUploadError = {
+          location: 'app/api/chat/route.ts:POST',
+          message: 'uploadFile error caught',
+          data: { errorMessage: error?.message, errorName: error?.name, errorStack: error?.stack?.substring(0, 300), fileName: file.name, fileType: file.type },
+          timestamp: Date.now(),
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'E'
+        };
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataUploadError) }).catch(() => {});
+        // #endregion
         return errorResponse(error.message || '檔案上傳失敗', 400);
       }
     }

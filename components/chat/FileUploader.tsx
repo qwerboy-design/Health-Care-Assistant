@@ -18,22 +18,108 @@ export function FileUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): boolean => {
+    // #region agent log
+    const logData = {
+      location: 'components/chat/FileUploader.tsx:validateFile',
+      message: 'File validation entry',
+      data: { fileName: file.name, fileSize: file.size, fileType: file.type, maxSize, acceptedTypes },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => {});
+    // #endregion
+
     if (file.size > maxSize) {
+      // #region agent log
+      const logDataSize = {
+        location: 'components/chat/FileUploader.tsx:validateFile',
+        message: 'File size validation failed',
+        data: { fileName: file.name, fileSize: file.size, maxSize, exceedsBy: file.size - maxSize },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'C'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataSize) }).catch(() => {});
+      // #endregion
       setError(`檔案大小超過 ${Math.round(maxSize / 1024 / 1024)}MB 限制`);
       return false;
     }
 
+    // #region agent log
+    const logDataType = {
+      location: 'components/chat/FileUploader.tsx:validateFile',
+      message: 'File type check',
+      data: { fileName: file.name, fileType: file.type, isInAcceptedTypes: acceptedTypes.includes(file.type), acceptedTypes },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataType) }).catch(() => {});
+    // #endregion
+
     if (!acceptedTypes.includes(file.type)) {
+      // #region agent log
+      const logDataTypeFail = {
+        location: 'components/chat/FileUploader.tsx:validateFile',
+        message: 'File type validation failed',
+        data: { fileName: file.name, fileType: file.type, acceptedTypes, isPdfExtension: file.name.toLowerCase().endsWith('.pdf') },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'A'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataTypeFail) }).catch(() => {});
+      // #endregion
       setError('不支援的檔案格式，僅支援 JPEG、PDF、WORD、TXT');
       return false;
     }
 
+    // #region agent log
+    const logDataSuccess = {
+      location: 'components/chat/FileUploader.tsx:validateFile',
+      message: 'File validation success',
+      data: { fileName: file.name, fileSize: file.size, fileType: file.type },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataSuccess) }).catch(() => {});
+    // #endregion
     setError('');
     return true;
   };
 
   const handleFile = (file: File) => {
+    // #region agent log
+    const logData = {
+      location: 'components/chat/FileUploader.tsx:handleFile',
+      message: 'File selected',
+      data: { fileName: file.name, fileSize: file.size, fileType: file.type },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'B'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => {});
+    // #endregion
     if (validateFile(file)) {
+      // #region agent log
+      const logDataSelect = {
+        location: 'components/chat/FileUploader.tsx:handleFile',
+        message: 'Calling onFileSelect',
+        data: { fileName: file.name, fileSize: file.size, fileType: file.type },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'run1',
+        hypothesisId: 'B'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataSelect) }).catch(() => {});
+      // #endregion
       onFileSelect(file);
     }
   };

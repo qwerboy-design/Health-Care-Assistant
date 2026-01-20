@@ -65,12 +65,38 @@ function getR2Bucket(): string {
  * 生成公開存取 URL
  */
 function getR2PublicUrl(fileName: string): string {
+  // #region agent log
+  const logData = {
+    location: 'lib/storage/upload.ts:getR2PublicUrl',
+    message: 'Generating R2 public URL',
+    data: { fileName, hasPublicUrl: !!process.env.R2_PUBLIC_URL, publicUrl: process.env.R2_PUBLIC_URL || null },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'A'
+  };
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => {});
+  // #endregion
+
   const publicUrl = process.env.R2_PUBLIC_URL;
   const bucket = getR2Bucket();
 
   if (publicUrl) {
     // 使用自訂網域或公開網域
-    return `${publicUrl}/${fileName}`;
+    const finalUrl = `${publicUrl}/${fileName}`;
+    // #region agent log
+    const logData2 = {
+      location: 'lib/storage/upload.ts:getR2PublicUrl',
+      message: 'Using custom public URL',
+      data: { finalUrl, publicUrl, fileName },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'A'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData2) }).catch(() => {});
+    // #endregion
+    return finalUrl;
   }
 
   // 回退到標準 R2 網域格式（需要先設定公開存取）
@@ -78,7 +104,20 @@ function getR2PublicUrl(fileName: string): string {
   if (!accountId) {
     throw new Error('R2_ACCOUNT_ID 未設定，無法生成公開 URL');
   }
-  return `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${fileName}`;
+  const fallbackUrl = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${fileName}`;
+  // #region agent log
+  const logData3 = {
+    location: 'lib/storage/upload.ts:getR2PublicUrl',
+    message: 'Using fallback R2 URL',
+    data: { fallbackUrl, accountId, bucket, fileName },
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId: 'B'
+  };
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData3) }).catch(() => {});
+  // #endregion
+  return fallbackUrl;
 }
 
 /**
@@ -128,14 +167,88 @@ export async function uploadFile(
   // 轉換 File 為 Buffer（Next.js 環境）
   let buffer: Buffer;
   try {
+    // #region agent log
+    const logDataBeforeConvert = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'Before file to buffer conversion',
+      data: { fileName: file.name, fileSize: file.size, fileType: file.type, hasArrayBuffer: typeof file.arrayBuffer === 'function' },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'E'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBeforeConvert) }).catch(() => {});
+    // #endregion
     const arrayBuffer = await file.arrayBuffer();
+    // #region agent log
+    const logDataAfterArrayBuffer = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'After arrayBuffer conversion',
+      data: { arrayBufferSize: arrayBuffer.byteLength, fileName: file.name },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'E'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterArrayBuffer) }).catch(() => {});
+    // #endregion
     buffer = Buffer.from(arrayBuffer);
+    // #region agent log
+    const logDataAfterBuffer = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'After Buffer.from conversion',
+      data: { bufferLength: buffer.length, fileName: file.name },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'E'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterBuffer) }).catch(() => {});
+    // #endregion
   } catch (error: any) {
+    // #region agent log
+    const logDataConvertError = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'File to buffer conversion error',
+      data: { errorMessage: error?.message, errorName: error?.name, fileName: file.name, fileType: file.type },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'E'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataConvertError) }).catch(() => {});
+    // #endregion
     throw new Error(`檔案轉換失敗: ${error.message || '無法讀取檔案'}`);
   }
 
   // 上傳到 R2
   try {
+    // #region agent log
+    const logDataBefore = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'Before R2 upload',
+      data: { bucket, fileName, fileSize: file.size, fileType: file.type, customerId },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBefore) }).catch(() => {});
+    // #endregion
+
+    // #region agent log
+    const logDataCommand = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'Creating PutObjectCommand',
+      data: { bucket, fileName, bufferLength: buffer.length, contentType: file.type || 'application/octet-stream', originalFileType: file.type },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'D'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataCommand) }).catch(() => {});
+    // #endregion
+
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: fileName,
@@ -145,8 +258,34 @@ export async function uploadFile(
 
     await s3Client.send(command);
 
+    // #region agent log
+    const logDataAfter = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'After R2 upload success',
+      data: { bucket, fileName, uploaded: true },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'C'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfter) }).catch(() => {});
+    // #endregion
+
     // 生成公開 URL
     const publicUrl = getR2PublicUrl(fileName);
+
+    // #region agent log
+    const logDataUrl = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'Generated public URL',
+      data: { publicUrl, fileName, bucket },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'D'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataUrl) }).catch(() => {});
+    // #endregion
 
     return {
       url: publicUrl,
@@ -155,6 +294,23 @@ export async function uploadFile(
       fileSize: file.size,
     };
   } catch (error: any) {
+    // #region agent log
+    const logDataError = {
+      location: 'lib/storage/upload.ts:uploadFile',
+      message: 'R2 upload error',
+      data: { 
+        error: error.message, 
+        errorCode: error.$metadata?.httpStatusCode || error.code || 'N/A',
+        bucket,
+        fileName
+      },
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId: 'E'
+    };
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataError) }).catch(() => {});
+    // #endregion
     // 提供更詳細的錯誤訊息
     const errorMessage = error.message || '未知錯誤';
     const errorCode = error.$metadata?.httpStatusCode || error.code || 'N/A';
