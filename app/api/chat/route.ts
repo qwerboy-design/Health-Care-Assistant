@@ -26,16 +26,35 @@ export async function POST(request: NextRequest) {
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
 
+    // 檢查 Content-Length（如果可用）以提前拒絕過大請求
+    const contentLength = request.headers.get('content-length');
+    const MAX_REQUEST_SIZE = 4.5 * 1024 * 1024; // 4.5MB (Vercel limit)
+    if (contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE) {
+      // #region agent log
+      const logDataSizeCheck = {
+        location: 'app/api/chat/route.ts:POST',
+        message: 'Request too large - rejected before parsing',
+        data: { contentLength: parseInt(contentLength), maxSize: MAX_REQUEST_SIZE },
+        timestamp: Date.now(),
+        sessionId: 'debug-session',
+        runId: 'post-fix',
+        hypothesisId: 'F'
+      };
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataSizeCheck) }).catch(() => {});
+      // #endregion
+      return errorResponse('請求大小超過 4.5MB 限制（Vercel 平台限制）', 413);
+    }
+
     // 解析請求
     const formData = await request.formData();
     // #region agent log
     const logDataFormData = {
       location: 'app/api/chat/route.ts:POST',
       message: 'FormData parsed',
-      data: { formDataKeys: Array.from(formData.keys()), hasFile: formData.has('file') },
+      data: { formDataKeys: Array.from(formData.keys()), hasFile: formData.has('file'), contentLength },
       timestamp: Date.now(),
       sessionId: 'debug-session',
-      runId: 'run1',
+      runId: 'post-fix',
       hypothesisId: 'B'
     };
     fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFormData) }).catch(() => {});
@@ -56,11 +75,12 @@ export async function POST(request: NextRequest) {
         fileSize: file?.size || null, 
         fileType: file?.type || null,
         isFileInstance: file instanceof File,
-        fileConstructor: file?.constructor?.name || null
+        fileConstructor: file?.constructor?.name || null,
+        exceedsVercelLimit: file ? file.size > MAX_REQUEST_SIZE : false
       },
       timestamp: Date.now(),
       sessionId: 'debug-session',
-      runId: 'run1',
+      runId: 'post-fix',
       hypothesisId: 'B'
     };
     fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFile) }).catch(() => {});

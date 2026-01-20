@@ -10,7 +10,7 @@ interface FileUploaderProps {
 
 export function FileUploader({ 
   onFileSelect, 
-  maxSize = 10 * 1024 * 1024, // 10MB
+  maxSize = 4 * 1024 * 1024, // 4MB (Vercel limit is 4.5MB)
   acceptedTypes = ['image/jpeg', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 }: FileUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
@@ -206,7 +206,7 @@ export function FileUploader({
             <span className="text-gray-600"> 或拖放檔案至此</span>
           </div>
           <p className="text-xs text-gray-500">
-            支援 JPEG、PDF、WORD、TXT，最大 10MB
+            支援 JPEG、PDF、WORD、TXT，最大 4MB
           </p>
         </div>
       </div>

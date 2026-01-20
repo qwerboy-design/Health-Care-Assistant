@@ -51,7 +51,7 @@ export const Errors = {
   // 請求錯誤
   INVALID_INPUT: new AppError(400, '輸入資料格式錯誤'),
   MISSING_FIELDS: new AppError(400, '缺少必要欄位'),
-  FILE_TOO_LARGE: new AppError(413, '檔案大小超過 10MB 限制'),
+  FILE_TOO_LARGE: new AppError(413, '檔案大小超過 4MB 限制'),
   INVALID_FILE_TYPE: new AppError(400, '不支援的檔案格式'),
   
   // Rate limiting
