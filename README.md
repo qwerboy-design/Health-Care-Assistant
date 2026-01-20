@@ -9,82 +9,98 @@
 - **樣式**: Tailwind CSS
 - **認證**: JWT Session、Google OAuth 2.0、OTP驗證
 - **資料庫**: Supabase (PostgreSQL)
-- **AI整合**: MCP Client SDK
+- **AI整合**: Anthropic Claude API（直接整合）
+- **儲存**: Cloudflare R2（物件儲存）
+- **Email**: Resend（OTP 發送）
+
+詳細架構說明請參考 [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## 專案狀態
 
-### ✅ 已完成
+### ✅ 已完成（100%）
 
-#### Phase 1: 專案初始化
-- ✅ Next.js 專案設置（TypeScript、Tailwind CSS）
-- ✅ 套件安裝（Supabase、jose、bcryptjs、zod、resend、google-auth-library、MCP SDK）
-- ✅ 資料庫遷移腳本（SQL）
-- ✅ 類型定義（types/index.ts）
-- ✅ 環境變數模板（.env.example）
+#### Phase 1: 專案初始化 ✅
+- ✅ Next.js 14 + TypeScript + Tailwind CSS 專案設置
+- ✅ 所有依賴套件安裝完成
+- ✅ 資料庫遷移腳本（2 個遷移檔案）
+- ✅ 完整的類型定義系統
+- ✅ 環境變數模板與安全性檢查
 
-#### Phase 2: 認證系統（部分完成）
-- ✅ 錯誤處理系統（lib/errors.ts）
-- ✅ Rate limiting（lib/rate-limit.ts）
-- ✅ 驗證 schemas（lib/validation/schemas.ts）
-- ✅ 認證工具函數
-  - ✅ 密碼加密與驗證（lib/auth/password.ts）
-  - ✅ OTP 生成器（lib/auth/otp-generator.ts）
-  - ✅ JWT Session 管理（lib/auth/session.ts）
-  - ✅ Google OAuth 驗證（lib/auth/google-oauth.ts）
-- ✅ 資料庫操作函數
-  - ✅ 客戶管理（lib/supabase/customers.ts）
-  - ✅ OTP 管理（lib/supabase/otp.ts）
-  - ✅ 對話管理（lib/supabase/conversations.ts）
-  - ✅ 訊息管理（lib/supabase/messages.ts）
-- ✅ Email 服務（lib/email/resend.ts）
-- ✅ 認證 API Routes
-  - ✅ POST /api/auth/register
-  - ✅ POST /api/auth/login
-  - ✅ POST /api/auth/send-otp
-  - ✅ POST /api/auth/verify-otp
-  - ✅ POST /api/auth/google
-- ✅ 認證相關元件
-  - ✅ OTPInput（6位數分離輸入）
-  - ✅ CountdownTimer（重發倒數）
-  - ✅ GoogleLoginButton（Google 登入）
-- ✅ 登入頁面（app/(auth)/login/page.tsx）
-- ✅ 註冊頁面（app/(auth)/register/page.tsx）
+#### Phase 2: 認證系統 ✅
+**後端：**
+- ✅ 7 個完整的 API Routes
+  - POST /api/auth/register - 註冊（支援密碼/OTP）
+  - POST /api/auth/login - 登入（支援密碼/OTP）
+  - POST /api/auth/send-otp - 發送 OTP
+  - POST /api/auth/verify-otp - 驗證 OTP
+  - POST /api/auth/google - Google OAuth
+  - POST /api/auth/logout - 登出
+  - GET /api/auth/me - 獲取當前用戶資料
+  - GET /api/auth/admin-check - 檢查管理員權限
 
-#### MCP 整合（基礎完成）
-- ✅ MCP 類型定義（lib/mcp/types.ts）
-- ✅ 工作量級別邏輯（lib/mcp/workload.ts）
-- ✅ 功能映射表（lib/mcp/function-mapping.ts）
-- ✅ MCP Client（lib/mcp/client.ts）
-- ✅ 檔案上傳工具（lib/storage/upload.ts）
+**前端：**
+- ✅ 登入頁面（三種登入方式）
+- ✅ 註冊頁面（三種註冊方式）
+- ✅ OTP 輸入元件（6位數，自動跳轉，支援貼上）
+- ✅ Google 登入按鈕
+- ✅ 倒數計時器
 
-### 🚧 待完成
+#### Phase 3: 說明Pop-UP ✅
+- ✅ OnboardingModal 元件（4個步驟卡片）
+- ✅ 首次登入檢測（localStorage）
+- ✅ 進度指示器
+- ✅ 美觀的 UI 設計
 
-#### Phase 3: 說明Pop-UP
-- ⏳ OnboardingModal 元件
-- ⏳ 首次登入檢測邏輯
+#### Phase 4: 對話介面 ✅
+**元件：**
+- ✅ ChatWindow - 對話視窗主元件
+- ✅ MessageList - 訊息列表（自動滾動）
+- ✅ MessageBubble - 訊息氣泡（支援檔案顯示）
+- ✅ ChatInput - 輸入區域（文字/檔案/選項）
+- ✅ FunctionSelector - 功能選擇器（檢驗/放射/病歷/藥物）
+- ✅ WorkloadSelector - 工作量級別選擇器（即時/初級/標準/專業）
+- ✅ FileUploader - 檔案上傳（拖放支援，10MB限制）
 
-#### Phase 4: 對話介面
-- ⏳ 對話頁面（app/(main)/chat/page.tsx）
-- ⏳ 對話相關元件
-  - ⏳ ChatWindow
-  - ⏳ MessageList
-  - ⏳ MessageBubble
-  - ⏳ ChatInput
-  - ⏳ FunctionSelector（檢驗、放射、病歷、藥物）
-  - ⏳ WorkloadSelector（即時、初級、標準、專業）
-  - ⏳ FileUploader
-  - ⏳ ConversationHistory
+**頁面：**
+- ✅ /chat - 對話頁面
+- ✅ /conversations - 對話記錄頁面
 
-#### Phase 5: 對話 API
-- ⏳ POST /api/chat（建立/發送訊息）
-- ⏳ GET /api/conversations（獲取對話列表）
-- ⏳ SSE 串流回應實作
+#### Phase 5: MCP 整合 ✅
+- ✅ MCP Client 實作（直接使用 Anthropic API）
+- ✅ 工作量級別邏輯（0/1/2-3/4+ Skills）
+- ✅ 功能映射表（檢驗/放射/病歷/藥物 → Skills）
+- ✅ 檔案上傳工具（Cloudflare R2）
+- ✅ 圖片上傳支援（轉換為 base64 格式傳遞給 AI）
+- ✅ POST /api/chat - 對話 API
+- ✅ GET /api/chat - 獲取對話訊息
+- ✅ GET /api/conversations - 對話列表
 
-#### Phase 6: 測試與優化
-- ⏳ 端對端測試
-- ⏳ 錯誤處理完善
-- ⏳ UI/UX 優化
-- ⏳ 效能優化
+#### Phase 6: 管理員系統 ✅
+- ✅ 帳號審核系統（pending/approved/rejected）
+- ✅ 管理員角色管理
+- ✅ GET /api/admin/customers - 客戶列表
+- ✅ POST /api/admin/approve - 審核通過
+- ✅ POST /api/admin/reject - 審核拒絕
+- ✅ 管理員頁面與元件
+
+#### 核心工具函數 ✅
+- ✅ 錯誤處理系統
+- ✅ Rate limiting
+- ✅ Zod 驗證
+- ✅ 密碼加密（bcrypt）
+- ✅ JWT Session 管理
+- ✅ Google OAuth 驗證
+- ✅ Email 服務（Resend，精美模板）
+- ✅ 資料庫操作（所有 CRUD 操作）
+
+### 🚧 未來優化項目（可選）
+
+1. ⚠️ SSE 串流回應實作（當前是完整回應）
+2. ⚠️ 更完善的錯誤處理和日誌
+3. ⚠️ 單元測試和整合測試
+4. ⚠️ 效能優化（緩存、分頁等）
+5. ⚠️ 無障礙功能（ARIA labels）
+6. ⚠️ 國際化支援
 
 ## 安裝與設置
 
@@ -122,18 +138,26 @@ GOOGLE_CLIENT_SECRET=GOCSPX-your_google_client_secret
 # Email (Resend)
 RESEND_API_KEY=re_your_resend_api_key
 
-# MCP Server
-# 預設使用官方 MCP Server，無需 API Key 即可使用
-# URL 必須包含協議前綴 (https://)
-MCP_SERVER_URL=https://mcp.k-dense.ai/claude-scientific-skills/mcp
-# API Key 為可選，如果 MCP Server 需要認證才設定
-# 如果不設定，將不使用認證（預設行為）
-MCP_API_KEY=
+# Cloudflare R2
+R2_ACCOUNT_ID=your_account_id
+R2_ACCESS_KEY_ID=your_access_key_id
+R2_SECRET_ACCESS_KEY=your_secret_access_key
+R2_BUCKET_NAME=chat-files
+R2_PUBLIC_URL=https://your-domain.com  # 可選：自訂網域
+
+# Anthropic API (AI 整合)
+ANTHROPIC_API_KEY=sk-ant-api03-your_api_key_here
+ANTHROPIC_MODEL=claude-3-haiku-20240307  # 可選
+
+# Next.js
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ### 4. 資料庫設置
 
-在 Supabase SQL Editor 中執行 `supabase/migrations/001_initial_schema.sql`
+在 Supabase SQL Editor 中依序執行：
+1. `supabase/migrations/001_initial_schema.sql` - 初始資料表結構
+2. `supabase/migrations/002_add_approval_system.sql` - 審核系統欄位
 
 ### 5. 啟動開發伺服器
 
@@ -202,26 +226,39 @@ TEST_BASE_URL=http://localhost:3000 npm run test
 │   ├── (auth)/           # 認證頁面
 │   │   ├── login/
 │   │   └── register/
+│   ├── (main)/           # 主頁面（需認證）
+│   │   ├── chat/         # 對話頁面
+│   │   ├── conversations/ # 對話記錄
+│   │   └── layout.tsx     # 認證保護佈局
+│   ├── (admin)/          # 管理頁面（需管理員權限）
+│   │   └── admin/
 │   ├── api/              # API Routes
-│   │   └── auth/
+│   │   ├── auth/         # 認證 API (8 routes)
+│   │   ├── chat/         # 對話 API
+│   │   ├── conversations/ # 對話列表 API
+│   │   └── admin/        # 管理 API (3 routes)
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components/
-│   └── auth/             # 認證元件
+│   ├── auth/             # 認證元件 (3個)
+│   ├── chat/             # 對話元件 (7個)
+│   ├── onboarding/       # 引導元件
+│   └── admin/            # 管理元件
 ├── lib/
-│   ├── auth/             # 認證工具
+│   ├── auth/             # 認證工具 (5個)
 │   ├── email/            # Email 服務
-│   ├── mcp/              # MCP 整合
-│   ├── storage/          # 檔案上傳
-│   ├── supabase/         # 資料庫操作
+│   ├── mcp/              # MCP 整合 (4個)
+│   ├── storage/          # 檔案上傳 (Cloudflare R2)
+│   ├── supabase/         # 資料庫操作 (5個)
 │   ├── validation/       # 驗證 schemas
 │   ├── errors.ts
 │   └── rate-limit.ts
 ├── supabase/
-│   └── migrations/       # 資料庫遷移
+│   └── migrations/       # 資料庫遷移 (2個)
 ├── types/
 │   └── index.ts          # TypeScript 類型定義
+├── scripts/              # 工具腳本
 ├── .env.example
 ├── next.config.js
 ├── package.json
@@ -279,17 +316,16 @@ https://github.com/K-Dense-AI/claude-scientific-skills
 
 - 限制：10MB
 - 支援格式：JPEG、PDF、DOCX、TXT
-- 儲存：Supabase Storage
+- 儲存：Cloudflare R2（物件儲存）
+- 圖片處理：自動轉換為 base64 格式傳遞給 AI
 
-## 下一步開發
+## 技術文件
 
-1. 完成對話介面 UI
-2. 實作對話 API 與 MCP 整合
-3. 實作 SSE 串流回應
-4. 添加對話歷史功能
-5. 完善錯誤處理
-6. 添加測試
-7. 優化效能
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 系統架構文件（技術棧、資料流、模組設計等）
+- **[SPECIFICATIONS.md](./SPECIFICATIONS.md)** - 系統規格文件（功能規格、API 規格、資料庫規格等）
+- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - 部署指南（GitHub + Vercel）
+- **[ENV_VARIABLES.md](./ENV_VARIABLES.md)** - 環境變數說明
+- **[IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md)** - 實作完成報告
 
 ## 參考文件
 
