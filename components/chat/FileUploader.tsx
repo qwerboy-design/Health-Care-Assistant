@@ -46,12 +46,12 @@ export function FileUploader({
     // 1. 通知父組件檔案已選取
     onFileSelect?.(file);
 
-    // 2. 開始執行 R2 直接上傳
+    // 2. 開始執行 R2 代理上傳（通過 API 避免 CORS 問題）
     try {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // 2.1 取得 Presigned URL
+      // 2.1 取得上傳授權（upload key 和代理端點 URL）
       // #region agent log
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Before fetch upload-token',data:{fileName:file.name,fileSize:file.size,fileType:file.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
