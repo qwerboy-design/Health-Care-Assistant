@@ -49,7 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body = (await request.json()) as HandleUploadBody;
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/upload/route.ts:POST',message:'Request body parsed',data:{hasBody:!!body,pathname:body?.pathname,contentType:body?.contentType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/upload/route.ts:POST',message:'Request body parsed',data:{hasBody:!!body,bodyKeys:body?Object.keys(body):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
     // #region agent log
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       request,
       onBeforeGenerateToken: async (pathname, clientPayload, multipart) => {
         // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/upload/route.ts:onBeforeGenerateToken',message:'onBeforeGenerateToken called',data:{pathname,hasClientPayload:!!clientPayload,multipartTotalSize:multipart?.totalSize},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/upload/route.ts:onBeforeGenerateToken',message:'onBeforeGenerateToken called',data:{pathname,hasClientPayload:!!clientPayload,isMultipart:typeof multipart==='boolean'?multipart:!!multipart,multipartType:typeof multipart},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
         // #endregion
         // 驗證檔案類型
         const ALLOWED_TYPES = [
@@ -87,8 +87,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // 驗證檔案大小（最大 500MB）
         const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-        if (multipart?.totalSize && multipart.totalSize > MAX_FILE_SIZE) {
-          throw new Error(`檔案大小不能超過 ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+        if (multipart && typeof multipart === 'object' && 'totalSize' in multipart) {
+          const totalSize = (multipart as { totalSize: number }).totalSize;
+          if (totalSize > MAX_FILE_SIZE) {
+            throw new Error(`檔案大小不能超過 ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+          }
         }
 
         // 構建上傳路徑（按用戶 ID 組織）
