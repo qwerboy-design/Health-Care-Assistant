@@ -37,7 +37,51 @@ npm run test:verify
 
 ---
 
-### 2. `test-integration.js` - 整合測試
+### 2. `test-file-upload.js` - 檔案上傳功能測試
+
+測試 Vercel Blob 直傳功能，驗證檔案上傳端點和相關功能。
+
+**執行方式**：
+```bash
+npm run test:upload
+```
+
+**測試項目**：
+- ✅ 環境變數檢查（`BLOB_READ_WRITE_TOKEN`）
+- ✅ `/api/upload` 端點存在性
+- ✅ 未授權訪問保護（401 驗證）
+- ✅ 檔案類型驗證（需要 Session）
+- ✅ 檔案大小驗證（500MB 限制）
+- ✅ `/api/chat` 端點檔案 URL 支援
+
+**前置條件**：
+- 開發伺服器運行中 (`npm run dev`)
+- `BLOB_READ_WRITE_TOKEN` 環境變數已設定
+- （可選）`TEST_SESSION_COOKIE` 環境變數以執行完整測試
+
+**獲取 Session Cookie**：
+1. 在瀏覽器中登入系統
+2. 打開開發者工具 → Application → Cookies
+3. 複製 `session` cookie 的值
+4. 設定環境變數：`TEST_SESSION_COOKIE="session=your-session-token"`
+
+**輸出範例**：
+```
+🚀 開始檔案上傳功能驗證
+✅ 環境變數: BLOB_READ_WRITE_TOKEN: 已設定
+✅ 上傳端點存在: 狀態碼: 401
+✅ 未授權訪問保護: 正確返回 401
+✅ 檔案類型驗證: 正確返回 400
+✅ 超大檔案拒絕: 正確返回 400
+
+📊 測試結果摘要
+✅ 通過: 5
+❌ 失敗: 0
+```
+
+---
+
+### 3. `test-integration.js` - 整合測試
 
 完整的功能流程測試，從註冊到發送訊息的完整流程。
 
@@ -85,6 +129,7 @@ npm run test:integration
 - `SUPABASE_URL` - Supabase 資料庫 URL
 - `SUPABASE_ANON_KEY` - Supabase 匿名金鑰
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase 服務角色金鑰
+- `BLOB_READ_WRITE_TOKEN` - Vercel Blob 讀寫令牌（檔案上傳功能需要）
 - `MCP_SERVER_URL` - MCP Server URL（預設: `https://mcp.k-dense.ai/claude-scientific-skills/mcp`）
 - `MCP_API_KEY` - MCP Server API Key（可選）
 - `RESEND_API_KEY` - Resend Email API Key
@@ -93,6 +138,7 @@ npm run test:integration
 
 **測試專用環境變數**：
 - `TEST_BASE_URL` - 測試基礎 URL（預設: `http://localhost:3000`）
+- `TEST_SESSION_COOKIE` - Session Cookie（格式: `"session=your-token"`，用於需要認證的測試）
 
 ---
 
@@ -124,6 +170,9 @@ npm run test:integration
    ```bash
    # 基礎驗證
    npm run test
+   
+   # 檔案上傳功能測試
+   npm run test:upload
    
    # 整合測試
    npm run test:integration

@@ -58,55 +58,112 @@ export class MCPClient {
       }
 
       // 準備使用者訊息內容
-      // 如果有檔案 URL，需要將圖片加入到訊息中
+      // 如果有檔案 URL，需要根據檔案類型處理
       let userContent: string | Array<any> = request.message;
       
       if (request.fileUrl) {
         try {
-          // 下載圖片並轉換為 base64
-          const imageResponse = await fetch(request.fileUrl);
-          if (imageResponse.ok) {
-            const imageBuffer = await imageResponse.arrayBuffer();
-            const imageBase64 = Buffer.from(imageBuffer).toString('base64');
-            const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+          // 獲取檔案類型（從 URL 或 Content-Type header）
+          const fileUrl = request.fileUrl;
+          const urlLower = fileUrl.toLowerCase();
+          
+          // 判斷是否為支援的圖片格式
+          const isImageFile = urlLower.endsWith('.jpg') || urlLower.endsWith('.jpeg') || 
+                             urlLower.endsWith('.png') || urlLower.endsWith('.gif') || 
+                             urlLower.endsWith('.webp') || urlLower.includes('/image/');
+          
+          // 下載檔案
+          const fileResponse = await fetch(fileUrl);
+          if (fileResponse.ok) {
+            const contentType = fileResponse.headers.get('content-type') || '';
             
-            // 構建包含圖片的訊息內容（符合 Anthropic API 格式）
-            userContent = [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: contentType,
-                  data: imageBase64,
+            // 只有當檔案是支援的圖片格式時，才作為 base64 圖片處理
+            const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            const isSupportedImage = isImageFile && supportedImageTypes.some(type => contentType.includes(type));
+            
+            if (isSupportedImage) {
+              // 處理圖片：轉換為 base64
+              const imageBuffer = await fileResponse.arrayBuffer();
+              const imageBase64 = Buffer.from(imageBuffer).toString('base64');
+              
+              // 確保 media_type 是支援的格式
+              let mediaType = contentType;
+              if (contentType.includes('image/jpg')) {
+                mediaType = 'image/jpeg';
+              } else if (!supportedImageTypes.includes(mediaType)) {
+                // 如果 contentType 不在支援列表中，根據 URL 判斷
+                if (urlLower.endsWith('.png')) mediaType = 'image/png';
+                else if (urlLower.endsWith('.gif')) mediaType = 'image/gif';
+                else if (urlLower.endsWith('.webp')) mediaType = 'image/webp';
+                else mediaType = 'image/jpeg'; // 預設
+              }
+              
+              // 構建包含圖片的訊息內容（符合 Anthropic API 格式）
+              userContent = [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: mediaType,
+                    data: imageBase64,
+                  },
                 },
-              },
-              {
-                type: 'text',
-                text: request.message || '請分析這張圖片',
-              },
-            ];
-            
-            console.log('[MCP Client] 已將圖片加入到訊息中:', {
-              fileUrl: request.fileUrl,
-              contentType,
-              imageSize: imageBuffer.byteLength,
-            });
+                {
+                  type: 'text',
+                  text: request.message || '請分析這張圖片',
+                },
+              ];
+              
+              // #region agent log
+              fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage',message:'Image file processed as base64',data:{fileUrl,contentType,mediaType,imageSize:imageBuffer.byteLength},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+              // #endregion
+              
+              console.log('[MCP Client] 已將圖片加入到訊息中:', {
+                fileUrl,
+                contentType,
+                mediaType,
+                imageSize: imageBuffer.byteLength,
+              });
+            } else {
+              // 處理非圖片檔案（PDF 等）：將 URL 作為文字引用
+              const fileType = contentType || '檔案';
+              const fileName = request.fileUrl.split('/').pop() || '檔案';
+              
+              // #region agent log
+              fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage',message:'Non-image file processed as URL reference',data:{fileUrl,contentType,fileType,fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+              // #endregion
+              
+              // 將檔案 URL 加入到文字訊息中
+              userContent = request.message 
+                ? `${request.message}\n\n[已上傳${fileType.includes('pdf') ? 'PDF' : '檔案'}: ${fileName}]\n檔案連結: ${fileUrl}\n\n請根據此檔案內容進行分析。`
+                : `請分析這個${fileType.includes('pdf') ? 'PDF' : '檔案'}: ${fileName}\n檔案連結: ${fileUrl}`;
+              
+              console.log('[MCP Client] 已將檔案 URL 加入到訊息中:', {
+                fileUrl,
+                contentType,
+                fileType,
+                fileName,
+              });
+            }
           } else {
-            console.warn('[MCP Client] 無法下載圖片:', {
-              fileUrl: request.fileUrl,
-              status: imageResponse.status,
+            console.warn('[MCP Client] 無法下載檔案:', {
+              fileUrl,
+              status: fileResponse.status,
             });
-            // 如果無法下載圖片，至少將 URL 加入到文字訊息中
+            // 如果無法下載檔案，至少將 URL 加入到文字訊息中
             userContent = request.message 
-              ? `${request.message}\n\n[圖片連結: ${request.fileUrl}]`
-              : `請分析這張圖片: ${request.fileUrl}`;
+              ? `${request.message}\n\n[檔案連結: ${fileUrl}]`
+              : `請分析這個檔案: ${fileUrl}`;
           }
         } catch (error: any) {
-          console.error('[MCP Client] 處理圖片時發生錯誤:', error.message);
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/mcp/client.ts:sendMessage',message:'Error processing file',data:{fileUrl:request.fileUrl,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+          // #endregion
+          console.error('[MCP Client] 處理檔案時發生錯誤:', error.message);
           // 如果處理失敗，至少將 URL 加入到文字訊息中
           userContent = request.message 
-            ? `${request.message}\n\n[圖片連結: ${request.fileUrl}]`
-            : `請分析這張圖片: ${request.fileUrl}`;
+            ? `${request.message}\n\n[檔案連結: ${request.fileUrl}]`
+            : `請分析這個檔案: ${request.fileUrl}`;
         }
       }
 

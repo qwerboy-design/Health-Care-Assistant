@@ -72,79 +72,59 @@ export default function ChatPage() {
     options: {
       workloadLevel: 'instant' | 'basic' | 'standard' | 'professional';
       selectedFunction?: string;
-      file?: File;
+      fileUrl?: string;
+      fileName?: string;
+      fileType?: string;
     }
   ) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'handleSend called',data:{hasMessage:!!message,hasFileUrl:!!options.fileUrl,fileName:options.fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+
     // 添加使用者訊息到 UI
     const userMessage: Message = {
       role: 'user',
       content: message,
-      fileName: options.file?.name,
+      fileName: options.fileName,
+      fileUrl: options.fileUrl,
       createdAt: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // 準備 FormData
-      const formData = new FormData();
-      formData.append('message', message);
-      formData.append('workloadLevel', options.workloadLevel);
-      if (options.selectedFunction) {
-        formData.append('selectedFunction', options.selectedFunction);
-      }
-      if (conversationId) {
-        formData.append('conversationId', conversationId);
-      }
-      if (options.file) {
-        // #region agent log
-        const logDataFile = {
-          location: 'app/(main)/chat/page.tsx:handleSend',
-          message: 'Appending file to FormData',
-          data: { fileName: options.file.name, fileSize: options.file.size, fileType: options.file.type, isFileInstance: options.file instanceof File },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'B'
-        };
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFile) }).catch(() => {});
-        // #endregion
-        formData.append('file', options.file);
-      }
+      // 準備 JSON 請求體（不帶檔案，只有元數據）
+      const requestBody = {
+        message,
+        workloadLevel: options.workloadLevel,
+        selectedFunction: options.selectedFunction,
+        conversationId: conversationId,
+        fileUrl: options.fileUrl,
+        fileName: options.fileName,
+        fileType: options.fileType,
+      };
 
       // #region agent log
-      const logDataBeforeFetch = {
-        location: 'app/(main)/chat/page.tsx:handleSend',
-        message: 'Before fetch POST /api/chat',
-        data: { hasFile: !!options.file, fileName: options.file?.name, messageLength: message.length, hasConversationId: !!conversationId },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B'
-      };
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBeforeFetch) }).catch(() => {});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Before fetch /api/chat',data:{requestBody},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
 
-      // 發送請求
+      // 發送請求（只傳送元數據，檔案已直傳到 Vercel Blob）
       const res = await fetch('/api/chat', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
       // #region agent log
-      const logDataAfterFetch = {
-        location: 'app/(main)/chat/page.tsx:handleSend',
-        message: 'After fetch POST /api/chat',
-        data: { status: res.status, statusText: res.statusText, ok: res.ok },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'B'
-      };
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterFetch) }).catch(() => {});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'After fetch /api/chat',data:{status:res.status,ok:res.ok,statusText:res.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
 
       const data = await res.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Response parsed',data:{success:data.success,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
 
       if (data.success) {
         // 更新對話 ID（如果是新對話）
@@ -171,7 +151,10 @@ export default function ChatPage() {
         // 移除剛才添加的使用者訊息
         setMessages((prev) => prev.slice(0, -1));
       }
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Error caught in handleSend',data:{errorMessage:error?.message,errorName:error?.name,errorString:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+      // #endregion
       console.error('發送訊息錯誤:', error);
       alert('網路錯誤，請稍後再試');
       setMessages((prev) => prev.slice(0, -1));

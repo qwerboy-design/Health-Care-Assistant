@@ -3,151 +3,83 @@ import { verifySession } from '@/lib/auth/session';
 import { createConversation, getConversationById } from '@/lib/supabase/conversations';
 import { createMessage, getMessagesByConversationId } from '@/lib/supabase/messages';
 import { createMCPClient } from '@/lib/mcp/client';
-import { uploadFile } from '@/lib/storage/upload';
 import { chatMessageSchema } from '@/lib/validation/schemas';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
 /**
- * POST /api/chat - 發送訊息並取得 AI 回應
+ * POST /api/chat - 處理聊天訊息
+ * 檔案上傳已改為直傳方式，使用 /api/upload 端點
  */
 export async function POST(request: NextRequest) {
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:POST',message:'Chat API POST endpoint called',data:{method:request.method,url:request.url,hasCookie:!!request.headers.get('cookie')},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
+
+  return handleChatMessage(request);
+}
+
+async function handleChatMessage(request: NextRequest) {
   try {
     // 驗證 Session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
     
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session check',data:{hasSessionToken:!!sessionToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
     if (!sessionToken) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'No session token',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
 
     const session = await verifySession(sessionToken);
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session verification result',data:{sessionValid:!!session,customerId:session?.customerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
     if (!session) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session invalid',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
 
-    // 檢查 Content-Length（如果可用）以提前拒絕過大請求
+    // 檢查 Content-Length
     const contentLength = request.headers.get('content-length');
-    const MAX_REQUEST_SIZE = 4.5 * 1024 * 1024; // 4.5MB (Vercel limit)
+    const MAX_REQUEST_SIZE = 10 * 1024; // 10KB (只傳メタデータ)
     if (contentLength && parseInt(contentLength) > MAX_REQUEST_SIZE) {
-      // #region agent log
-      const logDataSizeCheck = {
-        location: 'app/api/chat/route.ts:POST',
-        message: 'Request too large - rejected before parsing',
-        data: { contentLength: parseInt(contentLength), maxSize: MAX_REQUEST_SIZE },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'post-fix',
-        hypothesisId: 'F'
-      };
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataSizeCheck) }).catch(() => {});
-      // #endregion
-      return errorResponse('請求大小超過 4.5MB 限制（Vercel 平台限制）', 413);
+      return errorResponse('請求大小過大', 413);
     }
 
     // 解析請求
-    const formData = await request.formData();
+    const body = await request.json();
     // #region agent log
-    const logDataFormData = {
-      location: 'app/api/chat/route.ts:POST',
-      message: 'FormData parsed',
-      data: { formDataKeys: Array.from(formData.keys()), hasFile: formData.has('file'), contentLength },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'post-fix',
-      hypothesisId: 'B'
-    };
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFormData) }).catch(() => {});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Request body parsed',data:{hasMessage:!!body.message,hasFileUrl:!!body.fileUrl,fileName:body.fileName,hasConversationId:!!body.conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
-    const message = formData.get('message') as string;
-    const workloadLevel = formData.get('workloadLevel') as string;
-    const selectedFunction = formData.get('selectedFunction') as string | null;
-    const conversationId = formData.get('conversationId') as string | null;
-    const file = formData.get('file') as File | null;
-    
-    // #region agent log
-    const logDataFile = {
-      location: 'app/api/chat/route.ts:POST',
-      message: 'File extracted from FormData',
-      data: { 
-        hasFile: !!file, 
-        fileName: file?.name || null, 
-        fileSize: file?.size || null, 
-        fileType: file?.type || null,
-        isFileInstance: file instanceof File,
-        fileConstructor: file?.constructor?.name || null,
-        exceedsVercelLimit: file ? file.size > MAX_REQUEST_SIZE : false
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'post-fix',
-      hypothesisId: 'B'
-    };
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataFile) }).catch(() => {});
-    // #endregion
+
+    const {
+      message,
+      workloadLevel,
+      selectedFunction,
+      conversationId,
+      fileUrl,      // 已上傳到 Vercel Blob 的 URL
+      fileName,
+      fileType,
+    } = body;
 
     // 驗證基本欄位
-    if (!message?.trim() && !file) {
+    if (!message?.trim() && !fileUrl) {
       return errorResponse('訊息內容或檔案至少需要一個', 400);
-    }
-
-    // 上傳檔案（如果有）
-    let fileUrl: string | undefined;
-    let fileName: string | undefined;
-    let fileType: string | undefined;
-
-    if (file && file.size > 0) {
-      // #region agent log
-      const logDataBeforeUpload = {
-        location: 'app/api/chat/route.ts:POST',
-        message: 'Before uploadFile call',
-        data: { fileName: file.name, fileSize: file.size, fileType: file.type, customerId: session.customerId },
-        timestamp: Date.now(),
-        sessionId: 'debug-session',
-        runId: 'run1',
-        hypothesisId: 'E'
-      };
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataBeforeUpload) }).catch(() => {});
-      // #endregion
-      try {
-        const uploadResult = await uploadFile(file, session.customerId);
-        // #region agent log
-        const logDataAfterUpload = {
-          location: 'app/api/chat/route.ts:POST',
-          message: 'After uploadFile success',
-          data: { url: uploadResult.url, fileName: uploadResult.fileName, fileType: uploadResult.fileType, fileSize: uploadResult.fileSize },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'E'
-        };
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataAfterUpload) }).catch(() => {});
-        // #endregion
-        fileUrl = uploadResult.url;
-        fileName = uploadResult.fileName;
-        fileType = uploadResult.fileType;
-      } catch (error: any) {
-        // #region agent log
-        const logDataUploadError = {
-          location: 'app/api/chat/route.ts:POST',
-          message: 'uploadFile error caught',
-          data: { errorMessage: error?.message, errorName: error?.name, errorStack: error?.stack?.substring(0, 300), fileName: file.name, fileType: file.type },
-          timestamp: Date.now(),
-          sessionId: 'debug-session',
-          runId: 'run1',
-          hypothesisId: 'E'
-        };
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logDataUploadError) }).catch(() => {});
-        // #endregion
-        return errorResponse(error.message || '檔案上傳失敗', 400);
-      }
     }
 
     // 獲取或建立對話
     let currentConversationId = conversationId;
     
     if (!currentConversationId) {
-      // 建立新對話
       const title = message?.substring(0, 50) || '新對話';
       const conversation = await createConversation(
         session.customerId,
@@ -157,24 +89,24 @@ export async function POST(request: NextRequest) {
       );
       currentConversationId = conversation.id;
     } else {
-      // 驗證對話屬於當前用戶
+      // 驗證對話屬於當前使用者
       const conversation = await getConversationById(currentConversationId);
       if (!conversation || conversation.customer_id !== session.customerId) {
         return errorResponse('對話不存在或無權限', 403);
       }
     }
 
-    // 儲存使用者訊息
+    // 儲存使用者訊息（包含檔案 URL）
     await createMessage(
       currentConversationId,
       'user',
       message || `已上傳檔案: ${fileName}`,
-      fileUrl,
+      fileUrl,      // Vercel Blob URL
       fileName,
       fileType
     );
 
-    // 獲取對話歷史（用於上下文）
+    // 獲取對話歷史
     const historyMessages = await getMessagesByConversationId(currentConversationId, 20);
     const conversationHistory = historyMessages.map(msg => ({
       role: msg.role,
@@ -183,21 +115,20 @@ export async function POST(request: NextRequest) {
 
     // 呼叫 MCP Client 取得 AI 回應
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:96',message:'Before createMCPClient',data:{hasMessage:!!message,workloadLevel,selectedFunction},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Before MCP client call',data:{hasFileUrl:!!fileUrl,fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
+
     const mcpClient = createMCPClient();
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:98',message:'Before mcpClient.sendMessage',data:{hasMessage:!!message,hasFileUrl:!!fileUrl,historyLength:conversationHistory.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     const mcpResponse = await mcpClient.sendMessage({
       message: message || `請分析這個檔案: ${fileName}`,
       workloadLevel: workloadLevel as 'instant' | 'basic' | 'standard' | 'professional',
       selectedFunction: selectedFunction as 'lab' | 'radiology' | 'medical_record' | 'medication' | undefined,
-      fileUrl,
+      fileUrl,      // 傳給 MCP 用的 Blob URL
       conversationHistory,
     });
+
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:106',message:'After mcpClient.sendMessage',data:{hasContent:!!mcpResponse.content,hasSkillsUsed:!!mcpResponse.skillsUsed},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'MCP response received',data:{hasContent:!!mcpResponse.content,contentLength:mcpResponse.content?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
     // 儲存 AI 回應
@@ -210,6 +141,10 @@ export async function POST(request: NextRequest) {
       undefined
     );
 
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Returning success response',data:{conversationId:currentConversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
     return successResponse({
       conversationId: currentConversationId,
       message: {
@@ -218,9 +153,10 @@ export async function POST(request: NextRequest) {
       },
       skillsUsed: mcpResponse.skillsUsed,
     });
+
   } catch (error: any) {
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:125',message:'Chat API error caught',data:{errorName:error?.name,errorMessage:error?.message,errorStack:error?.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Error caught in handleChatMessage',data:{errorMessage:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
     console.error('對話 API 錯誤:', error);
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
@@ -232,9 +168,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:145',message:'GET /api/chat entry',data:{requestUrl:request.url,hasUrl:!!request.url},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // 驗證 Session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
@@ -249,22 +182,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:160',message:'Before extracting conversationId',data:{requestUrl:request.url,searchParamsKeys:Array.from(searchParams.keys()),searchParamsString:searchParams.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
     const conversationId = searchParams.get('conversationId');
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:161',message:'After extracting conversationId',data:{conversationId,hasConversationId:!!conversationId,conversationIdLength:conversationId?.length,allParams:Object.fromEntries(searchParams)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     if (!conversationId) {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:163',message:'Missing conversationId error',data:{requestUrl:request.url,searchParamsString:searchParams.toString(),allParams:Object.fromEntries(searchParams)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       return errorResponse('缺少 conversationId 參數', 400);
     }
 
-    // 驗證對話屬於當前用戶
+    // 驗證對話屬於當前使用者
     const conversation = await getConversationById(conversationId);
     if (!conversation || conversation.customer_id !== session.customerId) {
       return errorResponse('對話不存在或無權限', 403);
@@ -277,6 +201,7 @@ export async function GET(request: NextRequest) {
       conversation,
       messages,
     });
+
   } catch (error) {
     console.error('獲取對話錯誤:', error);
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
