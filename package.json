@@ -12,6 +12,7 @@
     "test:upload": "node scripts/test-file-upload.js",
     "test:integration": "node scripts/test-integration.js",
     "test:mcp": "node scripts/test-mcp-client.js",
+    "test:vercel": "node scripts/verify-vercel-deployment.js",
     "check:env": "node scripts/check-env-safety.js"
   },
   "dependencies": {
