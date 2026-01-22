@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
+import { Download } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -18,6 +19,7 @@ export default function ChatPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isSavingLog, setIsSavingLog] = useState(false);
 
   // 檢查是否需要顯示 Onboarding
   useEffect(() => {
@@ -163,17 +165,75 @@ export default function ChatPage() {
     }
   };
 
+  const handleDownloadLog = async () => {
+    if (!conversationId) {
+      alert('請先開始對話');
+      return;
+    }
+
+    setIsSavingLog(true);
+    try {
+      const res = await fetch('/api/chat/save-log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId,
+          serialNumber: 1,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Download the file
+        const downloadUrl = data.data.url;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = data.data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert('對話記錄已下載');
+      } else {
+        alert(data.error || '下載失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('下載日誌錯誤:', error);
+      alert('網路錯誤，請稍後再試');
+    } finally {
+      setIsSavingLog(false);
+    }
+  };
+
   return (
     <>
       {showOnboarding && (
         <OnboardingModal onClose={() => setShowOnboarding(false)} />
       )}
-      <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto">
-        <ChatWindow
-          messages={messages}
-          isLoading={isLoading}
-          onSend={handleSend}
-        />
+      <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
+        {/* Header with download button */}
+        <div className="flex justify-between items-center p-4 border-b">
+          <h1 className="text-xl font-semibold">對話</h1>
+          <button
+            onClick={handleDownloadLog}
+            disabled={isSavingLog || !conversationId}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            <Download size={18} />
+            {isSavingLog ? '保存中...' : '下載記錄'}
+          </button>
+        </div>
+
+        {/* Chat window */}
+        <div className="flex-1 overflow-hidden">
+          <ChatWindow
+            messages={messages}
+            isLoading={isLoading}
+            onSend={handleSend}
+          />
+        </div>
       </div>
     </>
   );

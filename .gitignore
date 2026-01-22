@@ -52,5 +52,6 @@ supabase/PW.txt
 
 # 臨時檔案
 tmp_*
+tmpclaude-*
 *.tmp
 test-api-key.*
