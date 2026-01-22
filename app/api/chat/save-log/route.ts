@@ -10,6 +10,7 @@ import { cookies } from 'next/headers';
  * POST /api/chat/save-log - Save conversation log to R2
  */
 export async function POST(request: NextRequest) {
+  let conversationId: string | undefined;
   try {
     // Verify session
     const cookieStore = await cookies();
@@ -26,7 +27,8 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { conversationId, serialNumber = 1 } = body;
+    conversationId = body.conversationId;
+    const serialNumber = body.serialNumber || 1;
 
     if (!conversationId) {
       return errorResponse('缺少 conversationId 參數', 400);
@@ -47,16 +49,27 @@ export async function POST(request: NextRequest) {
     const storagePath = generateLogStoragePath(session.customerId, filename);
 
     // Upload to R2
+    console.log(`[save-log] 開始上傳對話記錄: conversationId=${conversationId}, path=${storagePath}`);
     const r2Url = await uploadToR2(storagePath, markdownContent);
+    console.log(`[save-log] 上傳成功: url=${r2Url}, filename=${filename}`);
 
     return successResponse({
       filename,
       url: r2Url,
       storagePath,
+      messageCount: messages.length,
+      uploadedAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('保存日誌錯誤:', error);
-    return errorResponse(Errors.INTERNAL_ERROR.message, 500);
+    console.error('[save-log] 保存日誌錯誤:', {
+      error: error.message,
+      stack: error.stack,
+      conversationId: conversationId || 'unknown',
+    });
+    return errorResponse(
+      error.message || Errors.INTERNAL_ERROR.message,
+      500
+    );
   }
 }
 
@@ -90,8 +103,22 @@ async function uploadToR2(path: string, content: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`R2 upload failed: ${response.statusText}`);
+    const errorText = await response.text().catch(() => 'Unknown error');
+    console.error(`[save-log] R2 上傳失敗:`, {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorText,
+      path,
+      contentLength: content.length,
+    });
+    throw new Error(`R2 upload failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
+
+  console.log(`[save-log] R2 上傳成功:`, {
+    path,
+    status: response.status,
+    contentLength: content.length,
+  });
 
   // Return public URL
   return `${publicUrl}/${path}`;

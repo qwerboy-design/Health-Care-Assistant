@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { Download } from 'lucide-react';
@@ -20,6 +20,11 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isSavingLog, setIsSavingLog] = useState(false);
+  
+  // 追蹤已自動上傳的對話輪次，避免重複上傳
+  const autoUploadedRounds = useRef<Set<string>>(new Set());
+  const uploadSerialNumber = useRef<number>(1);
+  const conversationRoundCounter = useRef<number>(0);
 
   // 檢查是否需要顯示 Onboarding
   useEffect(() => {
@@ -63,6 +68,10 @@ export default function ChatPage() {
           }))
         );
         setConversationId(id);
+        // 載入對話時重置上傳追蹤
+        autoUploadedRounds.current.clear();
+        uploadSerialNumber.current = 1;
+        conversationRoundCounter.current = 0;
       }
     } catch (error) {
       console.error('載入對話錯誤:', error);
@@ -130,6 +139,7 @@ export default function ChatPage() {
 
       if (data.success) {
         // 更新對話 ID（如果是新對話）
+        const finalConversationId = conversationId || data.data.conversationId;
         if (!conversationId) {
           setConversationId(data.data.conversationId);
           // 更新 URL（不重新載入頁面）
@@ -138,6 +148,10 @@ export default function ChatPage() {
             '',
             `/chat?conversationId=${data.data.conversationId}`
           );
+          // 新對話時重置上傳追蹤
+          autoUploadedRounds.current.clear();
+          uploadSerialNumber.current = 1;
+          conversationRoundCounter.current = 0;
         }
 
         // 添加 AI 回應
@@ -147,6 +161,16 @@ export default function ChatPage() {
           createdAt: new Date(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
+
+        // 對話結束後自動上傳記錄
+        // 使用輪次計數器作為唯一標識，避免重複上傳
+        conversationRoundCounter.current += 1;
+        const roundKey = `${finalConversationId}-${conversationRoundCounter.current}`;
+        
+        // 延遲執行以確保訊息已保存到資料庫
+        setTimeout(() => {
+          autoSaveLog(finalConversationId, roundKey);
+        }, 500);
       } else {
         // 錯誤處理
         alert(data.error || '發送失敗，請稍後再試');
@@ -165,6 +189,63 @@ export default function ChatPage() {
     }
   };
 
+  /**
+   * 自動上傳對話記錄（靜默執行，不顯示提示）
+   */
+  const autoSaveLog = async (currentConversationId: string, roundKey: string) => {
+    // 檢查是否已經上傳過這一輪
+    if (autoUploadedRounds.current.has(roundKey)) {
+      console.log('[auto-save-log] 已上傳過，跳過:', roundKey);
+      return;
+    }
+
+    try {
+      console.log('[auto-save-log] 開始自動上傳對話記錄:', {
+        conversationId: currentConversationId,
+        roundKey,
+        serialNumber: uploadSerialNumber.current,
+      });
+
+      const res = await fetch('/api/chat/save-log', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: currentConversationId,
+          serialNumber: uploadSerialNumber.current,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // 標記為已上傳
+        autoUploadedRounds.current.add(roundKey);
+        uploadSerialNumber.current += 1;
+        
+        console.log('[auto-save-log] 自動上傳成功:', {
+          filename: data.data.filename,
+          url: data.data.url,
+          messageCount: data.data.messageCount,
+          roundKey,
+        });
+      } else {
+        console.error('[auto-save-log] 自動上傳失敗:', data.error);
+        // 靜默失敗，不影響用戶體驗
+      }
+    } catch (error: any) {
+      console.error('[auto-save-log] 自動上傳錯誤:', {
+        error: error.message,
+        roundKey,
+      });
+      // 靜默失敗，不影響用戶體驗
+    }
+  };
+
+  /**
+   * 手動下載對話記錄（顯示提示）
+   */
   const handleDownloadLog = async () => {
     if (!conversationId) {
       alert('請先開始對話');
@@ -180,7 +261,7 @@ export default function ChatPage() {
         },
         body: JSON.stringify({
           conversationId,
-          serialNumber: 1,
+          serialNumber: uploadSerialNumber.current,
         }),
       });
 
@@ -189,19 +270,45 @@ export default function ChatPage() {
       if (data.success) {
         // Download the file
         const downloadUrl = data.data.url;
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = data.data.filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        alert('對話記錄已下載');
+        const filename = data.data.filename;
+        const messageCount = data.data.messageCount || 0;
+        
+        console.log('[save-log] 上傳成功:', {
+          filename,
+          url: downloadUrl,
+          storagePath: data.data.storagePath,
+          messageCount,
+        });
+
+        // 更新序列號
+        uploadSerialNumber.current += 1;
+
+        // 嘗試下載檔案
+        try {
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // 顯示成功訊息，包含檔案資訊
+          alert(`對話記錄已成功上傳並下載！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n檔案已保存至 R2 儲存空間。`);
+        } catch (downloadError) {
+          console.error('[save-log] 下載失敗:', downloadError);
+          // 即使下載失敗，檔案已成功上傳到 R2
+          alert(`對話記錄已成功上傳至 R2！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n下載連結: ${downloadUrl}\n\n（瀏覽器下載失敗，但檔案已成功保存）`);
+        }
       } else {
-        alert(data.error || '下載失敗，請稍後再試');
+        console.error('[save-log] API 返回錯誤:', data);
+        alert(`上傳失敗: ${data.error || '未知錯誤，請稍後再試'}`);
       }
-    } catch (error) {
-      console.error('下載日誌錯誤:', error);
-      alert('網路錯誤，請稍後再試');
+    } catch (error: any) {
+      console.error('[save-log] 網路錯誤:', {
+        error: error.message,
+        stack: error.stack,
+      });
+      alert(`網路錯誤: ${error.message || '請檢查網路連線後再試'}`);
     } finally {
       setIsSavingLog(false);
     }
