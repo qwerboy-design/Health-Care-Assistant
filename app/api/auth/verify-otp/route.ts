@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { otpSchema } from '@/lib/validation/schemas';
 import { findCustomerByEmail, updateLastLogin } from '@/lib/supabase/customers';
+import { getCustomerCredits } from '@/lib/supabase/credits';
 import { verifyOTPToken, markOTPTokenAsUsed } from '@/lib/supabase/otp';
 import { createSession } from '@/lib/auth/session';
 import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
@@ -70,11 +71,21 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
+    // 查詢用戶 Credits
+    let credits = 0;
+    try {
+      credits = await getCustomerCredits(customer.id);
+    } catch (error) {
+      console.error('查詢 Credits 失敗:', error);
+      // 即使查詢失敗，仍然允許登入，Credits 預設為 0
+    }
+
     return successResponse(
       {
         customerId: customer.id,
         email: customer.email,
         name: customer.name,
+        credits,
       },
       '驗證成功'
     );

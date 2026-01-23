@@ -39,6 +39,7 @@ export const chatMessageSchema = z.object({
   file_url: z.string().url('無效的檔案 URL').optional(),
   file_name: z.string().optional(),
   file_type: z.string().optional(),
+  modelName: z.string().optional(), // 新增：模型名稱（可選，有預設值）
 });
 
 // 建立對話 Schema

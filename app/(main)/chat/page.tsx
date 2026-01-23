@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
+import { CreditsDisplay } from '@/components/chat/CreditsDisplay';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { Download } from 'lucide-react';
 
@@ -20,7 +21,8 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isSavingLog, setIsSavingLog] = useState(false);
-  
+  const [userCredits, setUserCredits] = useState<number>(0);
+
   // 追蹤已自動上傳的對話輪次，避免重複上傳
   const autoUploadedRounds = useRef<Set<string>>(new Set());
   const uploadSerialNumber = useRef<number>(1);
@@ -86,6 +88,7 @@ export default function ChatPage() {
       fileUrl?: string;
       fileName?: string;
       fileType?: string;
+      modelName?: string;
     }
   ) => {
     // #region agent log
@@ -113,6 +116,7 @@ export default function ChatPage() {
         fileUrl: options.fileUrl,
         fileName: options.fileName,
         fileType: options.fileType,
+        modelName: options.modelName,
       };
 
       // #region agent log
@@ -152,6 +156,11 @@ export default function ChatPage() {
           autoUploadedRounds.current.clear();
           uploadSerialNumber.current = 1;
           conversationRoundCounter.current = 0;
+        }
+
+        // 更新 Credits（如果 API 返回了）
+        if (typeof data.data.creditsAfter === 'number') {
+          setUserCredits(data.data.creditsAfter);
         }
 
         // 添加 AI 回應
@@ -320,17 +329,23 @@ export default function ChatPage() {
         <OnboardingModal onClose={() => setShowOnboarding(false)} />
       )}
       <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
-        {/* Header with download button */}
+        {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b">
           <h1 className="text-xl font-semibold">對話</h1>
-          <button
-            onClick={handleDownloadLog}
-            disabled={isSavingLog || !conversationId}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            <Download size={18} />
-            {isSavingLog ? '保存中...' : '下載記錄'}
-          </button>
+          <div className="flex items-center gap-4">
+            <CreditsDisplay
+              initialCredits={userCredits}
+              onCreditsUpdate={setUserCredits}
+            />
+            <button
+              onClick={handleDownloadLog}
+              disabled={isSavingLog || !conversationId}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              <Download size={18} />
+              {isSavingLog ? '保存中...' : '下載記錄'}
+            </button>
+          </div>
         </div>
 
         {/* Chat window */}
@@ -339,6 +354,7 @@ export default function ChatPage() {
             messages={messages}
             isLoading={isLoading}
             onSend={handleSend}
+            userCredits={userCredits}
           />
         </div>
       </div>

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
 import { createConversation, getConversationById } from '@/lib/supabase/conversations';
 import { createMessage, getMessagesByConversationId } from '@/lib/supabase/messages';
+import { getCustomerCredits, deductCredits } from '@/lib/supabase/credits';
+import { getModelPricing } from '@/lib/supabase/model-pricing';
 import { createMCPClient } from '@/lib/mcp/client';
 import { chatMessageSchema } from '@/lib/validation/schemas';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
@@ -69,6 +71,7 @@ async function handleChatMessage(request: NextRequest) {
       fileUrl,      // 已上傳到 Vercel Blob 的 URL
       fileName,
       fileType,
+      modelName,    // 新增：模型名稱
     } = body;
 
     // 驗證基本欄位
@@ -76,16 +79,35 @@ async function handleChatMessage(request: NextRequest) {
       return errorResponse('訊息內容或檔案至少需要一個', 400);
     }
 
+    // 設定預設模型（如果未提供）
+    const selectedModel = modelName || 'claude-sonnet-4-20250514';
+
+    // 檢查模型是否存在
+    const modelPricing = await getModelPricing(selectedModel);
+    if (!modelPricing) {
+      return errorResponse('模型不存在或未啟用', 400);
+    }
+
+    // 檢查用戶 Credits 是否足夠
+    const currentCredits = await getCustomerCredits(session.customerId);
+    if (currentCredits < modelPricing.credits_cost) {
+      return errorResponse(
+        `Credits 不足。當前 Credits: ${currentCredits}，需要: ${modelPricing.credits_cost}`,
+        400
+      );
+    }
+
     // 獲取或建立對話
     let currentConversationId = conversationId;
-    
+
     if (!currentConversationId) {
       const title = message?.substring(0, 50) || '新對話';
       const conversation = await createConversation(
         session.customerId,
         title,
         workloadLevel as 'instant' | 'basic' | 'standard' | 'professional',
-        selectedFunction || undefined
+        selectedFunction || undefined,
+        selectedModel
       );
       currentConversationId = conversation.id;
     } else {
@@ -94,6 +116,18 @@ async function handleChatMessage(request: NextRequest) {
       if (!conversation || conversation.customer_id !== session.customerId) {
         return errorResponse('對話不存在或無權限', 403);
       }
+    }
+
+    // 扣除 Credits
+    const deductResult = await deductCredits(
+      session.customerId,
+      modelPricing.credits_cost,
+      selectedModel,
+      currentConversationId
+    );
+
+    if (!deductResult.success) {
+      return errorResponse(deductResult.error || 'Credits 扣除失敗', 400);
     }
 
     // 儲存使用者訊息（包含檔案 URL）
@@ -125,6 +159,7 @@ async function handleChatMessage(request: NextRequest) {
       selectedFunction: selectedFunction as 'lab' | 'radiology' | 'medical_record' | 'medication' | undefined,
       fileUrl,      // 傳給 MCP 用的 Blob URL
       conversationHistory,
+      modelName: selectedModel,  // 新增：傳入模型名稱
     });
 
     // #region agent log
@@ -152,6 +187,7 @@ async function handleChatMessage(request: NextRequest) {
         content: mcpResponse.content,
       },
       skillsUsed: mcpResponse.skillsUsed,
+      creditsAfter: deductResult.creditsAfter,  // 新增：返回更新後的 Credits
     });
 
   } catch (error: any) {

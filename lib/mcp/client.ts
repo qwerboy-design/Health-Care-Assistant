@@ -174,10 +174,8 @@ export class MCPClient {
       ];
 
       // 構建 Anthropic API 請求
-      // 使用 Claude 3 Haiku 作為預設模型（穩定且廣泛支援）
-      // 可以通過環境變數 ANTHROPIC_MODEL 自訂模型
-      // 注意：如果您的帳戶支援更高級模型，可設定為 'claude-3-5-sonnet-20241022'
-      const modelToUse = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+      // 優先順序：request.modelName > 環境變數 ANTHROPIC_MODEL > 預設模型
+      const modelToUse = request.modelName || process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
       const apiRequest = {
         model: modelToUse,
         max_tokens: 4096,
@@ -375,7 +373,7 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307',
+          model: request.modelName || process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages,

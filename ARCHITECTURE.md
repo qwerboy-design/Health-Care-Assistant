@@ -1,7 +1,7 @@
 # 🏗️ 系統架構文件
 
-> 最後更新：2026-01-19  
-> 版本：v1.1.0
+> 最後更新：2026-01-23  
+> 版本：v1.2.0
 
 ## 📋 目錄
 
@@ -14,6 +14,7 @@
 7. [API 架構](#api-架構)
 8. [安全性架構](#安全性架構)
 9. [部署架構](#部署架構)
+10. [Credits 系統與模型管理](#credits-系統與模型管理)
 
 ---
 
@@ -30,6 +31,8 @@
 - ✅ **功能選擇**：檢驗/放射/病歷/藥物
 - ✅ **對話歷史管理**：完整的對話記錄與查詢
 - ✅ **管理員系統**：帳號審核與管理功能
+- ✅ **Credits 系統**：點數管理、消費記錄、餘額查詢
+- ✅ **多模型支援**：支援多種 AI 模型選擇與定價管理
 
 ---
 
@@ -69,6 +72,8 @@
 | **Zod** | 資料驗證 |
 | **ESLint** | 程式碼檢查 |
 | **TypeScript** | 類型檢查 |
+| **Vitest** | 單元測試與整合測試 |
+| **@testing-library/react** | React 元件測試 |
 
 ---
 
@@ -101,6 +106,8 @@ flowchart TB
             MCPLib[MCP 整合<br/>lib/mcp]
             StorageLib[儲存模組<br/>lib/storage]
             ValidationLib[驗證模組<br/>lib/validation]
+            CreditsLib[Credits 模組<br/>lib/supabase/credits]
+            ModelPricingLib[模型定價模組<br/>lib/supabase/model-pricing]
         end
     end
     
@@ -123,8 +130,12 @@ flowchart TB
     AuthAPI --> AuthLib
     ChatAPI --> MCPLib
     ChatAPI --> StorageLib
+    ChatAPI --> CreditsLib
+    ChatAPI --> ModelPricingLib
     
     AuthLib --> Supabase
+    CreditsLib --> Supabase
+    ModelPricingLib --> Supabase
     AuthLib --> Google
     AuthLib --> Resend
     
@@ -160,6 +171,8 @@ graph LR
         L4[儲存服務<br/>storage/]
         L5[Email 服務<br/>email/]
         L6[驗證<br/>validation/]
+        L7[Credits 管理<br/>supabase/credits]
+        L8[模型定價<br/>supabase/model-pricing]
     end
     
     A1 --> C1
@@ -173,6 +186,8 @@ graph LR
     A4 --> L4
     A4 --> L5
     A4 --> L6
+    A4 --> L7
+    A4 --> L8
 ```
 
 ---
@@ -281,6 +296,44 @@ flowchart TD
     Select5 --> AI
 ```
 
+### Credits 扣除流程
+
+```mermaid
+sequenceDiagram
+    participant U as 使用者
+    participant F as 前端頁面
+    participant CreditsAPI as Credits API
+    participant ChatAPI as 聊天 API
+    participant DB as Supabase
+    participant MCP as MCP Client
+
+    U->>F: 登入/載入頁面
+    F->>CreditsAPI: GET /api/credits
+    CreditsAPI->>DB: 查詢 customers.credits
+    DB-->>CreditsAPI: 返回 credits 分數
+    CreditsAPI-->>F: 返回 credits
+    F->>F: 更新 CreditsDisplay
+
+    U->>F: 選擇模型並發送訊息
+    F->>ChatAPI: POST /api/chat (含 modelName)
+    ChatAPI->>DB: 查詢 model_pricing
+    DB-->>ChatAPI: 返回 credits_cost
+    ChatAPI->>DB: 查詢 customers.credits
+    DB-->>ChatAPI: 返回當前 credits
+    
+    alt Credits 足夠
+        ChatAPI->>DB: 扣除 credits
+        ChatAPI->>DB: 記錄 credits_transactions
+        ChatAPI->>MCP: 呼叫 AI 模型
+        MCP-->>ChatAPI: 返回回應
+        ChatAPI-->>F: 返回成功 + 新 credits
+        F->>CreditsAPI: 更新 CreditsDisplay
+    else Credits 不足
+        ChatAPI-->>F: 返回錯誤（Credits 不足）
+        F->>U: 顯示錯誤提示
+    end
+```
+
 ---
 
 ## 核心模組
@@ -304,7 +357,7 @@ flowchart TD
 
 | 檔案 | 功能 |
 |------|------|
-| `client.ts` | MCP Client 實作（直接使用 Anthropic API） |
+| `client.ts` | MCP Client 實作（直接使用 Anthropic API，支援 modelName 參數） |
 | `workload.ts` | 工作量級別配置與 Skills 數量計算 |
 | `function-mapping.ts` | 功能類型到 Skills 的映射 |
 | `types.ts` | MCP 相關類型定義 |
@@ -314,6 +367,7 @@ flowchart TD
 - **工作量級別控制**：根據使用者選擇動態調整 Skills 數量
 - **功能映射**：將使用者選擇的功能映射到相關的 AI Skills
 - **圖片處理**：自動將上傳的圖片轉換為 base64 格式傳遞給 AI
+- **多模型支援**：根據 `modelName` 參數選擇對應的 Anthropic 模型（如 claude-sonnet-4-20250514、claude-3-haiku-20240307）
 
 ### 3. 資料庫模組 (`lib/supabase/`)
 
@@ -324,11 +378,15 @@ flowchart TD
 | `otp.ts` | OTP Token 管理 |
 | `conversations.ts` | 對話記錄管理 |
 | `messages.ts` | 訊息管理 |
+| `credits.ts` | Credits 管理（查詢、扣除、增加、歷史記錄） |
+| `model-pricing.ts` | 模型定價管理（查詢、建立、更新） |
 
 **設計決策**：
 - 使用 Supabase 作為 PostgreSQL 的託管服務
 - 所有資料庫操作都通過 TypeScript 函數封裝
 - 使用索引優化查詢效能
+- Credits 扣除採用原子性操作，確保資料一致性
+- 所有 Credits 交易都記錄在 `credits_transactions` 表中，便於審計
 
 ### 4. 儲存模組 (`lib/storage/`)
 
@@ -364,7 +422,9 @@ erDiagram
     customers ||--o{ sessions : "has"
     customers ||--o{ chat_conversations : "creates"
     customers ||--o{ otp_tokens : "generates"
+    customers ||--o{ credits_transactions : "has"
     chat_conversations ||--o{ chat_messages : "contains"
+    chat_conversations ||--o{ credits_transactions : "references"
     
     customers {
         uuid id PK
@@ -376,6 +436,7 @@ erDiagram
         varchar oauth_id
         varchar approval_status
         varchar role
+        integer credits
         timestamp created_at
         timestamp updated_at
         timestamp last_login_at
@@ -405,8 +466,30 @@ erDiagram
         varchar title
         varchar workload_level
         varchar selected_function
+        varchar model_name
         timestamp created_at
         timestamp updated_at
+    }
+    
+    model_pricing {
+        uuid id PK
+        varchar model_name UK
+        varchar display_name
+        integer credits_cost
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    credits_transactions {
+        uuid id PK
+        uuid customer_id FK
+        uuid conversation_id FK
+        varchar model_name
+        integer credits_cost
+        integer credits_before
+        integer credits_after
+        timestamp created_at
     }
     
     chat_messages {
@@ -436,6 +519,7 @@ erDiagram
 | `oauth_id` | VARCHAR(255) | OAuth 提供者的用戶 ID |
 | `approval_status` | VARCHAR(20) | 審核狀態：pending/approved/rejected |
 | `role` | VARCHAR(20) | 角色：user/admin |
+| `credits` | INTEGER | Credits 分數（預設 0） |
 | `created_at` | TIMESTAMP | 建立時間 |
 | `updated_at` | TIMESTAMP | 更新時間 |
 | `last_login_at` | TIMESTAMP | 最後登入時間 |
@@ -470,6 +554,7 @@ erDiagram
 | `title` | VARCHAR(255) | 對話標題 |
 | `workload_level` | VARCHAR(20) | 工作量級別：instant/basic/standard/professional |
 | `selected_function` | VARCHAR(50) | 選擇的功能：lab/radiology/medical_record/medication |
+| `model_name` | VARCHAR(255) | 使用的 AI 模型名稱 |
 | `created_at` | TIMESTAMP | 建立時間 |
 | `updated_at` | TIMESTAMP | 更新時間 |
 
@@ -491,6 +576,40 @@ erDiagram
 
 **索引**：
 - `idx_chat_messages_conversation_id` - 對話查詢優化
+
+#### `model_pricing` - 模型定價表
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `id` | UUID | 主鍵 |
+| `model_name` | VARCHAR(255) | 模型名稱（唯一，如 claude-sonnet-4-20250514） |
+| `display_name` | VARCHAR(255) | 顯示名稱 |
+| `credits_cost` | INTEGER | 每次使用消耗的點數 |
+| `is_active` | BOOLEAN | 是否啟用（預設 true） |
+| `created_at` | TIMESTAMP | 建立時間 |
+| `updated_at` | TIMESTAMP | 更新時間 |
+
+**索引**：
+- `idx_model_pricing_model_name` - 模型名稱查詢優化
+- `idx_model_pricing_is_active` - 啟用狀態查詢優化
+
+#### `credits_transactions` - Credits 交易記錄表
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| `id` | UUID | 主鍵 |
+| `customer_id` | UUID | 客戶 ID（外鍵） |
+| `conversation_id` | UUID | 對話 ID（外鍵，可選） |
+| `model_name` | VARCHAR(255) | 使用的模型名稱 |
+| `credits_cost` | INTEGER | 消耗的點數 |
+| `credits_before` | INTEGER | 消費前餘額 |
+| `credits_after` | INTEGER | 消費後餘額 |
+| `created_at` | TIMESTAMP | 建立時間 |
+
+**索引**：
+- `idx_credits_transactions_customer_id` - 客戶查詢優化
+- `idx_credits_transactions_conversation_id` - 對話查詢優化
+- `idx_credits_transactions_created_at` - 時間查詢優化
 
 ---
 
@@ -515,9 +634,17 @@ erDiagram
 
 | 方法 | 路徑 | 功能 | 認證 |
 |------|------|------|------|
-| POST | `/api/chat` | 發送訊息並取得 AI 回應 | ✅ |
+| POST | `/api/chat` | 發送訊息並取得 AI 回應（支援 modelName，自動扣除 Credits） | ✅ |
 | GET | `/api/chat` | 獲取對話訊息 | ✅ |
 | GET | `/api/conversations` | 獲取對話列表 | ✅ |
+
+#### Credits API
+
+| 方法 | 路徑 | 功能 | 認證 |
+|------|------|------|------|
+| GET | `/api/credits` | 取得當前用戶的 Credits 分數 | ✅ |
+| GET | `/api/credits/history` | 取得消費歷史記錄 | ✅ |
+| GET | `/api/models` | 取得所有啟用的模型列表 | ✅ |
 
 #### 管理 API (`/api/admin/*`)
 
@@ -526,6 +653,11 @@ erDiagram
 | GET | `/api/admin/customers` | 獲取客戶列表 | ✅ Admin |
 | POST | `/api/admin/approve` | 審核通過 | ✅ Admin |
 | POST | `/api/admin/reject` | 審核拒絕 | ✅ Admin |
+| GET | `/api/admin/models` | 取得所有模型列表（含停用） | ✅ Admin |
+| POST | `/api/admin/models` | 建立新模型 | ✅ Admin |
+| PUT | `/api/admin/models/:modelName` | 更新模型定價 | ✅ Admin |
+| DELETE | `/api/admin/models/:modelName` | 停用模型 | ✅ Admin |
+| POST | `/api/admin/credits/add` | 為用戶增加 Credits | ✅ Admin |
 
 ### API 回應格式
 
@@ -704,5 +836,60 @@ flowchart TB
 
 ---
 
+---
+
+## Credits 系統與模型管理
+
+### 系統概述
+
+Credits 系統提供點數管理機制，用於控制 AI 模型的使用成本。系統支援多種 AI 模型，每個模型有不同的定價，使用者在使用前需要確保有足夠的 Credits。
+
+### 核心功能
+
+1. **Credits 管理**
+   - 查詢當前餘額
+   - 扣除 Credits（使用 AI 模型時）
+   - 增加 Credits（管理員操作）
+   - 交易歷史記錄
+
+2. **模型定價管理**
+   - 支援多種 AI 模型
+   - 每個模型有獨立的定價
+   - 管理員可動態調整定價
+   - 模型啟用/停用控制
+
+3. **前端整合**
+   - Credits 顯示元件（`CreditsDisplay.tsx`）
+   - 模型選擇器元件（`ModelSelector.tsx`）
+   - 自動檢查 Credits 餘額
+   - 不足時顯示錯誤提示
+
+### 資料流程
+
+1. **登入時查詢 Credits**：使用者登入後，系統自動查詢並返回 Credits 分數
+2. **使用前檢查**：發送訊息前檢查 Credits 是否足夠
+3. **扣除與記錄**：使用成功後扣除 Credits 並記錄交易
+4. **即時更新**：前端即時更新 Credits 顯示
+
+### 預設模型定價
+
+| 模型名稱 | 顯示名稱 | Credits 消耗 |
+|---------|---------|-------------|
+| `claude-sonnet-4-20250514` | Claude Sonnet 4 | 10 點 |
+| `claude-3-haiku-20240307` | Claude 3 Haiku | 5 點 |
+
+### 測試策略
+
+系統採用 **TDD（Test-Driven Development）** 開發模式：
+
+- **單元測試**：使用 Vitest 測試所有後端函數
+- **整合測試**：測試完整流程（選擇模型 → 發送 → 扣除 Credits）
+- **元件測試**：使用 @testing-library/react 測試前端元件
+- **測試覆蓋率目標**：關鍵邏輯 100%，整體 ≥ 90%
+
+詳細測試計劃請參考 `credits_系統與模型管理.plan.md`。
+
+---
+
 **文件維護者**：開發團隊  
-**最後審查日期**：2026-01-19
+**最後審查日期**：2026-01-23

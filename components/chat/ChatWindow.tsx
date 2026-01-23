@@ -18,19 +18,23 @@ interface ChatWindowProps {
   onSend: (message: string, options: {
     workloadLevel: 'instant' | 'basic' | 'standard' | 'professional';
     selectedFunction?: string;
-    file?: File;
+    fileUrl?: string;
+    fileName?: string;
+    fileType?: string;
+    modelName?: string;
   }) => void;
   disabled?: boolean;
+  userCredits?: number;
 }
 
-export function ChatWindow({ messages, isLoading, onSend, disabled }: ChatWindowProps) {
+export function ChatWindow({ messages, isLoading, onSend, disabled, userCredits = 0 }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* 訊息列表 */}
       <MessageList messages={messages} isLoading={isLoading} />
-      
+
       {/* 輸入區域 */}
-      <ChatInput onSend={onSend} disabled={disabled || isLoading} />
+      <ChatInput onSend={onSend} disabled={disabled || isLoading} userCredits={userCredits} />
     </div>
   );
 }

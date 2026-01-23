@@ -8,7 +8,8 @@ export async function createConversation(
   customerId: string,
   title: string,
   workloadLevel: 'instant' | 'basic' | 'standard' | 'professional',
-  selectedFunction?: string
+  selectedFunction?: string,
+  modelName?: string
 ): Promise<Conversation> {
   const { data, error } = await supabaseAdmin
     .from('chat_conversations')
@@ -17,14 +18,15 @@ export async function createConversation(
       title,
       workload_level: workloadLevel,
       selected_function: selectedFunction,
+      model_name: modelName,
     })
     .select()
     .single();
-  
+
   if (error) {
     throw new Error(`建立對話失敗: ${error.message}`);
   }
-  
+
   return data as Conversation;
 }
 

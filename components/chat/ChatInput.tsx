@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { FunctionSelector } from './FunctionSelector';
 import { WorkloadSelector } from './WorkloadSelector';
 import { FileUploader } from './FileUploader';
+import { ModelSelector } from './ModelSelector';
 
 interface ChatInputProps {
   onSend: (message: string, options: {
@@ -12,14 +13,17 @@ interface ChatInputProps {
     fileUrl?: string;
     fileName?: string;
     fileType?: string;
+    modelName?: string;
   }) => void;
   disabled?: boolean;
+  userCredits?: number;
 }
 
-export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState<string>('');
   const [workloadLevel, setWorkloadLevel] = useState<'instant' | 'basic' | 'standard' | 'professional'>('standard');
+  const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-20250514');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -48,6 +52,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
       fileUrl: uploadedFileUrl || undefined,
       fileName: uploadedFileName || undefined,
       fileType: uploadedFileType || undefined,
+      modelName: selectedModel || undefined,
     });
 
     // 重置表單
@@ -92,6 +97,11 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
 
           {showOptions && (
             <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+              <ModelSelector
+                value={selectedModel}
+                onChange={setSelectedModel}
+                userCredits={userCredits}
+              />
               <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
               <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
             </div>

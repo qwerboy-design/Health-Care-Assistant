@@ -9,6 +9,7 @@ export interface Customer {
   oauth_id?: string;
   approval_status: 'pending' | 'approved' | 'rejected';
   role: 'user' | 'admin';
+  credits: number;
   created_at: string;
   updated_at: string;
   last_login_at?: string;
@@ -41,6 +42,7 @@ export interface Conversation {
   title: string;
   workload_level: 'instant' | 'basic' | 'standard' | 'professional';
   selected_function?: string;
+  model_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -70,3 +72,44 @@ export interface ApiResponse<T = any> {
   error?: string;
   message?: string;
 }
+
+// 模型定價類型
+export interface ModelPricing {
+  id: string;
+  model_name: string;
+  display_name: string;
+  credits_cost: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Credits 交易記錄類型
+export interface CreditsTransaction {
+  id: string;
+  customer_id: string;
+  conversation_id: string | null;
+  model_name: string;
+  credits_cost: number;
+  credits_before: number;
+  credits_after: number;
+  created_at: string;
+}
+
+// Credits 扣除結果類型
+export interface DeductCreditsResult {
+  success: boolean;
+  creditsAfter?: number;
+  creditsBefore?: number;
+  transactionId?: string;
+  error?: string;
+}
+
+// Credits 增加結果類型
+export interface AddCreditsResult {
+  success: boolean;
+  creditsAfter?: number;
+  creditsBefore?: number;
+  error?: string;
+}
+
