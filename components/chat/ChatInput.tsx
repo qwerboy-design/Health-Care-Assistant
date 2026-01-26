@@ -41,7 +41,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!message.trim() && !uploadedFileUrl) {
       return;
     }
@@ -75,16 +75,21 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 功能選擇和工作量級別 */}
-        <div className="space-y-3">
+    <div className="border-t border-gray-200 bg-white">
+      <form onSubmit={handleSubmit} className="flex flex-col">
+        {/* 功能選擇和工作量級別 - 可折疊區域 */}
+        <div className="border-b border-gray-100">
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+            className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex items-center justify-between transition-colors"
           >
-            {showOptions ? '隱藏選項' : '顯示選項'}
+            <span className="flex items-center gap-2">
+              {showOptions ? '隱藏選項' : '顯示選項'}
+              <span className="text-xs text-gray-500">
+                (模型、功能、工作量)
+              </span>
+            </span>
             <svg
               className={`w-4 h-4 transition-transform ${showOptions ? 'rotate-180' : ''}`}
               fill="none"
@@ -96,107 +101,113 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
           </button>
 
           {showOptions && (
-            <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
-              <ModelSelector
-                value={selectedModel}
-                onChange={setSelectedModel}
-                userCredits={userCredits}
-              />
-              <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
-              <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
+            <div className="max-h-64 overflow-y-auto border-t border-gray-100">
+              <div className="p-4 space-y-3 bg-gray-50">
+                <ModelSelector
+                  value={selectedModel}
+                  onChange={setSelectedModel}
+                  userCredits={userCredits}
+                />
+                <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
+                <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
+              </div>
             </div>
           )}
         </div>
 
-        {/* 檔案上傳 */}
-        {!selectedFile && !uploadedFileUrl && (
-          <FileUploader
-            onFileSelect={(file) => {
-              // #region agent log
-              fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:onFileSelect',message:'onFileSelect callback called',data:{fileIsNull:file === null,fileIsUndefined:file === undefined,hasFileName:!!file?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-              // #endregion
-              setSelectedFile(file);
-              if (file) {
-                setUploadedFileName(file.name);
-                setUploadedFileType(file.type);
-              } else {
+        {/* 檔案上傳區域 */}
+        <div className="px-4 pt-3">
+          {!selectedFile && !uploadedFileUrl && (
+            <FileUploader
+              onFileSelect={(file) => {
                 // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:onFileSelect',message:'File is null, clearing state',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onFileSelect', message: 'onFileSelect callback called', data: { fileIsNull: file === null, fileIsUndefined: file === undefined, hasFileName: !!file?.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
                 // #endregion
-                setUploadedFileName(null);
-                setUploadedFileType(null);
-              }
-            }}
-            onUploadSuccess={(url) => {
-              // #region agent log
-              fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:onUploadSuccess',message:'onUploadSuccess callback called',data:{url,hasUrl:!!url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-              // #endregion
-              try {
-                setUploadedFileUrl(url);
-                setUploadError(null); // 清除錯誤訊息
-                // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:onUploadSuccess',message:'setUploadedFileUrl called',data:{url},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
-              } catch (err: any) {
-                // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:onUploadSuccess',message:'Error in onUploadSuccess',data:{errorMessage:err?.message,errorName:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
-                console.error('Error in onUploadSuccess:', err);
-              }
-            }}
-            onUploadError={(error) => {
-              setUploadError(error);
-            }}
-          />
-        )}
-
-        {(selectedFile || uploadedFileUrl) && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-              <span className="text-sm text-blue-900">
-                📎 {uploadedFileName || selectedFile?.name} 
-                {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
-                {uploadedFileUrl && ' ✓ 已上傳'}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedFile(null);
-                  setUploadedFileUrl(null);
+                setSelectedFile(file);
+                if (file) {
+                  setUploadedFileName(file.name);
+                  setUploadedFileType(file.type);
+                } else {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onFileSelect', message: 'File is null, clearing state', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                  // #endregion
                   setUploadedFileName(null);
                   setUploadedFileType(null);
-                  setUploadError(null);
-                }}
-                className="text-blue-600 hover:text-blue-700 text-sm"
-              >
-                移除
-              </button>
-            </div>
-            {uploadError && (
-              <p className="text-sm text-red-600 px-2">{uploadError}</p>
-            )}
-          </div>
-        )}
+                }
+              }}
+              onUploadSuccess={(url) => {
+                // #region agent log
+                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'onUploadSuccess callback called', data: { url, hasUrl: !!url }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                // #endregion
+                try {
+                  setUploadedFileUrl(url);
+                  setUploadError(null); // 清除錯誤訊息
+                  // #region agent log
+                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'setUploadedFileUrl called', data: { url }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                  // #endregion
+                } catch (err: any) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'Error in onUploadSuccess', data: { errorMessage: err?.message, errorName: err?.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+                  // #endregion
+                  console.error('Error in onUploadSuccess:', err);
+                }
+              }}
+              onUploadError={(error) => {
+                setUploadError(error);
+              }}
+            />
+          )}
 
-        {/* 文字輸入 */}
-        <div className="flex gap-2">
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="輸入訊息... (Enter 發送, Shift+Enter 換行)"
-            disabled={disabled}
-            rows={1}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <button
-            type="submit"
-            disabled={disabled || (!message.trim() && !uploadedFileUrl)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            發送
-          </button>
+          {(selectedFile || uploadedFileUrl) && (
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                <span className="text-sm text-blue-900">
+                  📎 {uploadedFileName || selectedFile?.name}
+                  {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
+                  {uploadedFileUrl && ' ✓ 已上傳'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setUploadedFileUrl(null);
+                    setUploadedFileName(null);
+                    setUploadedFileType(null);
+                    setUploadError(null);
+                  }}
+                  className="text-blue-600 hover:text-blue-700 text-sm"
+                >
+                  移除
+                </button>
+              </div>
+              {uploadError && (
+                <p className="text-sm text-red-600 px-2">{uploadError}</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 文字輸入區域 */}
+        <div className="px-4 pb-4 pt-2">
+          <div className="flex gap-2">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="輸入訊息... (Enter 發送, Shift+Enter 換行)"
+              disabled={disabled}
+              rows={1}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <button
+              type="submit"
+              disabled={disabled || (!message.trim() && !uploadedFileUrl)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              發送
+            </button>
+          </div>
         </div>
       </form>
     </div>
