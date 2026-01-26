@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
 import { createConversation, getConversationById } from '@/lib/supabase/conversations';
 import { createMessage, getMessagesByConversationId } from '@/lib/supabase/messages';
-import { getCustomerCredits, deductCredits } from '@/lib/supabase/credits';
+import { getCustomerCredits, deductCredits, addCredits } from '@/lib/supabase/credits';
 import { getModelPricing } from '@/lib/supabase/model-pricing';
 import { createMCPClient } from '@/lib/mcp/client';
 import { chatMessageSchema } from '@/lib/validation/schemas';
@@ -15,7 +15,7 @@ import { cookies } from 'next/headers';
  */
 export async function POST(request: NextRequest) {
   // #region agent log
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:POST',message:'Chat API POST endpoint called',data:{method:request.method,url:request.url,hasCookie:!!request.headers.get('cookie')},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:POST', message: 'Chat API POST endpoint called', data: { method: request.method, url: request.url, hasCookie: !!request.headers.get('cookie') }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
   // #endregion
 
   return handleChatMessage(request);
@@ -26,26 +26,26 @@ async function handleChatMessage(request: NextRequest) {
     // 驗證 Session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
-    
+
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session check',data:{hasSessionToken:!!sessionToken},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Session check', data: { hasSessionToken: !!sessionToken }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
-    
+
     if (!sessionToken) {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'No session token',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'No session token', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
       // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
 
     const session = await verifySession(sessionToken);
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session verification result',data:{sessionValid:!!session,customerId:session?.customerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Session verification result', data: { sessionValid: !!session, customerId: session?.customerId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
 
     if (!session) {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Session invalid',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Session invalid', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
       // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
@@ -60,7 +60,7 @@ async function handleChatMessage(request: NextRequest) {
     // 解析請求
     const body = await request.json();
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Request body parsed',data:{hasMessage:!!body.message,hasFileUrl:!!body.fileUrl,fileName:body.fileName,hasConversationId:!!body.conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Request body parsed', data: { hasMessage: !!body.message, hasFileUrl: !!body.fileUrl, fileName: body.fileName, hasConversationId: !!body.conversationId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
 
     const {
@@ -147,37 +147,55 @@ async function handleChatMessage(request: NextRequest) {
       content: msg.content,
     }));
 
-    // 呼叫 MCP Client 取得 AI 回應
+    // 呼叫 MCP Client 取得 AI 回應並儲存
+    let mcpResponse;
+    try {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Before MCP client call', data: { hasFileUrl: !!fileUrl, fileName }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
+      // #endregion
+
+      const mcpClient = createMCPClient();
+      mcpResponse = await mcpClient.sendMessage({
+        message: message || `請分析這個檔案: ${fileName}`,
+        workloadLevel: workloadLevel as 'instant' | 'basic' | 'standard' | 'professional',
+        selectedFunction: selectedFunction as 'lab' | 'radiology' | 'medical_record' | 'medication' | undefined,
+        fileUrl,      // 傳給 MCP 用的 Blob URL
+        conversationHistory,
+        modelName: selectedModel,  // 新增：傳入模型名稱
+      });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'MCP response received', data: { hasContent: !!mcpResponse.content, contentLength: mcpResponse.content?.length }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
+      // #endregion
+
+      // 儲存 AI 回應
+      await createMessage(
+        currentConversationId,
+        'assistant',
+        mcpResponse.content,
+        undefined,
+        undefined,
+        undefined
+      );
+    } catch (modelError: any) {
+      // 如果模型呼叫失敗，退回 Credits
+      console.error('模型呼叫失敗，正在退回 Credits:', modelError);
+
+      try {
+        await addCredits(
+          session.customerId,
+          modelPricing.credits_cost,
+          `退款：模型呼叫失敗 (${selectedModel})`
+        );
+      } catch (refundError) {
+        console.error('退回 Credits 失敗:', refundError);
+      }
+
+      throw modelError; // 重新拋出錯誤，由外層 catch 處理
+    }
+
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Before MCP client call',data:{hasFileUrl:!!fileUrl,fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-
-    const mcpClient = createMCPClient();
-    const mcpResponse = await mcpClient.sendMessage({
-      message: message || `請分析這個檔案: ${fileName}`,
-      workloadLevel: workloadLevel as 'instant' | 'basic' | 'standard' | 'professional',
-      selectedFunction: selectedFunction as 'lab' | 'radiology' | 'medical_record' | 'medication' | undefined,
-      fileUrl,      // 傳給 MCP 用的 Blob URL
-      conversationHistory,
-      modelName: selectedModel,  // 新增：傳入模型名稱
-    });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'MCP response received',data:{hasContent:!!mcpResponse.content,contentLength:mcpResponse.content?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-
-    // 儲存 AI 回應
-    await createMessage(
-      currentConversationId,
-      'assistant',
-      mcpResponse.content,
-      undefined,
-      undefined,
-      undefined
-    );
-
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Returning success response',data:{conversationId:currentConversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Returning success response', data: { conversationId: currentConversationId }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
 
     return successResponse({
@@ -187,15 +205,15 @@ async function handleChatMessage(request: NextRequest) {
         content: mcpResponse.content,
       },
       skillsUsed: mcpResponse.skillsUsed,
-      creditsAfter: deductResult.creditsAfter,  // 新增：返回更新後的 Credits
+      creditsAfter: deductResult.creditsAfter,  // 注意：這裡返回的是扣除後的，退款後的更新會由前台重新獲取
     });
 
   } catch (error: any) {
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/chat/route.ts:handleChatMessage',message:'Error caught in handleChatMessage',data:{errorMessage:error?.message,errorName:error?.name,errorStack:error?.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/chat/route.ts:handleChatMessage', message: 'Error caught in handleChatMessage', data: { errorMessage: error?.message, errorName: error?.name, errorStack: error?.stack?.substring(0, 300) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run2', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
     console.error('對話 API 錯誤:', error);
-    return errorResponse(Errors.INTERNAL_ERROR.message, 500);
+    return errorResponse(error.message || Errors.INTERNAL_ERROR.message, 500);
   }
 }
 
@@ -207,7 +225,7 @@ export async function GET(request: NextRequest) {
     // 驗證 Session
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get('session')?.value;
-    
+
     if (!sessionToken) {
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }

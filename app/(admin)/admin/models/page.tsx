@@ -137,6 +137,33 @@ export default function ModelsPage() {
     }
   };
 
+  const handleActivate = async (modelName: string) => {
+    setProcessing(true);
+    try {
+      const res = await fetch('/api/admin/models', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model_name: modelName,
+          is_active: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        await fetchModels();
+        alert('模型已啟用');
+      } else {
+        alert(data.error || '啟用失敗');
+      }
+    } catch (err) {
+      alert('網路錯誤，請稍後再試');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const openEditModal = (model: Model) => {
     setSelectedModel(model);
     setFormData({
@@ -235,7 +262,7 @@ export default function ModelsPage() {
                       <Edit2 size={16} />
                       編輯定價
                     </button>
-                    {model.is_active && (
+                    {model.is_active ? (
                       <button
                         onClick={() => handleDeactivate(model.model_name)}
                         disabled={processing}
@@ -243,6 +270,15 @@ export default function ModelsPage() {
                       >
                         <PowerOff size={16} />
                         停用
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleActivate(model.model_name)}
+                        disabled={processing}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                      >
+                        <Power size={16} />
+                        啟用
                       </button>
                     )}
                   </div>

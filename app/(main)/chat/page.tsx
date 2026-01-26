@@ -256,6 +256,10 @@ export default function ChatPage() {
    * 手動下載對話記錄（顯示提示）
    */
   const handleDownloadLog = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:entry',message:'handleDownloadLog called',data:{conversationId,hasConversationId:!!conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+    // #endregion
+
     if (!conversationId) {
       alert('請先開始對話');
       return;
@@ -263,6 +267,10 @@ export default function ChatPage() {
 
     setIsSavingLog(true);
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:before-fetch',message:'Before fetch /api/chat/save-log',data:{conversationId,serialNumber:uploadSerialNumber.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+      // #endregion
+
       const res = await fetch('/api/chat/save-log', {
         method: 'POST',
         headers: {
@@ -274,7 +282,15 @@ export default function ChatPage() {
         }),
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:after-fetch',message:'After fetch response',data:{status:res.status,ok:res.ok,statusText:res.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+      // #endregion
+
       const data = await res.json();
+
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:data-parsed',message:'Response data parsed',data:{success:data.success,hasError:!!data.error,hasData:!!data.data,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+      // #endregion
 
       if (data.success) {
         // Download the file
@@ -282,6 +298,10 @@ export default function ChatPage() {
         const filename = data.data.filename;
         const messageCount = data.data.messageCount || 0;
         
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:success',message:'API returned success',data:{downloadUrl,filename,messageCount},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+        // #endregion
+
         console.log('[save-log] 上傳成功:', {
           filename,
           url: downloadUrl,
@@ -294,6 +314,10 @@ export default function ChatPage() {
 
         // 嘗試下載檔案
         try {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:before-download',message:'Before download attempt',data:{downloadUrl,filename},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+          // #endregion
+
           const link = document.createElement('a');
           link.href = downloadUrl;
           link.download = filename;
@@ -301,18 +325,31 @@ export default function ChatPage() {
           link.click();
           document.body.removeChild(link);
           
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:download-success',message:'Download link clicked',data:{downloadUrl,filename},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+          // #endregion
+          
           // 顯示成功訊息，包含檔案資訊
           alert(`對話記錄已成功上傳並下載！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n檔案已保存至 R2 儲存空間。`);
         } catch (downloadError) {
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:download-error',message:'Download error',data:{errorMessage:downloadError instanceof Error?downloadError.message:String(downloadError)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+          // #endregion
           console.error('[save-log] 下載失敗:', downloadError);
           // 即使下載失敗，檔案已成功上傳到 R2
           alert(`對話記錄已成功上傳至 R2！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n下載連結: ${downloadUrl}\n\n（瀏覽器下載失敗，但檔案已成功保存）`);
         }
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:api-error',message:'API returned error',data:{error:data.error,hasError:!!data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+        // #endregion
         console.error('[save-log] API 返回錯誤:', data);
         alert(`上傳失敗: ${data.error || '未知錯誤，請稍後再試'}`);
       }
     } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:network-error',message:'Network error caught',data:{errorMessage:error?.message,errorName:error?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
+      // #endregion
       console.error('[save-log] 網路錯誤:', {
         error: error.message,
         stack: error.stack,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
 
 interface ModelOption {
   id: string;
@@ -23,36 +24,64 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
   const [error, setError] = useState<string | null>(null);
 
   // 從 API 獲取可用模型列表
-  useEffect(() => {
-    const fetchModels = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchModels = async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    setError(null);
 
-      try {
-        const res = await fetch('/api/models');
-        const data = await res.json();
+    try {
+      const res = await fetch('/api/models');
+      const data = await res.json();
 
-        if (data.success) {
-          setModels(data.data.models || []);
+      if (data.success) {
+        const fetchedModels = data.data.models || [];
+        setModels(fetchedModels);
 
-          // 如果沒有選擇模型，設定預設模型
-          if (!value && data.data.models.length > 0) {
-            // 預設選擇第一個模型
-            onChange(data.data.models[0].model_name);
-          }
-        } else {
-          setError(data.error || '無法獲取模型列表');
+        // 如果沒有選擇模型，或者當前選擇的模型已不再可用清單中
+        const isCurrentModelAvailable = fetchedModels.some((m: ModelOption) => m.model_name === value);
+
+        if (fetchedModels.length > 0 && (!value || !isCurrentModelAvailable)) {
+          // 預設選擇第一個模型
+          onChange(fetchedModels[0].model_name);
         }
-      } catch (err: any) {
-        console.error('獲取模型列表錯誤:', err);
-        setError('網路錯誤');
-      } finally {
-        setIsLoading(false);
+      } else {
+        setError(data.error || '無法獲取模型列表');
       }
-    };
+    } catch (err: any) {
+      console.error('獲取模型列表錯誤:', err);
+      if (!silent) setError('網路錯誤');
+    } finally {
+      if (!silent) setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchModels();
-  }, []);
+
+    // 設置即時同步
+    // 加入 retry 邏輯或確認訂閱狀態
+    const channel = supabase
+      .channel('model_pricing_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'model_pricing'
+        },
+        (payload) => {
+          console.log('模型資料實時變動:', payload);
+          // 使用 silent 模式更新，避免選單閃爍
+          fetchModels(true);
+        }
+      )
+      .subscribe((status) => {
+        console.log('Supabase Realtime 訂閱狀態:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [value]); // 加入 value 作為依賴，確保 fallback 邏輯正確執行
 
   // 檢查用戶是否有足夠的 Credits
   const canAffordModel = (creditsCost: number) => {

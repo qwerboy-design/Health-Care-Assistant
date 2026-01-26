@@ -14,15 +14,21 @@ export interface ModelPricing {
 }
 
 /**
- * 取得所有啟用的模型
- * @returns 啟用的模型列表
+ * 取得模型列表
+ * @param onlyActive 是否僅取得啟用的模型（預設 true）
+ * @returns 模型列表
  */
-export async function getAllModels(): Promise<ModelPricing[]> {
-  const { data, error } = await supabaseAdmin
+export async function getAllModels(onlyActive: boolean = true): Promise<ModelPricing[]> {
+  let query = supabaseAdmin
     .from('model_pricing')
     .select('*')
-    .eq('is_active', true)
     .order('credits_cost', { ascending: true });
+
+  if (onlyActive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
@@ -41,6 +47,7 @@ export async function getModelPricing(modelName: string): Promise<ModelPricing |
     .from('model_pricing')
     .select('*')
     .eq('model_name', modelName)
+    .eq('is_active', true)
     .single();
 
   if (error) {
@@ -126,6 +133,29 @@ export async function deactivateModel(modelName: string): Promise<ModelPricing |
       return null;
     }
     // 其他錯誤拋出異常
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+/**
+ * 啟用模型（管理員用）
+ * @param modelName 模型名稱
+ * @returns 啟用後的模型，如果不存在則返回 null
+ */
+export async function activateModel(modelName: string): Promise<ModelPricing | null> {
+  const { data, error } = await supabaseAdmin
+    .from('model_pricing')
+    .update({ is_active: true })
+    .eq('model_name', modelName)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116' || error.message.includes('Not found')) {
+      return null;
+    }
     throw new Error(error.message);
   }
 

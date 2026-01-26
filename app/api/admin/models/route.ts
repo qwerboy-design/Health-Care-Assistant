@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
-import { getAllModels, createModel, updateModelPricing, deactivateModel } from '@/lib/supabase/model-pricing';
+import { getAllModels, createModel, updateModelPricing, deactivateModel, activateModel } from '@/lib/supabase/model-pricing';
 import { findCustomerById } from '@/lib/supabase/customers';
 import { errorResponse, successResponse } from '@/lib/errors';
 import { cookies } from 'next/headers';
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: '未授權或非管理員' }, { status: 403 });
     }
 
-    const models = await getAllModels();
+    const models = await getAllModels(false);
 
     return successResponse({ models });
   } catch (error: any) {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * PATCH /api/admin/models
- * 更新模型定價
+ * 更新模型資料（定價或狀態）
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -93,18 +93,34 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { model_name, credits_cost } = body;
+    const { model_name, credits_cost, is_active } = body;
 
-    if (!model_name || typeof credits_cost !== 'number') {
-      return errorResponse('缺少必要參數', 400);
+    if (!model_name) {
+      return errorResponse('缺少 model_name 參數', 400);
     }
 
-    const model = await updateModelPricing(model_name, credits_cost);
+    let model = null;
 
-    return successResponse({ model }, '模型定價更新成功');
+    // 更新定價
+    if (typeof credits_cost === 'number') {
+      model = await updateModelPricing(model_name, credits_cost);
+    }
+
+    // 更新啟用狀態
+    if (is_active === true) {
+      model = await activateModel(model_name);
+    } else if (is_active === false) {
+      model = await deactivateModel(model_name);
+    }
+
+    if (!model) {
+      return errorResponse('找不到該模型或更新失敗', 404);
+    }
+
+    return successResponse({ model }, '模型更新成功');
   } catch (error: any) {
-    console.error('更新模型定價失敗:', error);
-    return errorResponse(error.message || '更新模型定價失敗', 500);
+    console.error('更新模型失敗:', error);
+    return errorResponse(error.message || '更新模型失敗', 500);
   }
 }
 
