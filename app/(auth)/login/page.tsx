@@ -17,12 +17,12 @@ export default function LoginPage() {
   const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'input' | 'verify'>('input');
-  
+
   // 表單狀態
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  
+
   // UI 狀態
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,7 +48,7 @@ export default function LoginPage() {
       } else {
         const errorMsg = data.error || '登入失敗';
         setError(errorMsg);
-        
+
         // 如果是審核相關錯誤，顯示更詳細的提示
         if (errorMsg.includes('待審核')) {
           setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
@@ -112,7 +112,7 @@ export default function LoginPage() {
         const errorMsg = data.error || '驗證失敗';
         setError(errorMsg);
         setOtp('');
-        
+
         // 如果是審核相關錯誤，顯示更詳細的提示
         if (errorMsg.includes('待審核')) {
           setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
@@ -144,7 +144,7 @@ export default function LoginPage() {
 
         {/* Google 登入 */}
         <div>
-          <GoogleLoginButton 
+          <GoogleLoginButton
             onError={(err) => setError(err)}
           />
         </div>
@@ -166,11 +166,10 @@ export default function LoginPage() {
               setStep('input');
               setError('');
             }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-              loginMethod === 'password'
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'password'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+              }`}
           >
             密碼登入
           </button>
@@ -180,11 +179,10 @@ export default function LoginPage() {
               setStep('input');
               setError('');
             }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-              loginMethod === 'otp'
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'otp'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+              }`}
           >
             OTP 登入
           </button>
@@ -289,8 +287,18 @@ export default function LoginPage() {
                   />
                 </div>
 
+                <div className="mt-4">
+                  <button
+                    onClick={handleVerifyOTP}
+                    disabled={loading || otp.length !== 6}
+                    className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  >
+                    {loading ? '驗證中...' : '驗證並登入'}
+                  </button>
+                </div>
+
                 {error && (
-                  <p className="text-sm text-red-600 text-center">{error}</p>
+                  <p className="text-sm text-red-600 text-center mt-2">{error}</p>
                 )}
 
                 <div className="text-center text-sm text-gray-600">
