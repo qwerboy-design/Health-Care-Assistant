@@ -198,24 +198,24 @@ LIMIT 5;
 
 ---
 
-### 錯誤 3: Email 未收到
-
-**原因**:
-- 郵件進入垃圾郵件匣
-- Resend API 配置錯誤
-- Email 發送失敗但 API 回傳成功（防止資訊洩漏）
-
 **檢查方法**:
-```powershell
-# 測試 Email 發送
-node scripts/test-email.js
-```
+1. **使用 Resend 專用測試腳本**:
+   ```powershell
+   node scripts/test-resend.js
+   ```
+   此腳本會檢查 `RESEND_API_KEY` 並發送一封測試郵件。
+
+2. **原本的測試腳本**:
+   ```powershell
+   node scripts/test-email.js
+   ```
 
 **解決方案**:
 1. 檢查垃圾郵件匣
-2. 搜尋發件人 `onboarding@resend.dev`
+2. 搜尋發件人 `onboarding@resend.dev` 或您的自訂網域
 3. 查看開發伺服器控制台的錯誤訊息
 4. 使用診斷工具直接查詢資料庫中的 OTP
+5. 確保 `.env.local` 中的 `RESEND_FROM_EMAIL` 已正確設定為已驗證的網域
 
 ---
 
@@ -367,6 +367,6 @@ export async function sendOTPEmail(to: string, otpCode: string): Promise<void> {
 
 ---
 
-**最後更新**: 2026-01-05
-**版本**: 1.0.0
+**最後更新**: 2026-01-29
+**版本**: 1.1.0
 

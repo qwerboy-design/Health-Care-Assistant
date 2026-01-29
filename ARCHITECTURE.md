@@ -1,7 +1,7 @@
 # 🏗️ 系統架構文件
 
-> 最後更新：2026-01-23  
-> 版本：v1.2.0
+> 最後更新：2026-01-29  
+> 版本：v1.2.1
 
 ## 📋 目錄
 
@@ -611,6 +611,17 @@ erDiagram
 - `idx_credits_transactions_conversation_id` - 對話查詢優化
 - `idx_credits_transactions_created_at` - 時間查詢優化
 
+#### 實時同步與快取政策
+
+為了確保後台管理員更新模型狀態或定價時，前台使用者能即時看到變動，系統實施了以下政策：
+
+1. **API 動態路由**：`/api/models` 與 `/api/admin/models` 使用 `export const dynamic = 'force-dynamic'`，停用 Next.js 的靜態優化與快取。
+2. **前端不快取請求**：前端 Fetch 請求使用 `{ cache: 'no-store' }`，確保瀏覽器不讀取舊資料。
+3. **Supabase Realtime**：使用 Supabase Realtime 訂閱 `model_pricing` 表的變動。
+4. **RLS 政策考量**：
+   - 為了讓 Realtime 能正常工作，即便模型已停用，RLS 政策也需允許認證使用者讀取該筆資料（`is_active = false` 的資料對 Realtime 而言必須是「可見」的，否則客戶端收不到變動通知）。
+   - 過濾邏輯由應用程式層級（API）負責。
+
 ---
 
 ## API 架構
@@ -792,7 +803,7 @@ flowchart TB
 1. **Rate Limiting**：目前使用記憶體，建議遷移到 Redis
 2. **SSE 串流**：目前是完整回應，未來可實作真正的串流
 3. **圖片處理**：大圖片會增加 API 請求大小，建議限制圖片尺寸
-4. **快取機制**：可加入 Redis 快取常用查詢
+4. **快取機制**：API 已針對模型資料實施 `force-dynamic`，確保即時性。
 
 ---
 
@@ -892,4 +903,4 @@ Credits 系統提供點數管理機制，用於控制 AI 模型的使用成本�
 ---
 
 **文件維護者**：開發團隊  
-**最後審查日期**：2026-01-23
+**最後審查日期**：2026-01-29

@@ -2,6 +2,8 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
 export interface SendOTPEmailParams {
   to: string;
   name: string;
@@ -13,8 +15,8 @@ export interface SendOTPEmailParams {
  */
 export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promise<void> {
   try {
-    await resend.emails.send({
-      from: 'Clinical Assistant <noreply@yourdomain.com>',
+    const data = await resend.emails.send({
+      from: `Clinical Assistant <${FROM_EMAIL}>`,
       to,
       subject: '您的驗證碼 - 臨床助手 AI',
       html: `
@@ -84,6 +86,12 @@ export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promi
           </body>
         </html>
       `,
+    });
+
+    console.log('Email sent successfully:', {
+      to,
+      messageId: data.data?.id,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('發送 OTP Email 失敗:', error);

@@ -10,7 +10,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [registerMethod, setRegisterMethod] = useState<'password' | 'otp'>('otp');
   const [step, setStep] = useState<'input' | 'verify'>('input');
-  
+
   // 表單狀態
   const [formData, setFormData] = useState({
     email: '',
@@ -19,7 +19,7 @@ export default function RegisterPage() {
     password: '',
   });
   const [otp, setOtp] = useState('');
-  
+
   // UI 狀態
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,13 +30,13 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    const payload = registerMethod === 'password' 
-      ? formData 
+    const payload = registerMethod === 'password'
+      ? formData
       : { email: formData.email, name: formData.name, phone: formData.phone };
 
     try {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:37',message:'Before fetch to /api/auth/register',data:{payload},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:37', message: 'Before fetch to /api/auth/register', data: { payload }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
       // #endregion
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -44,28 +44,34 @@ export default function RegisterPage() {
         body: JSON.stringify(payload),
       });
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:44',message:'Fetch response received',data:{status:res.status,statusText:res.statusText,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:44', message: 'Fetch response received', data: { status: res.status, statusText: res.statusText, ok: res.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
       // #endregion
       const data = await res.json();
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:46',message:'Response data parsed',data:{success:data.success,error:data.error,authProvider:data.data?.authProvider},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:46', message: 'Response data parsed', data: { success: data.success, error: data.error, authProvider: data.data?.authProvider }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
       // #endregion
 
       if (data.success) {
-        // 註冊成功，顯示等待審核訊息
-        setError('');
-        alert('註冊成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
-        router.push('/login');
-        router.refresh();
+        if (registerMethod === 'otp') {
+          // OTP 註冊：切換到驗證步驟
+          setStep('verify');
+          setError('');
+        } else {
+          // 密碼註冊：顯示成功訊息並導向登入
+          setError('');
+          alert('註冊成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
+          router.push('/login');
+          router.refresh();
+        }
       } else {
         // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:60',message:'Registration failed',data:{error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:60', message: 'Registration failed', data: { error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
         // #endregion
         setError(data.error || '註冊失敗');
       }
     } catch (err) {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(auth)/register/page.tsx:56',message:'handleRegister catch error',data:{errorMessage:err instanceof Error?err.message:String(err),errorStack:err instanceof Error?err.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:56', message: 'handleRegister catch error', data: { errorMessage: err instanceof Error ? err.message : String(err), errorStack: err instanceof Error ? err.stack : undefined }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'I' }) }).catch(() => { });
       // #endregion
       setError('網路錯誤，請稍後再試');
     } finally {
@@ -98,7 +104,7 @@ export default function RegisterPage() {
         const errorMsg = data.error || '驗證失敗';
         setError(errorMsg);
         setOtp('');
-        
+
         // 如果是審核相關錯誤，顯示更詳細的提示
         if (errorMsg.includes('待審核')) {
           setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
@@ -176,11 +182,10 @@ export default function RegisterPage() {
                   setRegisterMethod('otp');
                   setError('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                  registerMethod === 'otp'
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${registerMethod === 'otp'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 OTP 註冊
               </button>
@@ -189,11 +194,10 @@ export default function RegisterPage() {
                   setRegisterMethod('password');
                   setError('');
                 }}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                  registerMethod === 'password'
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${registerMethod === 'password'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 密碼註冊
               </button>
