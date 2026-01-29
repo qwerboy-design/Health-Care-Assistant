@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     runId: 'post-fix',
     hypothesisId: 'ALL'
   }) + '\n';
-  if (fs) fs.promises.appendFile(logPath, logEntryPost).catch(() => {});
+  if (fs) fs.promises.appendFile(logPath, logEntryPost).catch(() => { });
   // #endregion
 
   try {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         runId: 'post-fix',
         hypothesisId: 'ALL'
       }) + '\n';
-      if (fs) fs.promises.appendFile(logPath, logEntryNoToken).catch(() => {});
+      if (fs) fs.promises.appendFile(logPath, logEntryNoToken).catch(() => { });
       // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         runId: 'post-fix',
         hypothesisId: 'ALL'
       }) + '\n';
-      if (fs) fs.promises.appendFile(logPath, logEntryInvalidSession).catch(() => {});
+      if (fs) fs.promises.appendFile(logPath, logEntryInvalidSession).catch(() => { });
       // #endregion
       return errorResponse(Errors.UNAUTHORIZED.message, 401);
     }
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       runId: 'post-fix',
       hypothesisId: 'ALL'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntryBody).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntryBody).catch(() => { });
     // #endregion
 
     if (!conversationId) {
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     // Generate markdown log
     const markdownContent = generateMarkdownLog(conversation, messages);
     const filename = generateLogFilename(serialNumber);
-    const storagePath = generateLogStoragePath(session.customerId, filename);
+    const storagePath = generateLogStoragePath(session.customerId, conversationId);
 
     // #region agent log
     const logEntryBeforeUpload = JSON.stringify({
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       runId: 'post-fix',
       hypothesisId: 'ALL'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntryBeforeUpload).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntryBeforeUpload).catch(() => { });
     // #endregion
 
     // Upload to R2
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       runId: 'post-fix',
       hypothesisId: 'ALL'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntryAfterUpload).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntryAfterUpload).catch(() => { });
     // #endregion
 
     const responseData = {
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       runId: 'post-fix',
       hypothesisId: 'ALL'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntryBeforeResponse).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntryBeforeResponse).catch(() => { });
     // #endregion
 
     return successResponse(responseData);
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       runId: 'post-fix',
       hypothesisId: 'ALL'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntryError).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntryError).catch(() => { });
     // #endregion
     console.error('[save-log] 保存日誌錯誤:', {
       error: error.message,
@@ -236,7 +236,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
     runId: 'post-fix',
     hypothesisId: 'A'
   }) + '\n';
-  if (fs) fs.promises.appendFile(logPath, logEntry1).catch(() => {});
+  if (fs) fs.promises.appendFile(logPath, logEntry1).catch(() => { });
   // #endregion
 
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -264,7 +264,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
     runId: 'post-fix',
     hypothesisId: 'C'
   }) + '\n';
-  if (fs) fs.promises.appendFile(logPath, logEntry2).catch(() => {});
+  if (fs) fs.promises.appendFile(logPath, logEntry2).catch(() => { });
   // #endregion
 
   if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
@@ -290,7 +290,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
     runId: 'post-fix',
     hypothesisId: 'E'
   }) + '\n';
-  if (fs) fs.promises.appendFile(logPath, logEntry3).catch(() => {});
+  if (fs) fs.promises.appendFile(logPath, logEntry3).catch(() => { });
   // #endregion
 
   try {
@@ -315,7 +315,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
       runId: 'post-fix',
       hypothesisId: 'E'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntry4).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntry4).catch(() => { });
     // #endregion
 
     await s3Client.send(command);
@@ -334,7 +334,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
       runId: 'post-fix',
       hypothesisId: 'E'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntry5).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntry5).catch(() => { });
     // #endregion
 
     console.log(`[save-log] R2 上傳成功:`, {
@@ -360,7 +360,7 @@ async function uploadToR2(path: string, content: string): Promise<string> {
       runId: 'post-fix',
       hypothesisId: 'E'
     }) + '\n';
-    if (fs) fs.promises.appendFile(logPath, logEntry6).catch(() => {});
+    if (fs) fs.promises.appendFile(logPath, logEntry6).catch(() => { });
     // #endregion
     console.error(`[save-log] R2 上傳失敗:`, {
       error: error.message,

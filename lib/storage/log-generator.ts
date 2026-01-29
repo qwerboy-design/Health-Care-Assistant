@@ -54,8 +54,9 @@ export function generateLogFilename(serialNumber: number = 1): string {
 
 /**
  * Generate R2 storage path for logs
- * Format: logs/{customerId}/{filename}
+ * Format: logs/{customerId}/{conversationId}.md
+ * 使用對話 ID 作為檔名，確保同一對話自動上傳時會覆蓋前一份，節省空間且路徑唯一
  */
-export function generateLogStoragePath(customerId: string, filename: string): string {
-  return `logs/${customerId}/${filename}`;
+export function generateLogStoragePath(customerId: string, conversationId: string): string {
+  return `logs/${customerId}/${conversationId}.md`;
 }
