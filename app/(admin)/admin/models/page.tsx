@@ -37,7 +37,7 @@ export default function ModelsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/models');
+      const res = await fetch('/api/admin/models', { cache: 'no-store' });
       const data = await res.json();
 
       if (data.success) {

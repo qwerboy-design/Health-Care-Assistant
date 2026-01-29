@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllModels } from '@/lib/supabase/model-pricing';
 import { errorResponse, successResponse } from '@/lib/errors';

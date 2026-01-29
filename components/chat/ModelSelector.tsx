@@ -29,7 +29,7 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     setError(null);
 
     try {
-      const res = await fetch('/api/models');
+      const res = await fetch('/api/models', { cache: 'no-store' });
       const data = await res.json();
 
       if (data.success) {
