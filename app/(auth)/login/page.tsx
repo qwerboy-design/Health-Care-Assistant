@@ -1,32 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { CountdownTimer } from '@/components/auth/CountdownTimer';
 
-export default function LoginPage() {
-  const [isAdminAccessible, setIsAdminAccessible] = useState(false);
-
-  useEffect(() => {
-    // 預先檢查 session 是否存在以及角色是否為 admin 可以導向後台，但這裡僅提供按鈕狀態控制
-    // 後端實際授權由按鈕觸發時再驗證
-  }, []);
-
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
-  const [step, setStep] = useState<'input' | 'verify'>('input');
+  const [step, setStep] = useState<'input' | 'verify' | 'set-password'>('input');
 
   // 表單狀態
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
 
   // UI 狀態
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [canResend, setCanResend] = useState(false);
+
+  useEffect(() => {
+    const s = searchParams.get('step');
+    const e = searchParams.get('email');
+    if (s === 'set-password') {
+      setStep('set-password');
+    }
+    if (e) {
+      setEmail(e);
+    }
+  }, [searchParams]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +50,14 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        router.push('/chat');
-        router.refresh();
+        if (data.data.requiresPasswordReset) {
+          setStep('set-password');
+          setError('');
+          alert('這是您首次使用預設密碼登入，請先設定您的新密碼。');
+        } else {
+          router.push('/chat');
+          router.refresh();
+        }
       } else {
         const errorMsg = data.error || '登入失敗';
         setError(errorMsg);
@@ -106,6 +119,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
+        // OTP 登入成功，直接進入聊天室
         router.push('/chat');
         router.refresh();
       } else {
@@ -127,69 +141,119 @@ export default function LoginPage() {
     }
   };
 
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('兩次輸入的密碼不一致');
+      return;
+    }
+    if (password.length < 8) {
+      setError('密碼長度至少需要 8 個字元');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, confirmPassword }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert('密碼設定成功！請等待管理員審核。審核通過後即可登入。');
+        setStep('input');
+        setLoginMethod('password');
+        setPassword('');
+        setConfirmPassword('');
+        setError('');
+      } else {
+        setError(data.error || '設定失敗');
+      }
+    } catch (err) {
+      setError('網路錯誤，請稍後再試');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            登入臨床助手 AI
+            {step === 'set-password' ? '新增帳戶密碼' : '登入臨床助手 AI'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            或{' '}
-            <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              建立新帳號
-            </a>
+            {step === 'set-password' ? (
+              '請為您的帳號設定登入密碼'
+            ) : (
+              <>
+                或{' '}
+                <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                  建立新帳號
+                </a>
+              </>
+            )}
           </p>
         </div>
 
-        {/* Google 登入 */}
-        <div>
-          <GoogleLoginButton
-            onError={(err) => setError(err)}
-          />
-        </div>
+        {step !== 'set-password' && (
+          <>
+            {/* Google 登入 */}
+            <div>
+              <GoogleLoginButton
+                onError={(err) => setError(err)}
+              />
+            </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">或使用</span>
-          </div>
-        </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">或使用</span>
+              </div>
+            </div>
 
-        {/* 登入方式選擇 */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setLoginMethod('password');
-              setStep('input');
-              setError('');
-            }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'password'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-          >
-            密碼登入
-          </button>
-          <button
-            onClick={() => {
-              setLoginMethod('otp');
-              setStep('input');
-              setError('');
-            }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'otp'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-          >
-            OTP 登入
-          </button>
-        </div>
+            {/* 登入方式選擇 */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setLoginMethod('password');
+                  setStep('input');
+                  setError('');
+                }}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'password'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                密碼登入
+              </button>
+              <button
+                onClick={() => {
+                  setLoginMethod('otp');
+                  setStep('input');
+                  setError('');
+                }}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'otp'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                OTP 登入
+              </button>
+            </div>
+          </>
+        )}
 
         {/* 密碼登入表單 */}
-        {loginMethod === 'password' && (
+        {step === 'input' && loginMethod === 'password' && (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -235,8 +299,8 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* OTP 登入表單 */}
-        {loginMethod === 'otp' && (
+        {/* OTP 登入/驗證流程 */}
+        {loginMethod === 'otp' && step !== 'set-password' && (
           <div className="space-y-4">
             {step === 'input' && (
               <form onSubmit={handleSendOTP} className="space-y-4">
@@ -293,7 +357,7 @@ export default function LoginPage() {
                     disabled={loading || otp.length !== 6}
                     className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
-                    {loading ? '驗證中...' : '驗證並登入'}
+                    {loading ? '驗證中...' : '驗證並繼續'}
                   </button>
                 </div>
 
@@ -331,7 +395,78 @@ export default function LoginPage() {
             )}
           </div>
         )}
+
+        {/* 新增密碼表單 */}
+        {step === 'set-password' && (
+          <form onSubmit={handleSetPassword} className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                正在為 <strong>{email}</strong> 設定密碼
+              </p>
+            </div>
+            <div>
+              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
+                新密碼
+              </label>
+              <input
+                id="new-password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="至少 8 個字元"
+              />
+            </div>
+            <div>
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
+                確認新密碼
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="再次輸入新密碼"
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600 text-center">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              {loading ? '處理中...' : '設定密碼並完成'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep('input');
+                setLoginMethod('password');
+                setError('');
+              }}
+              className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
+            >
+              取消並返回登入
+            </button>
+          </form>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

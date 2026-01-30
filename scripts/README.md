@@ -39,7 +39,7 @@ npm run test:verify
 
 ### 2. `test-file-upload.js` - 檔案上傳功能測試
 
-測試 Vercel Blob 直傳功能，驗證檔案上傳端點和相關功能。
+測試 Cloudflare R2 上傳功能，驗證檔案上傳端點和相關功能。
 
 **執行方式**：
 ```bash
@@ -47,16 +47,16 @@ npm run test:upload
 ```
 
 **測試項目**：
-- ✅ 環境變數檢查（`BLOB_READ_WRITE_TOKEN`）
-- ✅ `/api/upload` 端點存在性
+- ✅ 環境變數檢查（`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`）
+- ✅ `/api/chat/upload` 端點存在性
 - ✅ 未授權訪問保護（401 驗證）
 - ✅ 檔案類型驗證（需要 Session）
-- ✅ 檔案大小驗證（500MB 限制）
+- ✅ 檔案大小驗證（100MB 限制）
 - ✅ `/api/chat` 端點檔案 URL 支援
 
 **前置條件**：
 - 開發伺服器運行中 (`npm run dev`)
-- `BLOB_READ_WRITE_TOKEN` 環境變數已設定
+- Cloudflare R2 環境變數已設定
 - （可選）`TEST_SESSION_COOKIE` 環境變數以執行完整測試
 
 **獲取 Session Cookie**：
@@ -129,7 +129,10 @@ npm run test:integration
 - `SUPABASE_URL` - Supabase 資料庫 URL
 - `SUPABASE_ANON_KEY` - Supabase 匿名金鑰
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase 服務角色金鑰
-- `BLOB_READ_WRITE_TOKEN` - Vercel Blob 讀寫令牌（檔案上傳功能需要）
+- `R2_ACCESS_KEY_ID` - Cloudflare R2 Access Key ID
+- `R2_SECRET_ACCESS_KEY` - Cloudflare R2 Secret Access Key
+- `R2_BUCKET_NAME` - Cloudflare R2 Bucket Name
+- `R2_ACCOUNT_ID` - Cloudflare R2 Account ID
 - `MCP_SERVER_URL` - MCP Server URL（預設: `https://mcp.k-dense.ai/claude-scientific-skills/mcp`）
 - `MCP_API_KEY` - MCP Server API Key（可選）
 - `RESEND_API_KEY` - Resend Email API Key

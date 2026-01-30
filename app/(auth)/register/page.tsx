@@ -95,9 +95,9 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (data.success) {
-        // OTP 驗證成功，但需要等待審核
+        // OTP 驗證成功，告知等待審核
         setError('');
-        alert('驗證成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
+        alert('驗證成功！您的帳號已建立，請等待管理員審核。審核通過後，系統將寄送預設密碼至您的 Email。');
         router.push('/login');
         router.refresh();
       } else {

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     runId: 'run1',
     hypothesisId: 'A'
   };
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => {});
+  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logData) }).catch(() => { });
   // #endregion
   try {
     // Rate limiting - IP
@@ -37,17 +37,17 @@ export async function POST(request: NextRequest) {
 
     // 解析請求
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:21',message:'Before parsing request body',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:21', message: 'Before parsing request body', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
     // #endregion
     const body = await request.json();
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:23',message:'Request body parsed',data:{hasEmail:!!body.email,hasName:!!body.name,hasPhone:!!body.phone,hasPassword:!!body.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:23', message: 'Request body parsed', data: { hasEmail: !!body.email, hasName: !!body.name, hasPhone: !!body.phone, hasPassword: !!body.password }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
     // #endregion
-    
+
     // 驗證輸入
     const validation = registerSchema.safeParse(body);
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:26',message:'Validation result',data:{success:validation.success,errors:validation.success?[]:validation.error.issues.map((e:any)=>e.message)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:26', message: 'Validation result', data: { success: validation.success, errors: validation.success ? [] : validation.error.issues.map((e: any) => e.message) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'C' }) }).catch(() => { });
     // #endregion
     if (!validation.success) {
       return errorResponse(validation.error.issues[0].message, 400);
@@ -62,12 +62,12 @@ export async function POST(request: NextRequest) {
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:65',message:'Before findCustomerByEmail',data:{email},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:65', message: 'Before findCustomerByEmail', data: { email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
     // #endregion
     // 檢查 Email 是否已被註冊
     const existingCustomer = await findCustomerByEmail(email);
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:68',message:'After findCustomerByEmail',data:{found:!!existingCustomer},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:68', message: 'After findCustomerByEmail', data: { found: !!existingCustomer }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
     // #endregion
     if (existingCustomer) {
       return errorResponse(Errors.EMAIL_EXISTS.message, 409);
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
     // 檢查電話號碼是否已被註冊
     if (phone) {
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:74',message:'Before checkPhoneExists',data:{phone},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:74', message: 'Before checkPhoneExists', data: { phone }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
       // #endregion
       const phoneExists = await checkPhoneExists(phone);
       // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:77',message:'After checkPhoneExists',data:{phoneExists},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:77', message: 'After checkPhoneExists', data: { phoneExists }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'B' }) }).catch(() => { });
       // #endregion
       if (phoneExists) {
         return errorResponse(Errors.PHONE_EXISTS.message, 409);
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (authProvider === 'password') {
       // 密碼註冊：不自動登入，等待審核
       return successResponse(
-        { 
+        {
           customerId: customer.id,
           email: customer.email,
           authProvider,
@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
       // OTP 註冊：發送 OTP，不建立 Session
       const otp = generateOTP();
       const expiresAt = getOTPExpiryTime();
-      
+
       await createOTPToken(email, otp, expiresAt);
       await sendOTPEmail({ to: email, name: customer.name, otp });
 
       return successResponse(
-        { 
+        {
           customerId: customer.id,
           email: customer.email,
           authProvider,
@@ -130,9 +130,12 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/register/route.ts:140',message:'Error caught',data:{errorMessage:error instanceof Error?error.message:String(error),errorName:error instanceof Error?error.name:undefined,errorStack:error instanceof Error?error.stack?.substring(0,200):undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'ALL'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:140', message: 'Error caught', data: { errorMessage: error instanceof Error ? error.message : String(error), errorName: error instanceof Error ? error.name : undefined, errorStack: error instanceof Error ? error.stack?.substring(0, 200) : undefined }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'ALL' }) }).catch(() => { });
     // #endregion
-    console.error('註冊錯誤:', error);
-    return errorResponse(Errors.INTERNAL_ERROR.message, 500);
+    console.error('註冊錯誤詳細資訊:', error);
+
+    // 返回更具體的錯誤訊息幫助除錯（開發環境）
+    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
+    return errorResponse(`${Errors.INTERNAL_ERROR.message}: ${errorMessage}`, 500);
   }
 }

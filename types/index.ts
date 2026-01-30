@@ -13,6 +13,7 @@ export interface Customer {
   created_at: string;
   updated_at: string;
   last_login_at?: string;
+  requires_password_reset?: boolean;
 }
 
 // OTP Token 類型
