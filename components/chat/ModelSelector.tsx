@@ -58,7 +58,6 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     fetchModels();
 
     // 設置即時同步
-    // 加入 retry 邏輯或確認訂閱狀態
     const channel = supabase
       .channel('model_pricing_changes')
       .on(
@@ -78,8 +77,23 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
         console.log('Supabase Realtime 訂閱狀態:', status);
       });
 
+    // 補強機制 1: Window Focus 時重新獲取 (應對 tab 切換)
+    const handleWindowFocus = () => {
+      console.log('[ModelSelector] Window focused, refreshing models...');
+      fetchModels(true);
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
+    // 補強機制 2: 定期輪詢 (Realtime 失敗時的備援)
+    const pollInterval = setInterval(() => {
+      console.log('[ModelSelector] Polling models...');
+      fetchModels(true);
+    }, 30000); // 每 30 秒
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('focus', handleWindowFocus);
+      clearInterval(pollInterval);
     };
   }, [value]); // 加入 value 作為依賴，確保 fallback 邏輯正確執行
 
