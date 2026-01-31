@@ -7,8 +7,11 @@
 ### Supabase 資料庫
 
 ```env
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key
+# 客戶端和服務端共用 (必須使用 NEXT_PUBLIC_ 前綴以便客戶端使用)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# 服務端專用 (僅後端 API 使用，具有完整權限)
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
@@ -16,6 +19,11 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 1. 登入 Supabase Dashboard
 2. 選擇您的專案
 3. Settings → API → 複製 URL 和 Keys
+
+**⚠️ 重要**:
+- `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_ANON_KEY` **必須**使用 `NEXT_PUBLIC_` 前綴
+- 這樣客戶端 (瀏覽器) 才能讀取,Realtime 和前端 API 調用才能正常工作
+- 舊的變數名 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY` 仍然支援,但建議使用新格式
 
 ---
 
