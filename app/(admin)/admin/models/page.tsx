@@ -97,7 +97,11 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        await fetchModels();
+        setModels(prev => prev.map(m =>
+          m.model_name === selectedModel.model_name
+            ? { ...m, credits_cost: formData.credits_cost }
+            : m
+        ));
         setShowEditModal(false);
         setSelectedModel(null);
         alert('定價更新成功');
@@ -125,7 +129,9 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        await fetchModels();
+        setModels(prev => prev.map(m =>
+          m.model_name === modelName ? { ...m, is_active: false } : m
+        ));
         alert('模型已停用');
       } else {
         alert(data.error || '停用失敗');
@@ -152,7 +158,9 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        await fetchModels();
+        setModels(prev => prev.map(m =>
+          m.model_name === modelName ? { ...m, is_active: true } : m
+        ));
         alert('模型已啟用');
       } else {
         alert(data.error || '啟用失敗');
