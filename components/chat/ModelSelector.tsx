@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -22,40 +22,46 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
   const [models, setModels] = useState<ModelOption[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const lastRealtimeUpdateRef = useRef<number>(0);
+  const hasAutoSelectedRef = useRef<boolean>(false);
 
   // 從 API 獲取可用模型列表
-  const fetchModels = async (silent = false) => {
+  const fetchModels = async (silent = false, source = 'init') => {
+    // 若剛收到 Realtime 更新（5分鐘內），避免被 replica lag 的舊資料覆蓋
+    // Supabase Read Replica 延遲可能達 2-3 分鐘，設定更保守的保護期
+    const now = Date.now();
+    const timeSinceRealtimeUpdate = now - lastRealtimeUpdateRef.current;
+    if (source !== 'init' && lastRealtimeUpdateRef.current > 0 && timeSinceRealtimeUpdate < 300000) {
+      console.log(`[ModelSelector] ⏭️ Skip fetchModels (${source}) - Realtime active (last update ${Math.round(timeSinceRealtimeUpdate / 1000)}s ago)`);
+      return;
+    }
+    
     if (!silent) setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/models', { cache: 'no-store' });
+      const res = await fetch(`/api/models?_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
 
       if (data.success) {
         const fetchedModels = data.data.models || [];
+        console.log(`[ModelSelector] Fetched ${fetchedModels.length} models (${source})`);
         setModels(fetchedModels);
-
-        // 如果沒有選擇模型，或者當前選擇的模型已不再可用清單中
-        const isCurrentModelAvailable = fetchedModels.some((m: ModelOption) => m.model_name === value);
-
-        if (fetchedModels.length > 0 && (!value || !isCurrentModelAvailable)) {
-          // 預設選擇第一個模型
-          onChange(fetchedModels[0].model_name);
-        }
+        // 不在這裡處理 value fallback，改由獨立的 useEffect 處理
       } else {
         setError(data.error || '無法獲取模型列表');
       }
     } catch (err: any) {
-      console.error('獲取模型列表錯誤:', err);
+      console.error('[ModelSelector] Fetch error:', err);
       if (!silent) setError('網路錯誤');
     } finally {
       if (!silent) setIsLoading(false);
     }
   };
 
+  // 初始化：僅在 mount 時執行一次
   useEffect(() => {
-    fetchModels();
+    fetchModels(false, 'init');
 
     // 設置即時同步
     const channel = supabase
@@ -68,34 +74,79 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
           table: 'model_pricing'
         },
         (payload) => {
-          console.log('模型資料實時變動:', payload);
-          // 使用 silent 模式更新，避免選單閃爍
-          fetchModels(true);
+          console.log('[ModelSelector] Realtime event received:', payload.eventType);
+          const eventType = ((payload as { eventType?: string }).eventType ?? (payload as { event_type?: string }).event_type ?? (payload as { type?: string }).type ?? '') as string;
+          const rawPayload = payload as { new?: ModelOption; old?: { model_name?: string }; record?: ModelOption; old_record?: { model_name?: string } };
+          const newRow = rawPayload.new ?? rawPayload.record;
+          const oldRow = rawPayload.old ?? rawPayload.old_record;
+          // 直接以 Realtime payload 更新本地 state
+          if (eventType.toUpperCase() === 'UPDATE' && newRow) {
+            const updated = newRow;
+            lastRealtimeUpdateRef.current = Date.now();
+            if (updated.is_active === false) {
+              setModels((prev) => prev.filter((m) => m.model_name !== updated.model_name));
+            } else {
+              setModels((prev) => {
+                const found = prev.some(m => m.model_name === updated.model_name);
+                return found
+                  ? prev.map((m) => m.model_name === updated.model_name ? { ...m, ...updated } : m)
+                  : [...prev, updated].sort((a, b) => a.credits_cost - b.credits_cost);
+              });
+            }
+          } else if (eventType.toUpperCase() === 'INSERT' && newRow) {
+            const inserted = newRow;
+            lastRealtimeUpdateRef.current = Date.now();
+            if (inserted.is_active) {
+              setModels((prev) =>
+                prev.some((m) => m.model_name === inserted.model_name)
+                  ? prev.map((m) =>
+                      m.model_name === inserted.model_name ? { ...m, ...inserted } : m
+                    )
+                  : [...prev, inserted].sort((a, b) => a.credits_cost - b.credits_cost)
+              );
+            }
+          } else if (eventType.toUpperCase() === 'DELETE' && oldRow) {
+            const removed = oldRow;
+            if (removed.model_name) {
+              setModels((prev) => prev.filter((m) => m.model_name !== removed.model_name));
+            }
+          } else {
+            fetchModels(true, 'realtime');
+          }
         }
       )
-      .subscribe((status) => {
-        console.log('Supabase Realtime 訂閱狀態:', status);
-      });
+      .subscribe();
 
-    // 補強機制 1: Window Focus 時重新獲取 (應對 tab 切換)
-    const handleWindowFocus = () => {
-      console.log('[ModelSelector] Window focused, refreshing models...');
-      fetchModels(true);
-    };
-    window.addEventListener('focus', handleWindowFocus);
-
-    // 補強機制 2: 定期輪詢 (Realtime 失敗時的備援)
+    // 補強機制：僅在 Realtime 連線中斷時作為備援
+    // 由於 Supabase Read Replica 延遲可能超過 2-3 分鐘，完全依賴 Realtime 更新
+    // 僅保留極長間隔的輪詢作為 Realtime 失敗時的最後防線
     const pollInterval = setInterval(() => {
-      console.log('[ModelSelector] Polling models...');
-      fetchModels(true);
-    }, 30000); // 每 30 秒
+      fetchModels(true, 'poll');
+    }, 300000); // 每 5 分鐘（僅作為 Realtime 失敗的備援）
 
     return () => {
       supabase.removeChannel(channel);
-      window.removeEventListener('focus', handleWindowFocus);
       clearInterval(pollInterval);
     };
-  }, [value]); // 加入 value 作為依賴，確保 fallback 邏輯正確執行
+  }, []); // 移除 value 依賴，僅在 mount 時執行一次
+
+  // 獨立處理：當模型列表載入完成且當前選擇的模型不可用時，自動選擇第一個
+  useEffect(() => {
+    if (models.length === 0 || isLoading) return;
+
+    const isCurrentModelAvailable = models.some((m) => m.model_name === value);
+    
+    // 只在初次載入或當前選擇真的不可用時才自動選擇
+    if ((!value || !isCurrentModelAvailable) && !hasAutoSelectedRef.current) {
+      hasAutoSelectedRef.current = true;
+      onChange(models[0].model_name);
+    }
+    
+    // 如果當前選擇的模型變成可用了，重置 flag
+    if (value && isCurrentModelAvailable) {
+      hasAutoSelectedRef.current = false;
+    }
+  }, [models, value, isLoading, onChange]);
 
   // 檢查用戶是否有足夠的 Credits
   const canAffordModel = (creditsCost: number) => {

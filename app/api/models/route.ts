@@ -9,12 +9,14 @@ import { errorResponse, successResponse } from '@/lib/errors';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 獲取所有啟用的模型
     const models = await getAllModels();
-
-    return successResponse({
-      models,
-    });
+    const response = successResponse({ models });
+    // 禁止快取，確保切換分頁回來時取得最新定價
+    response.headers.set(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, max-age=0'
+    );
+    return response;
   } catch (error: any) {
     console.error('獲取模型列表失敗:', error);
     return errorResponse('獲取模型列表失敗', 500);

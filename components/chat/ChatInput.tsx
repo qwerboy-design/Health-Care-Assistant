@@ -100,7 +100,10 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
             </svg>
           </button>
 
-          {showOptions && (
+          <div
+            className={`overflow-hidden transition-all ${showOptions ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
+            aria-hidden={!showOptions}
+          >
             <div className="max-h-64 overflow-y-auto border-t border-gray-100">
               <div className="p-4 space-y-3 bg-gray-50">
                 <ModelSelector
@@ -112,7 +115,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
                 <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* 檔案上傳區域 */}
