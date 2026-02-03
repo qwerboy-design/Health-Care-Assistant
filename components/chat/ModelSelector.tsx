@@ -76,7 +76,7 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
         (payload) => {
           console.log('[ModelSelector] Realtime event received:', payload.eventType);
           const eventType = ((payload as { eventType?: string }).eventType ?? (payload as { event_type?: string }).event_type ?? (payload as { type?: string }).type ?? '') as string;
-          const rawPayload = payload as { new?: ModelOption; old?: { model_name?: string }; record?: ModelOption; old_record?: { model_name?: string } };
+          const rawPayload = payload as unknown as { new?: ModelOption; old?: { model_name?: string }; record?: ModelOption; old_record?: { model_name?: string } };
           const newRow = rawPayload.new ?? rawPayload.record;
           const oldRow = rawPayload.old ?? rawPayload.old_record;
           // 直接以 Realtime payload 更新本地 state
