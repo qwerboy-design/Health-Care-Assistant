@@ -25,20 +25,47 @@ function getSupabaseAnonKey(): string {
 function getSupabaseServiceKey(): string {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY 未設定，使用預設值');
+    // 僅在服務端使用，客戶端不需要此警告
+    if (typeof window === 'undefined') {
+      console.warn('SUPABASE_SERVICE_ROLE_KEY 未設定，使用預設值');
+    }
     return 'placeholder-service-key';
   }
   return key;
 }
 
 // 客戶端 Supabase client (使用 anon key)
-export const supabase: SupabaseClient = createClient(
-  getSupabaseUrl(),
-  getSupabaseAnonKey()
-);
+// 使用單例模式避免多實例警告
+let _supabase: SupabaseClient | null = null;
+export const supabase: SupabaseClient = (() => {
+  if (!_supabase) {
+    _supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+      auth: {
+        // 使用專屬的 storage key 避免衝突
+        storageKey: 'sb-hac-auth-token',
+        autoRefreshToken: true,
+        persistSession: true,
+      },
+    });
+  }
+  return _supabase;
+})();
 
 // 服務端 Supabase client (使用 service role key，具有完整權限)
-export const supabaseAdmin: SupabaseClient = createClient(
-  getSupabaseUrl(),
-  getSupabaseServiceKey()
-);
+// 僅在服務端初始化
+let _supabaseAdmin: SupabaseClient | null = null;
+export const supabaseAdmin: SupabaseClient = (() => {
+  if (typeof window !== 'undefined') {
+    // 客戶端不應該使用 admin client
+    return supabase;
+  }
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient(getSupabaseUrl(), getSupabaseServiceKey(), {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+  return _supabaseAdmin;
+})();
