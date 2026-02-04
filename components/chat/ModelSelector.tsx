@@ -49,10 +49,17 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
         let fetchedModels: ModelOption[] = data.data.models || [];
         console.log(`[ModelSelector] 📥 Fetched ${fetchedModels.length} models from API (${source})`);
         
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModelSelector.tsx:fetchModels',message:'API response received',data:{source:source,modelsCount:fetchedModels.length,models:fetchedModels.map(m=>({name:m.model_name,updated_at:m.updated_at,credits_cost:m.credits_cost}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'API'})}).catch(()=>{});
+        // #endregion
+        
         // 關鍵：與 localStorage 版本合併，確保使用最新版本
         // 這解決了重新登入後 API 返回舊數據的問題
         if (source === 'init') {
           fetchedModels = mergeWithStoredVersions(fetchedModels);
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModelSelector.tsx:fetchModels:afterMerge',message:'after merge with localStorage',data:{mergedModelsCount:fetchedModels.length,mergedModels:fetchedModels.map(m=>({name:m.model_name,updated_at:m.updated_at,credits_cost:m.credits_cost}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'MERGE'})}).catch(()=>{});
+          // #endregion
         }
         
         setModels(fetchedModels);
@@ -90,6 +97,10 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
           const rawPayload = payload as unknown as { new?: ModelOption; old?: { model_name?: string }; record?: ModelOption; old_record?: { model_name?: string } };
           const newRow = rawPayload.new ?? rawPayload.record;
           const oldRow = rawPayload.old ?? rawPayload.old_record;
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ModelSelector.tsx:Realtime',message:'Realtime event payload',data:{eventType:eventType,newRow:newRow,hasUpdatedAt:!!(newRow as ModelOption)?.updated_at},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           
           // 直接以 Realtime payload 更新本地 state 和 localStorage
           if (eventType.toUpperCase() === 'UPDATE' && newRow) {
