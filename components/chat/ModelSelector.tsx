@@ -231,13 +231,14 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
       >
         {models.map((model) => {
           const affordable = canAffordModel(model.credits_cost);
+          const textOnlyLabel = !model.supports_vision ? ' (僅限文字)' : '';
           return (
             <option
               key={model.id}
               value={model.model_name}
               disabled={!affordable}
             >
-              {model.display_name} - {model.credits_cost} Credits
+              {model.display_name}{textOnlyLabel} - {model.credits_cost} Credits
               {!affordable && ' (Credits 不足)'}
             </option>
           );

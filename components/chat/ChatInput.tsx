@@ -30,7 +30,9 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
   const [uploadedFileType, setUploadedFileType] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
+  const [modelVisionWarning, setModelVisionWarning] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [allModels, setAllModels] = useState<Array<{ model_name: string; display_name: string; supports_vision: boolean }>>([]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -38,6 +40,55 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [message]);
+
+  // 獲取所有模型列表，用於檢查視覺支持
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const res = await fetch(`/api/models?_t=${Date.now()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success) {
+          setAllModels(data.data.models || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch models:', err);
+      }
+    };
+    fetchModels();
+  }, []);
+
+  // 檢查上傳的檔案是否需要支持視覺的模型
+  const checkVisionRequirement = (fileType: string | null): boolean => {
+    const visionRequiredTypes = [
+      'image/jpeg',
+      'image/png',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    return fileType ? visionRequiredTypes.includes(fileType) : false;
+  };
+
+  // 當上傳檔案時，檢查當前模型是否支持視覺
+  useEffect(() => {
+    if (uploadedFileUrl && uploadedFileType) {
+      const needsVision = checkVisionRequirement(uploadedFileType);
+      if (needsVision) {
+        const currentModel = allModels.find(m => m.model_name === selectedModel);
+        if (currentModel && !currentModel.supports_vision) {
+          setModelVisionWarning(
+            `⚠️ 上傳的檔案需要支持圖片/PDF 的模型。請選擇 Claude Sonnet 4.5 或 Claude Opus 4.5。`
+          );
+        } else {
+          setModelVisionWarning(null);
+        }
+      } else {
+        setModelVisionWarning(null);
+      }
+    } else {
+      setModelVisionWarning(null);
+    }
+  }, [uploadedFileUrl, uploadedFileType, selectedModel, allModels]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +228,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
                     setUploadedFileName(null);
                     setUploadedFileType(null);
                     setUploadError(null);
+                    setModelVisionWarning(null);
                   }}
                   className="text-blue-600 hover:text-blue-700 text-sm"
                 >
@@ -185,6 +237,9 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
               </div>
               {uploadError && (
                 <p className="text-sm text-red-600 px-2">{uploadError}</p>
+              )}
+              {modelVisionWarning && (
+                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">{modelVisionWarning}</p>
               )}
             </div>
           )}

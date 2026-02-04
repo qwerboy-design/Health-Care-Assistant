@@ -20,6 +20,7 @@ export interface ModelOption {
   display_name: string;
   credits_cost: number;
   is_active: boolean;
+  supports_vision: boolean; // 是否支持圖片/PDF
   updated_at?: string;
 }
 

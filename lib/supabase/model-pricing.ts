@@ -9,6 +9,7 @@ export interface ModelPricing {
   display_name: string;
   credits_cost: number;
   is_active: boolean;
+  supports_vision: boolean; // 是否支持圖片/PDF
   created_at: string;
   updated_at: string;
 }
