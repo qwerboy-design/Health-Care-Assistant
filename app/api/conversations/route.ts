@@ -4,6 +4,9 @@ import { getConversationsByCustomerId } from '@/lib/supabase/conversations';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/conversations - 獲取用戶的所有對話
  */

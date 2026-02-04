@@ -4,6 +4,9 @@ import { verifySession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 import { Errors } from '@/lib/errors';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/upload - 處理檔案上傳授權
  * 使用 Vercel Blob 的 handleUpload() 標準方式

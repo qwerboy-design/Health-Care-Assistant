@@ -3,6 +3,9 @@ import { requireAdmin } from '@/lib/auth/admin';
 import { getAllCustomers, getPendingCustomers } from '@/lib/supabase/customers';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // 驗證管理員權限

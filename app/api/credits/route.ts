@@ -3,6 +3,9 @@ import { verifySession } from '@/lib/auth/session';
 import { getCustomerCredits, getCreditsHistory } from '@/lib/supabase/credits';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/credits
  * 取得當前用戶的 Credits 分數

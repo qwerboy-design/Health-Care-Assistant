@@ -8,6 +8,9 @@ import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 設定 Session，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   // #region agent log
   fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/login/route.ts:10', message: 'POST /api/auth/login entry', data: { hasSupabaseUrl: !!process.env.SUPABASE_URL }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });

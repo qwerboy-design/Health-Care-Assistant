@@ -5,6 +5,9 @@ import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { verifySession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();

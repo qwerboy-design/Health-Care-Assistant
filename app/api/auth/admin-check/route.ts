@@ -4,6 +4,9 @@ import { verifySession } from '@/lib/auth/session';
 import { findCustomerById } from '@/lib/supabase/customers';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/auth/admin-check
  * 檢查當前用戶是否為管理員（四步驗證）

@@ -4,6 +4,9 @@ import { findCustomerById } from '@/lib/supabase/customers';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   // #region agent log
   fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/auth/me/route.ts:7',message:'GET /api/auth/me entry',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'ME'})}).catch(()=>{});

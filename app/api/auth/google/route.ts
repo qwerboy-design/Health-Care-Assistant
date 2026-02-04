@@ -8,6 +8,9 @@ import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 設定 Session，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting

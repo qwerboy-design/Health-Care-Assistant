@@ -6,6 +6,9 @@ import { cookies } from 'next/headers';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 // S3 Client for R2
 const s3Client = new S3Client({
   region: 'auto',

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteSession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies()，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies();

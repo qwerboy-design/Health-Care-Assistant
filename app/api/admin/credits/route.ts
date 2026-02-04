@@ -5,6 +5,9 @@ import { findCustomerById } from '@/lib/supabase/customers';
 import { errorResponse, successResponse } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * 驗證管理員權限
  */

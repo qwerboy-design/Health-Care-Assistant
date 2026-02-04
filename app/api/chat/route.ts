@@ -9,6 +9,9 @@ import { chatMessageSchema } from '@/lib/validation/schemas';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 import { cookies } from 'next/headers';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/chat - 處理聊天訊息
  * 檔案上傳已改為直傳方式，使用 /api/upload 端點

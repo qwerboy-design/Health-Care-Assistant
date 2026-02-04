@@ -5,6 +5,9 @@ import { verifySession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 
+// 此路由使用 cookies() 進行身份驗證，必須動態渲染
+export const dynamic = 'force-dynamic';
+
 const s3Client = new S3Client({
   region: 'auto',
   credentials: {
