@@ -23,7 +23,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState<string>('');
   const [workloadLevel, setWorkloadLevel] = useState<'instant' | 'basic' | 'standard' | 'professional'>('standard');
-  const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-20250514');
+  const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-5-20250929');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);

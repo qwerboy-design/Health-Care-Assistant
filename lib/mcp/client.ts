@@ -175,7 +175,7 @@ export class MCPClient {
 
       // 構建 Anthropic API 請求
       // 優先順序：request.modelName > 環境變數 ANTHROPIC_MODEL > 預設模型
-      const modelToUse = request.modelName || process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+      const modelToUse = request.modelName || process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
       const apiRequest = {
         model: modelToUse,
         max_tokens: 4096,
@@ -373,7 +373,7 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: request.modelName || process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307',
+          model: request.modelName || process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages,

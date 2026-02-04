@@ -45,17 +45,16 @@ ALTER TABLE chat_conversations
 ADD COLUMN model_name VARCHAR(255);
 
 -- 5. 插入預設模型定價資料
+-- 注意：模型名稱必須與 Anthropic API 支援的模型 ID 完全一致
 INSERT INTO model_pricing (model_name, display_name, credits_cost, is_active) VALUES
-  ('claude-sonnet-4-20250514', 'Claude Sonnet 4', 10, true),
-  ('claude-3-5-sonnet-20241022', 'Claude 3.5 Sonnet', 8, true),
-  ('claude-3-haiku-20240307', 'Claude 3 Haiku', 5, true);
+  ('claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 3, true),
+  ('claude-sonnet-4-5-20250929', 'Claude Sonnet 4.5', 5, true),
+  ('claude-opus-4-5-20251101', 'Claude Opus 4.5', 20, true);
 
--- 注意：如果上述模型名稱不正確，請更新為正確的 Anthropic 模型 ID
--- 常見的模型 ID：
--- - claude-3-5-sonnet-20241022 (最新 Claude 3.5 Sonnet)
--- - claude-3-opus-20240229 (Claude 3 Opus)
--- - claude-3-sonnet-20240229 (Claude 3 Sonnet)
--- - claude-3-haiku-20240307 (Claude 3 Haiku)
+-- 參考：Anthropic Claude 4.5 系列模型 ID（2026年最新）
+-- - claude-sonnet-4-5-20250929 (Claude Sonnet 4.5) - 平衡智能與速度
+-- - claude-haiku-4-5-20251001 (Claude Haiku 4.5) - 最快速
+-- - claude-opus-4-5-20251101 (Claude Opus 4.5) - 最高智能
 
 -- 6. 建立更新 updated_at 的觸發器函數（如果不存在）
 CREATE OR REPLACE FUNCTION update_updated_at_column()

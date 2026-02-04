@@ -80,7 +80,7 @@ async function handleChatMessage(request: NextRequest) {
     }
 
     // 設定預設模型（如果未提供）
-    const selectedModel = modelName || 'claude-sonnet-4-20250514';
+    const selectedModel = modelName || 'claude-sonnet-4-5-20250929';
 
     // 檢查模型是否存在
     const modelPricing = await getModelPricing(selectedModel);

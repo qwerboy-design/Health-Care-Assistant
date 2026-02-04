@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // 測試請求 - 使用最簡單的配置
     const requestBody = {
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 50,
       messages: [{
         role: 'user',
