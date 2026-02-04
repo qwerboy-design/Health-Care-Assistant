@@ -121,9 +121,6 @@ function cleanupExpired(data: StoredVersionsData): StoredVersionsData {
  * @param model 更新後的模型數據
  */
 export function saveModelVersion(model: ModelOption): void {
-  // #region agent log
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'model-versions.ts:saveModelVersion',message:'saveModelVersion called',data:{model_name:model.model_name,updated_at:model.updated_at,has_updated_at:!!model.updated_at},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
   if (!model.updated_at) {
     console.warn('[ModelVersions] Model missing updated_at, skipping save:', model.model_name);
     return;
@@ -199,10 +196,6 @@ function compareTimestamps(time1: string | undefined, time2: string | undefined)
 export function mergeWithStoredVersions(apiModels: ModelOption[]): ModelOption[] {
   const stored = getStoredModelVersions();
   
-  // #region agent log
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'model-versions.ts:mergeWithStoredVersions',message:'merge called',data:{storedKeys:Object.keys(stored),storedCount:Object.keys(stored).length,apiModelsCount:apiModels.length,apiModels:apiModels.map(m=>({name:m.model_name,updated_at:m.updated_at}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-  
   if (Object.keys(stored).length === 0) {
     console.log('[ModelVersions] No stored versions, using API data as-is');
     return apiModels;
@@ -218,10 +211,6 @@ export function mergeWithStoredVersions(apiModels: ModelOption[]): ModelOption[]
     }
 
     const comparison = compareTimestamps(storedVersion.updated_at, apiModel.updated_at);
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'model-versions.ts:mergeWithStoredVersions:compare',message:'timestamp comparison',data:{model_name:apiModel.model_name,stored_updated_at:storedVersion.updated_at,api_updated_at:apiModel.updated_at,comparison:comparison,willUseStored:comparison>0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,D'})}).catch(()=>{});
-    // #endregion
     
     if (comparison > 0) {
       // localStorage 版本較新，使用儲存的數據
@@ -251,19 +240,12 @@ export function mergeWithStoredVersions(apiModels: ModelOption[]): ModelOption[]
 export function updateStoredVersions(models: ModelOption[]): void {
   const data = getStoredData();
   
-  // #region agent log
-  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'model-versions.ts:updateStoredVersions',message:'updateStoredVersions called',data:{inputModelsCount:models.length,existingVersionsCount:Object.keys(data.versions).length,inputModels:models.map(m=>({name:m.model_name,updated_at:m.updated_at}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-  // #endregion
-  
   for (const model of models) {
     if (model.updated_at) {
       const existing = data.versions[model.model_name];
       
       // 只有當 API 數據較新時才更新 localStorage
       if (!existing || compareTimestamps(model.updated_at, existing.updated_at) > 0) {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'model-versions.ts:updateStoredVersions:update',message:'updating localStorage',data:{model_name:model.model_name,new_updated_at:model.updated_at,existing_updated_at:existing?.updated_at},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         data.versions[model.model_name] = {
           model_name: model.model_name,
           updated_at: model.updated_at,
