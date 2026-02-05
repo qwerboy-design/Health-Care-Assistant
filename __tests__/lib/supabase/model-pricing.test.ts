@@ -25,6 +25,7 @@ describe('Model Pricing Management', () => {
           display_name: 'Claude Sonnet 4',
           credits_cost: 10,
           is_active: true,
+          supports_vision: false,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
         },
@@ -34,15 +35,17 @@ describe('Model Pricing Management', () => {
           display_name: 'Claude 3 Haiku',
           credits_cost: 5,
           is_active: true,
+          supports_vision: false,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
         },
       ];
 
+      // 修復 Mock chain: 必須包含完整的鏈式呼叫
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
+        order: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
           data: mockModels,
           error: null,
         }),
@@ -54,16 +57,17 @@ describe('Model Pricing Management', () => {
 
       expect(supabaseAdmin.from).toHaveBeenCalledWith('model_pricing');
       expect(mockChain.select).toHaveBeenCalledWith('*');
-      expect(mockChain.eq).toHaveBeenCalledWith('is_active', true);
       expect(mockChain.order).toHaveBeenCalledWith('credits_cost', { ascending: true });
+      expect(mockChain.eq).toHaveBeenCalledWith('is_active', true);
       expect(models).toEqual(mockModels);
     });
 
     it('應該在沒有模型時返回空陣列', async () => {
+      // 修復 Mock chain: 必須包含完整的鏈式呼叫
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
+        order: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
@@ -77,10 +81,11 @@ describe('Model Pricing Management', () => {
     });
 
     it('應該在資料庫錯誤時拋出異常', async () => {
+      // 修復 Mock chain: 必須包含完整的鏈式呼叫
       const mockChain = {
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
+        order: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'Database error' },
         }),

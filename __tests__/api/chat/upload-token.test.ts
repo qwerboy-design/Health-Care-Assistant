@@ -13,6 +13,32 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }));
 
+// 修復：Mock AWS SDK for R2 (使用 class constructor)
+vi.mock('@aws-sdk/client-s3', () => {
+  class MockS3Client {
+    constructor() {}
+    send = vi.fn();
+  }
+  
+  class MockPutObjectCommand {
+    constructor(params: any) {
+      Object.assign(this, params);
+    }
+  }
+  
+  return {
+    S3Client: MockS3Client,
+    PutObjectCommand: MockPutObjectCommand,
+  };
+});
+
+vi.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: vi.fn(async (_client, _command, _options) => {
+    // 返回模擬的 Presigned URL
+    return 'https://test-presigned-url.com/upload?signature=test123';
+  }),
+}));
+
 // Import after mocking
 import { POST } from '@/app/api/chat/upload-token/route';
 import { verifySession } from '@/lib/auth/session';
@@ -36,8 +62,12 @@ describe('POST /api/chat/upload-token', () => {
     mockCookieStore.get.mockReturnValue({ value: 'test-session-token' });
     vi.mocked(verifySession).mockResolvedValue(mockSession as any);
 
-    // Mock 環境變數
+    // 修復：設定所有必要的 R2 環境變數
     process.env.R2_BUCKET_DOMAIN = 'hca.qwerboy.com';
+    process.env.R2_ACCOUNT_ID = 'test-account-id';
+    process.env.R2_ACCESS_KEY_ID = 'test-access-key-id';
+    process.env.R2_SECRET_ACCESS_KEY = 'test-secret-access-key';
+    process.env.R2_BUCKET_NAME = 'test-bucket';
 
     // Mock agent logging
     vi.mocked(global.fetch).mockResolvedValue({
@@ -143,9 +173,11 @@ describe('POST /api/chat/upload-token', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.data.uploadUrl).toBe('/api/chat/upload');
+      // 修復：uploadUrl 現在是 Presigned URL 而不是 /api/chat/upload
+      expect(data.data.uploadUrl).toBe('https://test-presigned-url.com/upload?signature=test123');
       expect(data.data.uploadKey).toBe('test-customer-id/1234567890000-test.txt');
       expect(data.data.fileUrl).toBe('https://hca.qwerboy.com/test-customer-id/1234567890000-test.txt');
+      expect(data.data.method).toBe('PUT'); // Presigned URL 使用 PUT 方法
     });
 
     it('應該為不同使用者生成不同的 uploadKey', async () => {
@@ -227,14 +259,13 @@ describe('POST /api/chat/upload-token', () => {
   });
 
   describe('不同檔案類型', () => {
-    const testCases = [
+    // 修復：分為允許和拒絕的檔案類型
+    const allowedTypes = [
       { fileName: 'image.png', fileType: 'image/png', fileSize: 1024 },
       { fileName: 'document.pdf', fileType: 'application/pdf', fileSize: 2048 },
-      { fileName: 'data.json', fileType: 'application/json', fileSize: 512 },
-      { fileName: 'video.mp4', fileType: 'video/mp4', fileSize: 5 * 1024 * 1024 },
     ];
 
-    it.each(testCases)('應該處理 $fileType 類型的檔案', async (testCase) => {
+    it.each(allowedTypes)('應該處理 $fileType 類型的檔案', async (testCase) => {
       const request = new NextRequest('http://localhost/api/chat/upload-token', {
         method: 'POST',
         body: JSON.stringify(testCase),
@@ -247,6 +278,25 @@ describe('POST /api/chat/upload-token', () => {
       expect(data.success).toBe(true);
       expect(data.data.uploadKey).toContain(testCase.fileName);
       expect(data.data.fileUrl).toContain(testCase.fileName);
+    });
+
+    const rejectedTypes = [
+      { fileName: 'data.json', fileType: 'application/json', fileSize: 512 },
+      { fileName: 'video.mp4', fileType: 'video/mp4', fileSize: 5 * 1024 * 1024 },
+    ];
+
+    it.each(rejectedTypes)('應該拒絕 $fileType 類型的檔案', async (testCase) => {
+      const request = new NextRequest('http://localhost/api/chat/upload-token', {
+        method: 'POST',
+        body: JSON.stringify(testCase),
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('不支援的檔案格式');
     });
   });
 
@@ -265,7 +315,8 @@ describe('POST /api/chat/upload-token', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data.uploadKey).toContain('測試 檔案 (1).txt');
+      // 修復：特殊字元被替換為 '_'，所以檢查轉換後的檔名
+      expect(data.data.uploadKey).toContain('_______1_.txt');
     });
 
     it('應該處理空檔案', async () => {
@@ -318,12 +369,12 @@ describe('POST /api/chat/upload-token', () => {
 
       await POST(request);
 
-      // Verify agent logging was called
+      // 修復：驗證 Agent logging 的正確內容
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('127.0.0.1:7245'),
+        'http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('Upload token generated'),
+          body: expect.stringContaining('Presigned URL generated'),
         })
       );
     });

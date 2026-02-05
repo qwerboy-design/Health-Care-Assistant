@@ -57,7 +57,8 @@ describe('MCP Client - Model Selection', () => {
     });
 
     it('應該在未提供 modelName 時使用預設模型', async () => {
-      const defaultModel = 'claude-3-haiku-20240307';
+      // 修復：更新預設模型為 Claude 4.5 Haiku (與 lib/mcp/client.ts 一致)
+      const defaultModel = 'claude-haiku-4-5-20251001';
 
       // Mock successful API response
       vi.mocked(global.fetch).mockResolvedValue({

@@ -197,7 +197,8 @@ describe('POST /api/chat - Credits Integration', () => {
     });
 
     it('應該在未提供 modelName 時使用預設模型', async () => {
-      const defaultModelName = 'claude-sonnet-4-20250514';
+      // 修復：更新預設模型為 Claude Sonnet 4.5 (與 route.ts 一致)
+      const defaultModelName = 'claude-sonnet-4-5-20250929';
       const conversationId = 'conv-123';
 
       const mockModelPricing = {

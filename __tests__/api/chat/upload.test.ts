@@ -63,9 +63,9 @@ describe('POST /api/chat/upload', () => {
     // Setup default S3 send mock
     mockSendImplementation = vi.fn().mockResolvedValue({});
 
-    // Mock 環境變數
-    process.env.R2_ACCESS_KEY_ID = 'test-access-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'test-secret-key';
+    // 修復：Mock 環境變數（長度必須符合 Cloudflare R2 要求）
+    process.env.R2_ACCESS_KEY_ID = '12345678901234567890123456789012'; // 32 字元
+    process.env.R2_SECRET_ACCESS_KEY = '1234567890123456789012345678901234567890123456789012345678901234'; // 64 字元
     process.env.R2_ACCOUNT_ID = 'test-account-id';
     process.env.R2_BUCKET_NAME = 'test-bucket';
     process.env.R2_BUCKET_DOMAIN = 'hca.qwerboy.com';
