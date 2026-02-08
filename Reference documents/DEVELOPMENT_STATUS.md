@@ -1,6 +1,6 @@
 # 開發狀態報告
 
-> 最後更新：2026-01-29  
+> 最後更新：2026-02-08  
 > 版本：v1.2.2
 
 ## 專案進度總覽
@@ -83,19 +83,16 @@
 
 ### Phase 4: 對話介面 ✅ 100%
 
-**待建立頁面**
-- ⏳ app/(main)/chat/page.tsx
-- ⏳ app/(main)/conversations/page.tsx
+**頁面與元件**（已完成，見 README Phase 4）
 
-**待建立元件**
-- ⏳ components/chat/ChatWindow.tsx
-- ⏳ components/chat/MessageList.tsx
-- ⏳ components/chat/MessageBubble.tsx
-- ⏳ components/chat/ChatInput.tsx
-- ⏳ components/chat/FunctionSelector.tsx - 功能選擇（檢驗、放射、病歷、藥物）
-- ⏳ components/chat/WorkloadSelector.tsx - 工作量級別
-- ⏳ components/chat/FileUploader.tsx
-- ⏳ components/chat/ConversationHistory.tsx
+### Phase 4.5: 語系 (i18n) ✅ 100%
+
+- ✅ lib/i18n/translations.ts - 語系型別、zh-TW/en 翻譯、getT()
+- ✅ components/providers/LocaleProvider.tsx - Context（locale、setLocale、t）、cookie/localStorage 持久化
+- ✅ app/layout.tsx - 以 LocaleProvider 包住 children
+- ✅ 登錄頁 ZW/EN 切換按鈕與全文案 t()
+- ✅ 首頁、main/admin layout 以 cookie + getT 輸出文案
+- ✅ 註冊、聊天、對話記錄、後台頁面與共用元件（GoogleLoginButton、LogoutButton、AdminButton 等）改為 useLocale + t()
 
 ### Phase 5: MCP 整合 ✅ 100%
 

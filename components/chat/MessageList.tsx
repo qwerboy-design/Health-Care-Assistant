@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface Message {
   id?: string;
@@ -18,6 +19,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, isLoading }: MessageListProps) {
+  const { t } = useLocale();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,8 +31,8 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
       {messages.length === 0 && (
         <div className="flex items-center justify-center h-full text-gray-500">
           <div className="text-center">
-            <p className="text-lg mb-2">開始對話</p>
-            <p className="text-sm">上傳檔案、輸入文字或選擇功能開始分析</p>
+            <p className="text-lg mb-2">{t('chat.startChat')}</p>
+            <p className="text-sm">{t('chat.startChatHint')}</p>
           </div>
         </div>
       )}

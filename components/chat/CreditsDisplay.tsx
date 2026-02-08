@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Coins } from 'lucide-react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface CreditsDisplayProps {
   initialCredits?: number;
@@ -9,6 +10,7 @@ interface CreditsDisplayProps {
 }
 
 export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsDisplayProps) {
+  const { t } = useLocale();
   const [credits, setCredits] = useState<number>(initialCredits);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +29,11 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
         setCredits(newCredits);
         onCreditsUpdate?.(newCredits);
       } else {
-        setError(data.error || '無法獲取 Credits');
+        setError(data.error || t('common.error'));
       }
     } catch (err: any) {
-      console.error('獲取 Credits 錯誤:', err);
-      setError('網路錯誤');
+      console.error('Credits fetch error:', err);
+      setError(t('common.errorNetwork'));
     } finally {
       setIsLoading(false);
     }
@@ -54,12 +56,12 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
     <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm">
       <Coins className={`w-5 h-5 ${getCreditsColor()}`} />
       <div className="flex flex-col">
-        <span className="text-xs text-gray-500">可用 Credits</span>
+        <span className="text-xs text-gray-500">{t('chat.availableCredits')}</span>
         {isLoading ? (
-          <span className="text-sm font-semibold text-gray-400">載入中...</span>
+          <span className="text-sm font-semibold text-gray-400">{t('common.loading')}</span>
         ) : error ? (
           <span className="text-sm font-semibold text-red-600" title={error}>
-            錯誤
+            {t('common.error')}
           </span>
         ) : (
           <span className={`text-sm font-semibold ${getCreditsColor()}`}>
@@ -71,7 +73,7 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
         onClick={fetchCredits}
         disabled={isLoading}
         className="ml-2 text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400"
-        title="重新整理"
+        title={t('chat.refresh')}
       >
         ↻
       </button>

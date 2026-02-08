@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 import { FunctionSelector } from './FunctionSelector';
 import { WorkloadSelector } from './WorkloadSelector';
 import { FileUploader } from './FileUploader';
@@ -20,6 +21,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInputProps) {
+  const { t } = useLocale();
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState<string>('');
   const [workloadLevel, setWorkloadLevel] = useState<'instant' | 'basic' | 'standard' | 'professional'>('standard');
@@ -76,9 +78,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
       if (needsVision) {
         const currentModel = allModels.find(m => m.model_name === selectedModel);
         if (currentModel && !currentModel.supports_vision) {
-          setModelVisionWarning(
-            `⚠️ 上傳的檔案需要支持圖片/PDF 的模型。請選擇 Claude Sonnet 4.5 或 Claude Opus 4.5。`
-          );
+          setModelVisionWarning(t('chat.modelVisionWarning'));
         } else {
           setModelVisionWarning(null);
         }
@@ -136,9 +136,9 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
             className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex items-center justify-between transition-colors"
           >
             <span className="flex items-center gap-2">
-              {showOptions ? '隱藏選項' : '顯示選項'}
+              {showOptions ? t('chat.hideOptions') : t('chat.showOptions')}
               <span className="text-xs text-gray-500">
-                (模型、功能、工作量)
+                {t('chat.optionsHint')}
               </span>
             </span>
             <svg
@@ -218,7 +218,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
                 <span className="text-sm text-blue-900">
                   📎 {uploadedFileName || selectedFile?.name}
                   {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
-                  {uploadedFileUrl && ' ✓ 已上傳'}
+                  {uploadedFileUrl && ` ✓ ${t('chat.uploaded')}`}
                 </span>
                 <button
                   type="button"
@@ -232,7 +232,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
                   }}
                   className="text-blue-600 hover:text-blue-700 text-sm"
                 >
-                  移除
+                  {t('chat.remove')}
                 </button>
               </div>
               {uploadError && (
@@ -253,7 +253,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="輸入訊息... (Enter 發送, Shift+Enter 換行)"
+              placeholder={t('chat.inputPlaceholder')}
               disabled={disabled}
               rows={1}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -263,7 +263,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
               disabled={disabled || (!message.trim() && !uploadedFileUrl)}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              發送
+              {t('chat.send')}
             </button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth/session';
 import { isAdmin } from '@/lib/auth/admin';
 import { findCustomerById } from '@/lib/supabase/customers';
+import { getT, DEFAULT_LOCALE, type Locale } from '@/lib/i18n/translations';
 import { AdminButton } from '@/components/admin/AdminButton';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 
@@ -26,6 +27,9 @@ export default async function MainLayout({
   
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
+  const localeValue = cookieStore.get('locale')?.value;
+  const locale: Locale = localeValue === 'zh-TW' || localeValue === 'en' ? localeValue : DEFAULT_LOCALE;
+  const t = getT(locale);
 
   // #region agent log
   const logData2 = {
@@ -133,7 +137,7 @@ export default async function MainLayout({
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <a href="/chat" className="text-xl font-bold text-blue-600">
-                臨床助手 AI
+                {t('nav.appName')}
               </a>
             </div>
             <div className="flex items-center space-x-4">
@@ -141,7 +145,7 @@ export default async function MainLayout({
                 href="/conversations"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
-                對話記錄
+                {t('nav.conversations')}
               </a>
               {userIsAdmin && <AdminButton />}
               <LogoutButton />

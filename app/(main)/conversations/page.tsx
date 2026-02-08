@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface Conversation {
   id: string;
@@ -14,6 +15,7 @@ interface Conversation {
 
 export default function ConversationsPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,20 +40,20 @@ export default function ConversationsPage() {
 
   const getFunctionLabel = (func?: string) => {
     const labels: Record<string, string> = {
-      lab: '檢驗',
-      radiology: '放射',
-      medical_record: '病歷',
-      medication: '藥物',
+      lab: t('chat.lab'),
+      radiology: t('chat.radiology'),
+      medical_record: t('chat.medicalRecord'),
+      medication: t('chat.medication'),
     };
-    return labels[func || ''] || '未指定';
+    return labels[func || ''] || t('conversations.unspecified');
   };
 
   const getWorkloadLabel = (level: string) => {
     const labels: Record<string, string> = {
-      instant: '即時',
-      basic: '初級',
-      standard: '標準',
-      professional: '專業',
+      instant: t('chat.instant'),
+      basic: t('chat.basic'),
+      standard: t('chat.standard'),
+      professional: t('chat.professional'),
     };
     return labels[level] || level;
   };
@@ -61,7 +63,7 @@ export default function ConversationsPage() {
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+          <p className="mt-4 text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -70,23 +72,23 @@ export default function ConversationsPage() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">對話記錄</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('conversations.title')}</h1>
         <a
           href="/chat"
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
         >
-          新對話
+          {t('conversations.newConversation')}
         </a>
       </div>
 
       {conversations.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-600 mb-4">還沒有對話記錄</p>
+          <p className="text-gray-600 mb-4">{t('conversations.noConversations')}</p>
           <a
             href="/chat"
             className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            開始新對話
+            {t('conversations.startNew')}
           </a>
         </div>
       ) : (
@@ -105,12 +107,12 @@ export default function ConversationsPage() {
                   <div className="flex gap-4 text-sm text-gray-600">
                     {conversation.selected_function && (
                       <span className="flex items-center gap-1">
-                        <span className="text-gray-400">功能:</span>
+                        <span className="text-gray-400">{t('conversations.functionLabel')}:</span>
                         {getFunctionLabel(conversation.selected_function)}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <span className="text-gray-400">級別:</span>
+                      <span className="text-gray-400">{t('conversations.levelLabel')}:</span>
                       {getWorkloadLabel(conversation.workload_level)}
                     </span>
                   </div>

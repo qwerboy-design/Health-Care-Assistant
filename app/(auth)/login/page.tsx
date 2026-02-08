@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { CountdownTimer } from '@/components/auth/CountdownTimer';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale, setLocale, t } = useLocale();
 
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [step, setStep] = useState<'input' | 'verify' | 'set-password'>('input');
@@ -53,24 +55,23 @@ function LoginForm() {
         if (data.data.requiresPasswordReset) {
           setStep('set-password');
           setError('');
-          alert('這是您首次使用預設密碼登入，請先設定您的新密碼。');
+          alert(t('login.firstTimeSetPassword'));
         } else {
           router.push('/chat');
           router.refresh();
         }
       } else {
-        const errorMsg = data.error || '登入失敗';
-        setError(errorMsg);
-
-        // 如果是審核相關錯誤，顯示更詳細的提示
+        const errorMsg = data.error || t('login.errorLoginFailed');
         if (errorMsg.includes('待審核')) {
-          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+          setError(t('login.pendingApproval'));
         } else if (errorMsg.includes('已拒絕')) {
-          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+          setError(t('login.rejected'));
+        } else {
+          setError(errorMsg);
         }
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('login.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -94,10 +95,10 @@ function LoginForm() {
         setStep('verify');
         setCanResend(false);
       } else {
-        setError(data.error || '發送失敗');
+        setError(data.error || t('login.errorSendFailed'));
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('login.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -123,19 +124,18 @@ function LoginForm() {
         router.push('/chat');
         router.refresh();
       } else {
-        const errorMsg = data.error || '驗證失敗';
-        setError(errorMsg);
+        const errorMsg = data.error || t('login.errorVerifyFailed');
         setOtp('');
-
-        // 如果是審核相關錯誤，顯示更詳細的提示
         if (errorMsg.includes('待審核')) {
-          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+          setError(t('login.pendingApproval'));
         } else if (errorMsg.includes('已拒絕')) {
-          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+          setError(t('login.rejected'));
+        } else {
+          setError(errorMsg);
         }
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('login.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -144,11 +144,11 @@ function LoginForm() {
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      setError('兩次輸入的密碼不一致');
+      setError(t('login.errorPasswordMismatch'));
       return;
     }
     if (password.length < 8) {
-      setError('密碼長度至少需要 8 個字元');
+      setError(t('login.errorPasswordLength'));
       return;
     }
 
@@ -165,17 +165,17 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
-        alert('密碼設定成功！請等待管理員審核。審核通過後即可登入。');
+        alert(t('login.setPasswordSuccess'));
         setStep('input');
         setLoginMethod('password');
         setPassword('');
         setConfirmPassword('');
         setError('');
       } else {
-        setError(data.error || '設定失敗');
+        setError(data.error || t('login.errorSetFailed'));
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('login.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -183,19 +183,35 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg relative">
+        <div className="absolute top-4 right-4 flex gap-1">
+          <button
+            type="button"
+            onClick={() => setLocale('zh-TW')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'zh-TW' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            ZW
+          </button>
+          <button
+            type="button"
+            onClick={() => setLocale('en')}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            EN
+          </button>
+        </div>
         <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            {step === 'set-password' ? '新增帳戶密碼' : '登入臨床助手 AI'}
+            {step === 'set-password' ? t('login.titleSetPassword') : t('login.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {step === 'set-password' ? (
-              '請為您的帳號設定登入密碼'
+              t('login.subtitleSetPassword')
             ) : (
               <>
-                或{' '}
+                {t('login.subtitle')}{' '}
                 <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                  建立新帳號
+                  {t('login.createAccount')}
                 </a>
               </>
             )}
@@ -216,7 +232,7 @@ function LoginForm() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">或使用</span>
+                <span className="px-2 bg-white text-gray-500">{t('login.orUse')}</span>
               </div>
             </div>
 
@@ -233,7 +249,7 @@ function LoginForm() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
-                密碼登入
+                {t('login.passwordLogin')}
               </button>
               <button
                 onClick={() => {
@@ -246,7 +262,7 @@ function LoginForm() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
-                OTP 登入
+                {t('login.otpLogin')}
               </button>
             </div>
           </>
@@ -257,7 +273,7 @@ function LoginForm() {
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
+                {t('login.email')}
               </label>
               <input
                 id="email"
@@ -266,13 +282,13 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="your@email.com"
+                placeholder={t('login.placeholderEmail')}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                密碼
+                {t('login.password')}
               </label>
               <input
                 id="password"
@@ -281,7 +297,7 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
+                placeholder={t('login.placeholderPassword')}
               />
             </div>
 
@@ -294,7 +310,7 @@ function LoginForm() {
               disabled={loading}
               className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading ? '登入中...' : '登入'}
+              {loading ? t('login.loggingIn') : t('login.submit')}
             </button>
           </form>
         )}
@@ -306,7 +322,7 @@ function LoginForm() {
               <form onSubmit={handleSendOTP} className="space-y-4">
                 <div>
                   <label htmlFor="email-otp" className="block text-sm font-medium text-gray-700">
-                    Email
+                    {t('login.email')}
                   </label>
                   <input
                     id="email-otp"
@@ -315,7 +331,7 @@ function LoginForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="your@email.com"
+                    placeholder={t('login.placeholderEmail')}
                   />
                 </div>
 
@@ -328,7 +344,7 @@ function LoginForm() {
                   disabled={loading}
                   className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  {loading ? '發送中...' : '發送驗證碼'}
+                  {loading ? t('login.sending') : t('login.sendCode')}
                 </button>
               </form>
             )}
@@ -337,7 +353,7 @@ function LoginForm() {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-600 text-center mb-4">
-                    驗證碼已發送到 <strong>{email}</strong>
+                    {t('login.codeSentTo')} <strong>{email}</strong>
                   </p>
                   <OTPInput
                     value={otp}
@@ -357,7 +373,7 @@ function LoginForm() {
                     disabled={loading || otp.length !== 6}
                     className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
-                    {loading ? '驗證中...' : '驗證並繼續'}
+                    {loading ? t('login.verifying') : t('login.verifyAndContinue')}
                   </button>
                 </div>
 
@@ -372,11 +388,11 @@ function LoginForm() {
                       disabled={loading}
                       className="text-blue-600 hover:text-blue-700 font-medium"
                     >
-                      重新發送驗證碼
+                      {t('login.resendCode')}
                     </button>
                   ) : (
                     <span>
-                      重新發送驗證碼 (<CountdownTimer seconds={120} onComplete={() => setCanResend(true)} />)
+                      {t('login.resendCode')} (<CountdownTimer seconds={120} onComplete={() => setCanResend(true)} />)
                     </span>
                   )}
                 </div>
@@ -389,7 +405,7 @@ function LoginForm() {
                   }}
                   className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
                 >
-                  返回
+                  {t('login.back')}
                 </button>
               </div>
             )}
@@ -401,12 +417,12 @@ function LoginForm() {
           <form onSubmit={handleSetPassword} className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 mb-4">
-                正在為 <strong>{email}</strong> 設定密碼
+                {t('login.settingPasswordFor')} <strong>{email}</strong> {t('login.setPassword')}
               </p>
             </div>
             <div>
               <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
-                新密碼
+                {t('login.newPassword')}
               </label>
               <input
                 id="new-password"
@@ -415,12 +431,12 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="至少 8 個字元"
+                placeholder={t('login.placeholderNewPassword')}
               />
             </div>
             <div>
               <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
-                確認新密碼
+                {t('login.confirmPassword')}
               </label>
               <input
                 id="confirm-password"
@@ -429,7 +445,7 @@ function LoginForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="再次輸入新密碼"
+                placeholder={t('login.placeholderConfirm')}
               />
             </div>
 
@@ -442,7 +458,7 @@ function LoginForm() {
               disabled={loading}
               className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading ? '處理中...' : '設定密碼並完成'}
+              {loading ? t('login.processing') : t('login.setPasswordAndDone')}
             </button>
 
             <button
@@ -454,7 +470,7 @@ function LoginForm() {
               }}
               className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
             >
-              取消並返回登入
+              {t('login.cancelBackToLogin')}
             </button>
           </form>
         )}
@@ -463,9 +479,18 @@ function LoginForm() {
   );
 }
 
+function LoginLoadingFallback() {
+  const { t } = useLocale();
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      {t('common.loading')}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+    <Suspense fallback={<LoginLoadingFallback />}>
       <LoginForm />
     </Suspense>
   );

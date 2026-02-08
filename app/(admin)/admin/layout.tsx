@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth/session';
 import { findCustomerById } from '@/lib/supabase/customers';
+import { getT, DEFAULT_LOCALE, type Locale } from '@/lib/i18n/translations';
 import { LogoutButton } from '@/components/auth/LogoutButton';
 
 /**
@@ -17,9 +18,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 步驟 1: 檢查 Session 是否存在
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
+  const localeValue = cookieStore.get('locale')?.value;
+  const locale: Locale = localeValue === 'zh-TW' || localeValue === 'en' ? localeValue : DEFAULT_LOCALE;
+  const t = getT(locale);
 
   if (!sessionToken) {
     redirect('/login');
@@ -39,13 +42,13 @@ export default async function AdminLayout({
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">用戶不存在</h1>
-          <p className="text-gray-600 mb-4">無法找到您的帳號資訊</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('admin.userNotFound')}</h1>
+          <p className="text-gray-600 mb-4">{t('admin.userNotFoundDesc')}</p>
           <a
             href="/login"
             className="text-blue-600 hover:text-blue-800 underline"
           >
-            重新登入
+            {t('admin.reLogin')}
           </a>
         </div>
       </div>
@@ -57,13 +60,13 @@ export default async function AdminLayout({
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">權限不足</h1>
-          <p className="text-gray-600 mb-4">您沒有權限訪問此頁面。需要管理員權限。</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('admin.noPermission')}</h1>
+          <p className="text-gray-600 mb-4">{t('admin.noPermissionDesc')}</p>
           <a
             href="/chat"
             className="text-blue-600 hover:text-blue-800 underline"
           >
-            返回首頁
+            {t('admin.backToHome')}
           </a>
         </div>
       </div>
@@ -77,20 +80,20 @@ export default async function AdminLayout({
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
               <a href="/admin" className="text-xl font-bold text-blue-600">
-                後台管理系統
+                {t('admin.systemName')}
               </a>
               <div className="flex space-x-4">
                 <a
                   href="/admin"
                   className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  帳號審核
+                  {t('admin.accountReview')}
                 </a>
                 <a
                   href="/admin/models"
                   className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  模型管理
+                  {t('admin.modelManagement')}
                 </a>
               </div>
             </div>
@@ -99,7 +102,7 @@ export default async function AdminLayout({
                 href="/chat"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
               >
-                返回前台
+                {t('admin.backToApp')}
               </a>
               <LogoutButton />
             </div>

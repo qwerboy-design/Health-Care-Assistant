@@ -3,7 +3,7 @@
 智能臨床分析助手，提供檢驗、放射、病歷、藥物分析功能。
 
 > 版本：v1.2.2  
-> 最後更新：2026-01-29
+> 最後更新：2026-02-08
 
 ## 技術架構
 
@@ -15,6 +15,7 @@
 - **AI整合**: Anthropic Claude API（直接整合）
 - **儲存**: Cloudflare R2（物件儲存）
 - **Email**: Resend（OTP 發送）
+- **語系**: 繁體中文 (ZW) / 英文 (EN)，登錄頁切換、全站介面同步，持久化於 localStorage 與 cookie
 
 詳細架構說明請參考 [ARCHITECTURE.md](./ARCHITECTURE.md)
 
@@ -68,6 +69,13 @@
 - ✅ /chat - 對話頁面
 - ✅ /conversations - 對話記錄頁面
 
+#### Phase 4.5: 語系 (i18n) ✅
+- ✅ 登錄頁 ZW/EN 語系切換按鈕
+- ✅ 全站介面依語系切換（首頁、登錄、註冊、主導航、聊天、後台）
+- ✅ LocaleProvider（Context：locale、setLocale、t）
+- ✅ 翻譯檔 `lib/i18n/translations.ts`（zh-TW / en，dot path key）
+- ✅ 語系持久化：localStorage + cookie（供 Server Component 讀取）
+
 #### Phase 5: MCP 整合 ✅
 - ✅ MCP Client 實作（直接使用 Anthropic API）
 - ✅ 工作量級別邏輯（0/1/2-3/4+ Skills）
@@ -103,7 +111,7 @@
 3. ⚠️ 單元測試和整合測試
 4. ⚠️ 效能優化（緩存、分頁等）
 5. ⚠️ 無障礙功能（ARIA labels）
-6. ⚠️ 國際化支援
+6. ✅ 國際化支援（ZW/EN，已實作）
 
 ## 安裝與設置
 
@@ -244,16 +252,18 @@ TEST_BASE_URL=http://localhost:3000 npm run test
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components/
-│   ├── auth/             # 認證元件 (3個)
-│   ├── chat/             # 對話元件 (7個)
+│   ├── auth/             # 認證元件
+│   ├── chat/             # 對話元件
 │   ├── onboarding/       # 引導元件
-│   └── admin/            # 管理元件
+│   ├── admin/            # 管理元件
+│   └── providers/        # 全域 Provider（LocaleProvider）
 ├── lib/
-│   ├── auth/             # 認證工具 (5個)
+│   ├── auth/             # 認證工具
+│   ├── i18n/             # 語系翻譯（translations.ts、getT）
 │   ├── email/            # Email 服務
-│   ├── mcp/              # MCP 整合 (4個)
+│   ├── mcp/              # MCP 整合
 │   ├── storage/          # 檔案上傳 (Cloudflare R2)
-│   ├── supabase/         # 資料庫操作 (5個)
+│   ├── supabase/         # 資料庫操作
 │   ├── validation/       # 驗證 schemas
 │   ├── errors.ts
 │   └── rate-limit.ts
@@ -286,6 +296,13 @@ TEST_BASE_URL=http://localhost:3000 npm run test
 3. **Google OAuth 登入**
    - Google Identity Services 整合
    - 自動帳號建立或綁定
+
+### 語系 (i18n)
+
+- **切換位置**：登錄頁右上角 ZW（繁體中文）/ EN（英文）按鈕
+- **範圍**：全站介面（首頁、登錄、註冊、主導航、聊天、對話記錄、後台管理）
+- **持久化**：選擇語系後寫入 `localStorage` 與 cookie `locale`，Server Component 從 cookie 讀取以輸出對應文案
+- **擴展**：新增語系時於 `lib/i18n/translations.ts` 擴充 `Locale` 型別與翻譯物件即可
 
 ### 工作量級別
 
@@ -324,11 +341,12 @@ https://github.com/K-Dense-AI/claude-scientific-skills
 
 ## 技術文件
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 系統架構文件（技術棧、資料流、模組設計等）
-- **[SPECIFICATIONS.md](./SPECIFICATIONS.md)** - 系統規格文件（功能規格、API 規格、資料庫規格等）
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - 部署指南（GitHub + Vercel）
-- **[ENV_VARIABLES.md](./ENV_VARIABLES.md)** - 環境變數說明
-- **[IMPLEMENTATION_COMPLETE.md](./IMPLEMENTATION_COMPLETE.md)** - 實作完成報告
+- **[ARCHITECTURE.md](Reference documents/ARCHITECTURE.md)** - 系統架構文件（技術棧、資料流、模組設計、語系架構等）
+- **[SPECIFICATIONS.md](Reference documents/SPECIFICATIONS.md)** - 系統規格文件（功能規格、API 規格、資料庫規格等）
+- **[DEPLOYMENT_GUIDE.md](Reference documents/DEPLOYMENT_GUIDE.md)** - 部署指南（GitHub + Vercel）
+- **[ENV_VARIABLES.md](Reference documents/ENV_VARIABLES.md)** - 環境變數說明
+- **[I18N_IMPLEMENTATION.md](Reference documents/I18N_IMPLEMENTATION.md)** - 語系 (i18n) 實作說明（ZW/EN 切換、使用方式、擴展）
+- **[IMPLEMENTATION_COMPLETE.md](Reference documents/IMPLEMENTATION_COMPLETE.md)** - 實作完成報告
 
 ## 參考文件
 

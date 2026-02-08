@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { CreditsDisplay } from '@/components/chat/CreditsDisplay';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
+import { useLocale } from '@/components/providers/LocaleProvider';
 import { Download } from 'lucide-react';
 
 interface Message {
@@ -16,6 +17,7 @@ interface Message {
 }
 
 export default function ChatPage() {
+  const { t } = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -181,9 +183,7 @@ export default function ChatPage() {
           autoSaveLog(finalConversationId, roundKey);
         }, 500);
       } else {
-        // 錯誤處理
-        alert(data.error || '發送失敗，請稍後再試');
-        // 移除剛才添加的使用者訊息
+        alert(data.error || t('chat.sendFailed'));
         setMessages((prev) => prev.slice(0, -1));
       }
     } catch (error: any) {
@@ -191,7 +191,7 @@ export default function ChatPage() {
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Error caught in handleSend',data:{errorMessage:error?.message,errorName:error?.name,errorString:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
       // #endregion
       console.error('發送訊息錯誤:', error);
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
@@ -261,7 +261,7 @@ export default function ChatPage() {
     // #endregion
 
     if (!conversationId) {
-      alert('請先開始對話');
+      alert(t('chat.startConversation'));
       return;
     }
 
@@ -329,32 +329,18 @@ export default function ChatPage() {
           fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:download-success',message:'Download link clicked',data:{downloadUrl,filename},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
           // #endregion
           
-          // 顯示成功訊息，包含檔案資訊
-          alert(`對話記錄已成功上傳並下載！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n檔案已保存至 R2 儲存空間。`);
+          alert(`${t('chat.downloadSuccess')}\n\n${filename}\n${messageCount}`);
         } catch (downloadError) {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:download-error',message:'Download error',data:{errorMessage:downloadError instanceof Error?downloadError.message:String(downloadError)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-          // #endregion
           console.error('[save-log] 下載失敗:', downloadError);
-          // 即使下載失敗，檔案已成功上傳到 R2
-          alert(`對話記錄已成功上傳至 R2！\n\n檔案名稱: ${filename}\n訊息數量: ${messageCount} 條\n\n下載連結: ${downloadUrl}\n\n（瀏覽器下載失敗，但檔案已成功保存）`);
+          alert(`${t('chat.downloadSuccessR2')}\n\n${filename}\n${messageCount}\n\n${downloadUrl}`);
         }
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:api-error',message:'API returned error',data:{error:data.error,hasError:!!data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-        // #endregion
         console.error('[save-log] API 返回錯誤:', data);
-        alert(`上傳失敗: ${data.error || '未知錯誤，請稍後再試'}`);
+        alert(`${t('chat.uploadFailed')}: ${data.error || t('chat.uploadErrorUnknown')}`);
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:network-error',message:'Network error caught',data:{errorMessage:error?.message,errorName:error?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-      // #endregion
-      console.error('[save-log] 網路錯誤:', {
-        error: error.message,
-        stack: error.stack,
-      });
-      alert(`網路錯誤: ${error.message || '請檢查網路連線後再試'}`);
+      console.error('[save-log] 網路錯誤:', { error: error.message, stack: error.stack });
+      alert(`${t('common.errorNetwork')} ${error.message || ''}`);
     } finally {
       setIsSavingLog(false);
     }
@@ -368,7 +354,7 @@ export default function ChatPage() {
       <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
         {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b">
-          <h1 className="text-xl font-semibold">對話</h1>
+          <h1 className="text-xl font-semibold">{t('chat.title')}</h1>
           <div className="flex items-center gap-4">
             <CreditsDisplay
               initialCredits={userCredits}
@@ -380,7 +366,7 @@ export default function ChatPage() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               <Download size={18} />
-              {isSavingLog ? '保存中...' : '下載記錄'}
+              {isSavingLog ? t('chat.saving') : t('chat.downloadLog')}
             </button>
           </div>
         </div>

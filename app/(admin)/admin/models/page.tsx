@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Power, PowerOff } from 'lucide-react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface Model {
   id: string;
@@ -14,6 +15,7 @@ interface Model {
 }
 
 export default function ModelsPage() {
+  const { t } = useLocale();
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,10 +45,10 @@ export default function ModelsPage() {
       if (data.success) {
         setModels(data.data.models || []);
       } else {
-        setError(data.error || '載入失敗');
+        setError(data.error || t('admin.loadFailed'));
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('common.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -68,12 +70,12 @@ export default function ModelsPage() {
         await fetchModels();
         setShowCreateModal(false);
         setFormData({ model_name: '', display_name: '', credits_cost: 0 });
-        alert('模型創建成功');
+        alert(t('admin.createSuccess'));
       } else {
-        alert(data.error || '創建失敗');
+        alert(data.error || t('admin.createFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(false);
     }
@@ -104,19 +106,19 @@ export default function ModelsPage() {
         ));
         setShowEditModal(false);
         setSelectedModel(null);
-        alert('定價更新成功');
+        alert(t('admin.updateSuccess'));
       } else {
-        alert(data.error || '更新失敗');
+        alert(data.error || t('admin.updateFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(false);
     }
   };
 
   const handleDeactivate = async (modelName: string) => {
-    if (!confirm('確定要停用此模型嗎？')) {
+    if (!confirm(t('admin.deactivateConfirm'))) {
       return;
     }
 
@@ -132,12 +134,12 @@ export default function ModelsPage() {
         setModels(prev => prev.map(m =>
           m.model_name === modelName ? { ...m, is_active: false } : m
         ));
-        alert('模型已停用');
+        alert(t('admin.deactivateSuccess'));
       } else {
-        alert(data.error || '停用失敗');
+        alert(data.error || t('admin.deactivateFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(false);
     }
@@ -161,12 +163,12 @@ export default function ModelsPage() {
         setModels(prev => prev.map(m =>
           m.model_name === modelName ? { ...m, is_active: true } : m
         ));
-        alert('模型已啟用');
+        alert(t('admin.activateSuccess'));
       } else {
-        alert(data.error || '啟用失敗');
+        alert(data.error || t('admin.activateFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(false);
     }
@@ -191,15 +193,15 @@ export default function ModelsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">模型管理</h1>
-          <p className="text-gray-600">管理 AI 模型和定價</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('admin.modelsTitle')}</h1>
+          <p className="text-gray-600">{t('admin.modelsDesc')}</p>
         </div>
         <button
           onClick={openCreateModal}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           <Plus size={18} />
-          新增模型
+          {t('admin.addModel')}
         </button>
       </div>
 
@@ -214,11 +216,11 @@ export default function ModelsPage() {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">載入中...</p>
+          <p className="mt-2 text-gray-600">{t('admin.loading')}</p>
         </div>
       ) : models.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-600">目前沒有模型</p>
+          <p className="text-gray-600">{t('admin.noModels')}</p>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -234,29 +236,29 @@ export default function ModelsPage() {
                       {model.is_active ? (
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center gap-1">
                           <Power size={12} />
-                          啟用中
+                          {t('admin.active')}
                         </span>
                       ) : (
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 flex items-center gap-1">
                           <PowerOff size={12} />
-                          已停用
+                          {t('admin.inactive')}
                         </span>
                       )}
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <p>
-                        <span className="font-medium">模型名稱:</span> {model.model_name}
+                        <span className="font-medium">{t('admin.modelName')}:</span> {model.model_name}
                       </p>
                       <p>
-                        <span className="font-medium">Credits 費用:</span>{' '}
-                        <span className="text-blue-600 font-semibold">{model.credits_cost}</span> Credits
+                        <span className="font-medium">{t('admin.creditsCost')}:</span>{' '}
+                        <span className="text-blue-600 font-semibold">{model.credits_cost}</span> {t('chat.credits')}
                       </p>
                       <p>
-                        <span className="font-medium">創建時間:</span>{' '}
+                        <span className="font-medium">{t('admin.createdAt')}:</span>{' '}
                         {new Date(model.created_at).toLocaleString('zh-TW')}
                       </p>
                       <p>
-                        <span className="font-medium">更新時間:</span>{' '}
+                        <span className="font-medium">{t('admin.updatedAt')}:</span>{' '}
                         {new Date(model.updated_at).toLocaleString('zh-TW')}
                       </p>
                     </div>
@@ -268,7 +270,7 @@ export default function ModelsPage() {
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
                     >
                       <Edit2 size={16} />
-                      編輯定價
+                      {t('admin.editPricing')}
                     </button>
                     {model.is_active ? (
                       <button
@@ -277,7 +279,7 @@ export default function ModelsPage() {
                         className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
                       >
                         <PowerOff size={16} />
-                        停用
+                        {t('admin.deactivate')}
                       </button>
                     ) : (
                       <button
@@ -286,7 +288,7 @@ export default function ModelsPage() {
                         className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
                       >
                         <Power size={16} />
-                        啟用
+                        {t('admin.activate')}
                       </button>
                     )}
                   </div>
@@ -301,12 +303,12 @@ export default function ModelsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">新增模型</h2>
+            <h2 className="text-xl font-bold mb-4">{t('admin.addModelTitle')}</h2>
             <form onSubmit={handleCreate}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    模型名稱 *
+                    {t('admin.modelNameRequired')}
                   </label>
                   <input
                     type="text"
@@ -314,12 +316,12 @@ export default function ModelsPage() {
                     value={formData.model_name}
                     onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="例如: claude-sonnet-4-20250514"
+                    placeholder={t('admin.placeholderModelName')}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    顯示名稱 *
+                    {t('admin.displayNameRequired')}
                   </label>
                   <input
                     type="text"
@@ -327,12 +329,12 @@ export default function ModelsPage() {
                     value={formData.display_name}
                     onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="例如: Claude Sonnet 4"
+                    placeholder={t('admin.placeholderDisplayName')}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Credits 費用 *
+                    {t('admin.creditsCostRequired')}
                   </label>
                   <input
                     type="number"
@@ -352,14 +354,14 @@ export default function ModelsPage() {
                   disabled={processing}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={processing}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {processing ? '創建中...' : '創建'}
+                  {processing ? t('admin.creating') : t('admin.create')}
                 </button>
               </div>
             </form>
@@ -371,12 +373,12 @@ export default function ModelsPage() {
       {showEditModal && selectedModel && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">編輯定價</h2>
+            <h2 className="text-xl font-bold mb-4">{t('admin.editPricingTitle')}</h2>
             <form onSubmit={handleUpdatePricing}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    模型名稱
+                    {t('admin.modelName')}
                   </label>
                   <input
                     type="text"
@@ -387,7 +389,7 @@ export default function ModelsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    顯示名稱
+                    {t('admin.displayName')}
                   </label>
                   <input
                     type="text"
@@ -398,7 +400,7 @@ export default function ModelsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Credits 費用 *
+                    {t('admin.creditsCostRequired')}
                   </label>
                   <input
                     type="number"
@@ -421,14 +423,14 @@ export default function ModelsPage() {
                   disabled={processing}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={processing}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {processing ? '更新中...' : '更新'}
+                  {processing ? t('admin.updating') : t('admin.update')}
                 </button>
               </div>
             </form>

@@ -1,25 +1,28 @@
 'use client';
 
+import { useLocale } from '@/components/providers/LocaleProvider';
+
 interface FunctionSelectorProps {
   value?: string;
   onChange: (value: string) => void;
 }
 
-const FUNCTIONS = [
-  { value: 'lab', label: '檢驗', description: '檢驗報告分析' },
-  { value: 'radiology', label: '放射', description: '放射影像分析' },
-  { value: 'medical_record', label: '病歷', description: '病歷資料分析' },
-  { value: 'medication', label: '藥物', description: '藥物相關分析' },
+const FUNCTION_KEYS = [
+  { value: 'lab', labelKey: 'chat.lab', descKey: 'chat.labDesc' },
+  { value: 'radiology', labelKey: 'chat.radiology', descKey: 'chat.radiologyDesc' },
+  { value: 'medical_record', labelKey: 'chat.medicalRecord', descKey: 'chat.medicalRecordDesc' },
+  { value: 'medication', labelKey: 'chat.medication', descKey: 'chat.medicationDesc' },
 ];
 
 export function FunctionSelector({ value, onChange }: FunctionSelectorProps) {
+  const { t } = useLocale();
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700">
-        選擇功能
+        {t('chat.selectFunction')}
       </label>
       <div className="grid grid-cols-2 gap-2">
-        {FUNCTIONS.map((func) => (
+        {FUNCTION_KEYS.map((func) => (
           <button
             key={func.value}
             type="button"
@@ -32,8 +35,8 @@ export function FunctionSelector({ value, onChange }: FunctionSelectorProps) {
               }
             `}
           >
-            <div className="font-medium">{func.label}</div>
-            <div className="text-xs text-gray-500 mt-1">{func.description}</div>
+            <div className="font-medium">{t(func.labelKey)}</div>
+            <div className="text-xs text-gray-500 mt-1">{t(func.descKey)}</div>
           </button>
         ))}
       </div>

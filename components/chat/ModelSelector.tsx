@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 import { supabase } from '@/lib/supabase/client';
 import {
   saveModelVersion,
@@ -18,6 +19,7 @@ interface ModelSelectorProps {
 }
 
 export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelectorProps) {
+  const { t } = useLocale();
   const [models, setModels] = useState<ModelOption[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -189,9 +191,9 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          AI 模型
+          {t('chat.aiModel')}
         </label>
-        <div className="text-sm text-gray-500">載入中...</div>
+        <div className="text-sm text-gray-500">{t('common.loading')}</div>
       </div>
     );
   }
@@ -200,7 +202,7 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          AI 模型
+          {t('chat.aiModel')}
         </label>
         <div className="text-sm text-red-600">{error}</div>
       </div>
@@ -211,9 +213,9 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          AI 模型
+          {t('chat.aiModel')}
         </label>
-        <div className="text-sm text-gray-500">暫無可用模型</div>
+        <div className="text-sm text-gray-500">{t('chat.noModels')}</div>
       </div>
     );
   }
@@ -222,7 +224,7 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
         <Sparkles className="w-4 h-4" />
-        AI 模型
+        {t('chat.aiModel')}
       </label>
       <select
         value={value}
@@ -231,26 +233,25 @@ export function ModelSelector({ value, onChange, userCredits = 0 }: ModelSelecto
       >
         {models.map((model) => {
           const affordable = canAffordModel(model.credits_cost);
-          const textOnlyLabel = !model.supports_vision ? ' (僅限文字)' : '';
+          const textOnlyLabel = !model.supports_vision ? ` ${t('chat.textOnly')}` : '';
           return (
             <option
               key={model.id}
               value={model.model_name}
               disabled={!affordable}
             >
-              {model.display_name}{textOnlyLabel} - {model.credits_cost} Credits
-              {!affordable && ' (Credits 不足)'}
+              {model.display_name}{textOnlyLabel} - {model.credits_cost} {t('chat.credits')}
+              {!affordable && ` (${t('chat.creditsInsufficient')})`}
             </option>
           );
         })}
       </select>
 
-      {/* 顯示選中模型的詳細資訊 */}
       {selectedModel && (
         <div className="text-xs text-gray-600 flex items-center justify-between px-2">
-          <span>消耗: {selectedModel.credits_cost} Credits</span>
+          <span>{t('chat.consumeCredits')}: {selectedModel.credits_cost} {t('chat.credits')}</span>
           {!canAffordModel(selectedModel.credits_cost) && (
-            <span className="text-red-600 font-medium">Credits 不足</span>
+            <span className="text-red-600 font-medium">{t('chat.creditsInsufficient')}</span>
           )}
         </div>
       )}

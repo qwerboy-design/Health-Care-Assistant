@@ -1,36 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface OnboardingModalProps {
   onClose: () => void;
 }
 
-export function OnboardingModal({ onClose }: OnboardingModalProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+const STEP_KEYS = [
+  { titleKey: 'onboarding.step1Title', descKey: 'onboarding.step1Desc', icon: '📄' },
+  { titleKey: 'onboarding.step2Title', descKey: 'onboarding.step2Desc', icon: '🔧' },
+  { titleKey: 'onboarding.step3Title', descKey: 'onboarding.step3Desc', icon: '⚙️' },
+  { titleKey: 'onboarding.step4Title', descKey: 'onboarding.step4Desc', icon: '💬' },
+];
 
-  const steps = [
-    {
-      title: '上傳檔案或輸入內容',
-      description: '您可以上傳檔案（JPEG、PDF、WORD、TXT）或直接輸入文字、上傳圖片進行分析',
-      icon: '📄',
-    },
-    {
-      title: '選擇想調閱的功能',
-      description: '根據您的需求選擇功能：檢驗報告分析、放射影像分析、病歷資料分析或藥物相關分析',
-      icon: '🔧',
-    },
-    {
-      title: '選擇工作量級別',
-      description: '即時（0 Skills）、初級（1 Skill）、標準（2-3 Skills）或專業（4+ Skills），級別越高分析越深入',
-      icon: '⚙️',
-    },
-    {
-      title: '開始對話',
-      description: '完成以上設置後，點擊發送開始與 AI 對話，獲得專業的臨床分析建議',
-      icon: '💬',
-    },
-  ];
+export function OnboardingModal({ onClose }: OnboardingModalProps) {
+  const { t } = useLocale();
+  const [currentStep, setCurrentStep] = useState(0);
+  const steps = STEP_KEYS.map((s) => ({ title: t(s.titleKey), description: t(s.descKey), icon: s.icon }));
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -50,7 +37,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">歡迎使用臨床助手 AI</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('onboarding.welcome')}</h2>
           <button
             onClick={handleComplete}
             className="text-gray-400 hover:text-gray-600"
@@ -66,7 +53,7 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
           {/* Progress Indicator */}
           <div className="mb-8">
             <div className="flex justify-between mb-2">
-              <span className="text-sm text-gray-600">步驟 {currentStep + 1} / {steps.length}</span>
+              <span className="text-sm text-gray-600">{t('onboarding.step')} {currentStep + 1} {t('onboarding.of')} {steps.length}</span>
               <span className="text-sm text-gray-600">{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -119,13 +106,13 @@ export function OnboardingModal({ onClose }: OnboardingModalProps) {
             disabled={currentStep === 0}
             className="px-4 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            上一步
+            {t('onboarding.prev')}
           </button>
           <button
             onClick={handleNext}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            {currentStep < steps.length - 1 ? '下一步' : '開始使用'}
+            {currentStep < steps.length - 1 ? t('onboarding.next') : t('onboarding.start')}
           </button>
         </div>
       </div>

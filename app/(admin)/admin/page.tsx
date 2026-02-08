@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface CustomerListItem extends Omit<Customer, 'password_hash'> {}
 
 export default function AdminPage() {
+  const { t } = useLocale();
   const [customers, setCustomers] = useState<CustomerListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,10 +35,10 @@ export default function AdminPage() {
       if (data.success) {
         setCustomers(data.data.customers || []);
       } else {
-        setError(data.error || '載入失敗');
+        setError(data.error || t('admin.loadFailed'));
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('common.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -56,17 +58,17 @@ export default function AdminPage() {
       if (data.success) {
         await fetchCustomers();
       } else {
-        alert(data.error || '審核失敗');
+        alert(data.error || t('admin.approveFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(null);
     }
   };
 
   const handleReject = async (customerId: string) => {
-    if (!confirm('確定要拒絕此帳號嗎？')) {
+    if (!confirm(t('admin.confirmReject'))) {
       return;
     }
 
@@ -83,10 +85,10 @@ export default function AdminPage() {
       if (data.success) {
         await fetchCustomers();
       } else {
-        alert(data.error || '拒絕失敗');
+        alert(data.error || t('admin.rejectFailed'));
       }
     } catch (err) {
-      alert('網路錯誤，請稍後再試');
+      alert(t('common.errorNetwork'));
     } finally {
       setProcessing(null);
     }
@@ -99,9 +101,9 @@ export default function AdminPage() {
       rejected: 'bg-red-100 text-red-800',
     };
     const labels = {
-      pending: '待審核',
-      approved: '已通過',
-      rejected: '已拒絕',
+      pending: t('admin.statusPending'),
+      approved: t('admin.statusApproved'),
+      rejected: t('admin.statusRejected'),
     };
     return (
       <span
@@ -117,11 +119,11 @@ export default function AdminPage() {
   const getRoleBadge = (role: string) => {
     return role === 'admin' ? (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-        管理員
+        {t('admin.roleAdmin')}
       </span>
     ) : (
       <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-        一般用戶
+        {t('admin.roleUser')}
       </span>
     );
   };
@@ -129,11 +131,10 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">帳號審核管理</h1>
-        <p className="text-gray-600">管理用戶帳號的審核狀態</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('admin.reviewTitle')}</h1>
+        <p className="text-gray-600">{t('admin.reviewDesc')}</p>
       </div>
 
-      {/* 篩選器 */}
       <div className="mb-6 flex space-x-2">
         <button
           onClick={() => setFilter('pending')}
@@ -143,7 +144,7 @@ export default function AdminPage() {
               : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          待審核 ({customers.filter((c) => c.approval_status === 'pending').length})
+          {t('admin.filterPending')} ({customers.filter((c) => c.approval_status === 'pending').length})
         </button>
         <button
           onClick={() => setFilter('approved')}
@@ -153,7 +154,7 @@ export default function AdminPage() {
               : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          已通過
+          {t('admin.filterApproved')}
         </button>
         <button
           onClick={() => setFilter('rejected')}
@@ -163,7 +164,7 @@ export default function AdminPage() {
               : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          已拒絕
+          {t('admin.filterRejected')}
         </button>
         <button
           onClick={() => setFilter('all')}
@@ -173,7 +174,7 @@ export default function AdminPage() {
               : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
-          全部
+          {t('admin.filterAll')}
         </button>
       </div>
 
@@ -188,11 +189,11 @@ export default function AdminPage() {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">載入中...</p>
+          <p className="mt-2 text-gray-600">{t('admin.loading')}</p>
         </div>
       ) : customers.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-          <p className="text-gray-600">目前沒有用戶</p>
+          <p className="text-gray-600">{t('admin.noUsers')}</p>
         </div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -210,20 +211,20 @@ export default function AdminPage() {
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <p>
-                        <span className="font-medium">Email:</span> {customer.email}
+                        <span className="font-medium">{t('admin.email')}:</span> {customer.email}
                       </p>
                       {customer.phone && (
                         <p>
-                          <span className="font-medium">電話:</span> {customer.phone}
+                          <span className="font-medium">{t('admin.phone')}:</span> {customer.phone}
                         </p>
                       )}
                       <p>
-                        <span className="font-medium">註冊時間:</span>{' '}
+                        <span className="font-medium">{t('admin.registeredAt')}:</span>{' '}
                         {new Date(customer.created_at).toLocaleString('zh-TW')}
                       </p>
                       {customer.last_login_at && (
                         <p>
-                          <span className="font-medium">最後登入:</span>{' '}
+                          <span className="font-medium">{t('admin.lastLogin')}:</span>{' '}
                           {new Date(customer.last_login_at).toLocaleString('zh-TW')}
                         </p>
                       )}
@@ -236,14 +237,14 @@ export default function AdminPage() {
                         disabled={processing === customer.id}
                         className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {processing === customer.id ? '處理中...' : '通過'}
+                        {processing === customer.id ? t('admin.processing') : t('admin.approve')}
                       </button>
                       <button
                         onClick={() => handleReject(customer.id)}
                         disabled={processing === customer.id}
                         className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {processing === customer.id ? '處理中...' : '拒絕'}
+                        {processing === customer.id ? t('admin.processing') : t('admin.reject')}
                       </button>
                     </div>
                   )}

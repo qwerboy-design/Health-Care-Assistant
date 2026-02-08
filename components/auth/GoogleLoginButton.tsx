@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 declare global {
   interface Window {
@@ -24,16 +25,16 @@ interface GoogleLoginButtonProps {
 
 export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps) {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 載入 Google Identity Services SDK
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    
+
     script.onload = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
@@ -48,7 +49,7 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
             size: 'large',
             width: '100%',
             text: 'continue_with',
-            locale: 'zh_TW',
+            locale: locale === 'en' ? 'en' : 'zh_TW',
           });
         }
       }
@@ -61,7 +62,7 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
         document.body.removeChild(script);
       }
     };
-  }, []);
+  }, [locale]);
 
   const handleCredentialResponse = async (response: any) => {
     setIsLoading(true);
@@ -81,12 +82,12 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
         router.push('/chat');
         router.refresh();
       } else {
-        const errorMsg = data.error || 'Google 登入失敗';
+        const errorMsg = data.error || t('common.googleLoginFailed');
         setError(errorMsg);
         onError?.(errorMsg);
       }
     } catch (err) {
-      const errorMsg = '網路錯誤，請稍後再試';
+      const errorMsg = t('common.errorNetwork');
       setError(errorMsg);
       onError?.(errorMsg);
     } finally {
@@ -98,7 +99,7 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
     <div>
       <div id="google-signin-button" className="w-full" />
       {isLoading && (
-        <p className="text-sm text-gray-600 text-center mt-2">登入中...</p>
+        <p className="text-sm text-gray-600 text-center mt-2">{t('common.googleLoginLoading')}</p>
       )}
       {error && (
         <p className="text-sm text-red-600 text-center mt-2">{error}</p>

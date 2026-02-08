@@ -1,9 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 export function LogoutButton() {
   const router = useRouter();
+  const { t } = useLocale();
 
   const handleLogout = async () => {
     try {
@@ -32,7 +34,7 @@ export function LogoutButton() {
       onClick={handleLogout}
       className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
     >
-      登出
+      {t('common.logout')}
     </button>
   );
 }

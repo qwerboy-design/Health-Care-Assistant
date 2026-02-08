@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { GoogleLoginButton } from '@/components/auth/GoogleLoginButton';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { CountdownTimer } from '@/components/auth/CountdownTimer';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [registerMethod, setRegisterMethod] = useState<'password' | 'otp'>('otp');
   const [step, setStep] = useState<'input' | 'verify'>('input');
 
@@ -59,7 +61,7 @@ export default function RegisterPage() {
         } else {
           // 密碼註冊：顯示成功訊息並導向登入
           setError('');
-          alert('註冊成功！您的帳號已建立，請等待管理員審核。審核通過後即可登入使用。');
+          alert(t('register.registerSuccess'));
           router.push('/login');
           router.refresh();
         }
@@ -67,13 +69,13 @@ export default function RegisterPage() {
         // #region agent log
         fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:60', message: 'Registration failed', data: { error: data.error }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'H' }) }).catch(() => { });
         // #endregion
-        setError(data.error || '註冊失敗');
+        setError(data.error || t('register.errorRegisterFailed'));
       }
     } catch (err) {
       // #region agent log
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/(auth)/register/page.tsx:56', message: 'handleRegister catch error', data: { errorMessage: err instanceof Error ? err.message : String(err), errorStack: err instanceof Error ? err.stack : undefined }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'I' }) }).catch(() => { });
       // #endregion
-      setError('網路錯誤，請稍後再試');
+      setError(t('register.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -95,25 +97,23 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (data.success) {
-        // OTP 驗證成功，告知等待審核
         setError('');
-        alert('驗證成功！您的帳號已建立，請等待管理員審核。審核通過後，系統將寄送預設密碼至您的 Email。');
+        alert(t('register.verifySuccess'));
         router.push('/login');
         router.refresh();
       } else {
-        const errorMsg = data.error || '驗證失敗';
-        setError(errorMsg);
+        const errorMsg = data.error || t('register.errorVerifyFailed');
         setOtp('');
-
-        // 如果是審核相關錯誤，顯示更詳細的提示
         if (errorMsg.includes('待審核')) {
-          setError('您的帳號正在等待管理員審核，審核通過後即可登入使用');
+          setError(t('register.pendingApproval'));
         } else if (errorMsg.includes('已拒絕')) {
-          setError('您的帳號已被拒絕，如有疑問請聯繫管理員');
+          setError(t('register.rejected'));
+        } else {
+          setError(errorMsg);
         }
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('register.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -135,10 +135,10 @@ export default function RegisterPage() {
       if (data.success) {
         setCanResend(false);
       } else {
-        setError(data.error || '發送失敗');
+        setError(data.error || t('register.errorSendFailed'));
       }
     } catch (err) {
-      setError('網路錯誤，請稍後再試');
+      setError(t('register.errorNetwork'));
     } finally {
       setLoading(false);
     }
@@ -149,19 +149,18 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            註冊臨床助手 AI
+            {t('register.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            或{' '}
+            {t('register.subtitle')}{' '}
             <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              已有帳號？登入
+              {t('register.haveAccount')}
             </a>
           </p>
         </div>
 
         {step === 'input' && (
           <>
-            {/* Google 註冊 */}
             <div>
               <GoogleLoginButton onError={(err) => setError(err)} />
             </div>
@@ -171,11 +170,10 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">或使用 Email</span>
+                <span className="px-2 bg-white text-gray-500">{t('register.orUseEmail')}</span>
               </div>
             </div>
 
-            {/* 註冊方式選擇 */}
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -187,7 +185,7 @@ export default function RegisterPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
-                OTP 註冊
+                {t('register.otpRegister')}
               </button>
               <button
                 onClick={() => {
@@ -199,15 +197,14 @@ export default function RegisterPage() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
-                密碼註冊
+                {t('register.passwordRegister')}
               </button>
             </div>
 
-            {/* 註冊表單 */}
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  姓名
+                  {t('register.name')}
                 </label>
                 <input
                   id="name"
@@ -216,13 +213,13 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="您的姓名"
+                  placeholder={t('register.placeholderName')}
                 />
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
+                  {t('register.email')}
                 </label>
                 <input
                   id="email"
@@ -231,13 +228,13 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="your@email.com"
+                  placeholder={t('register.placeholderEmail')}
                 />
               </div>
 
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  電話（選填）
+                  {t('register.phone')}
                 </label>
                 <input
                   id="phone"
@@ -245,14 +242,14 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0912345678"
+                  placeholder={t('register.placeholderPhone')}
                 />
               </div>
 
               {registerMethod === 'password' && (
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    密碼
+                    {t('register.password')}
                   </label>
                   <input
                     id="password"
@@ -261,9 +258,9 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="至少 8 個字元"
+                    placeholder={t('register.placeholderPassword')}
                   />
-                  <p className="mt-1 text-xs text-gray-500">密碼至少需要 8 個字元</p>
+                  <p className="mt-1 text-xs text-gray-500">{t('register.passwordHint')}</p>
                 </div>
               )}
 
@@ -276,7 +273,7 @@ export default function RegisterPage() {
                 disabled={loading}
                 className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                {loading ? '處理中...' : '註冊'}
+                {loading ? t('register.processing') : t('register.submit')}
               </button>
             </form>
           </>
@@ -286,7 +283,7 @@ export default function RegisterPage() {
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 text-center mb-4">
-                驗證碼已發送到 <strong>{formData.email}</strong>
+                {t('register.codeSentTo')} <strong>{formData.email}</strong>
               </p>
               <OTPInput
                 value={otp}
@@ -306,7 +303,7 @@ export default function RegisterPage() {
                 disabled={loading || otp.length !== 6}
                 className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                {loading ? '驗證中...' : '驗證並完成註冊'}
+                {loading ? t('register.verifying') : t('register.verifyAndComplete')}
               </button>
             </div>
 
@@ -321,11 +318,11 @@ export default function RegisterPage() {
                   disabled={loading}
                   className="text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  重新發送驗證碼
+                  {t('register.resendCode')}
                 </button>
               ) : (
                 <span>
-                  重新發送驗證碼 (<CountdownTimer seconds={120} onComplete={() => setCanResend(true)} />)
+                  {t('register.resendCode')} (<CountdownTimer seconds={120} onComplete={() => setCanResend(true)} />)
                 </span>
               )}
             </div>
@@ -338,7 +335,7 @@ export default function RegisterPage() {
               }}
               className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
             >
-              返回
+              {t('register.back')}
             </button>
           </div>
         )}

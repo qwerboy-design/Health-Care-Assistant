@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 export function AdminButton() {
+  const { t } = useLocale();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -24,11 +26,11 @@ export function AdminButton() {
       } else {
         // 驗證失敗，顯示錯誤訊息
         const data = await response.json();
-        alert(data.error || '權限不足或登入失效');
+        alert(data.error || t('admin.permissionOrLoginFailed'));
       }
     } catch (error) {
-      console.error('Admin check 錯誤:', error);
-      alert('檢查權限時發生錯誤，請稍後再試');
+      console.error('Admin check error:', error);
+      alert(t('admin.checkPermissionError'));
     } finally {
       setLoading(false);
     }
@@ -42,7 +44,7 @@ export function AdminButton() {
         loading ? 'opacity-50 cursor-not-allowed' : ''
       }`}
     >
-      {loading ? '檢查中...' : '後台管理'}
+      {loading ? t('admin.checking') : t('admin.backendManagement')}
     </a>
   );
 }
