@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface FileUploaderProps {
   onFileSelect?: (file: File | null) => void;
@@ -17,6 +18,7 @@ export function FileUploader({
   maxSize = 100 * 1024 * 1024, // 100MB (R2 上限)
   acceptedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 }: FileUploaderProps) {
+  const { t } = useLocale();
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -25,11 +27,11 @@ export function FileUploader({
 
   const validateFile = (file: File): boolean => {
     if (file.size > maxSize) {
-      setError(`檔案大小超過 ${Math.round(maxSize / 1024 / 1024)}MB 限制`);
+      setError(t('chat.fileTooBig', { max: Math.round(maxSize / 1024 / 1024) }));
       return false;
     }
     if (!acceptedTypes.includes(file.type)) {
-      setError('不支援的檔案格式');
+      setError(t('chat.unsupportedFormat'));
       return false;
     }
     setError('');
@@ -144,7 +146,7 @@ export function FileUploader({
       // #region agent log
       fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Upload error caught',data:{errorMessage:err?.message,errorName:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
-      const errorMessage = err?.message || '檔案上傳失敗，請稍後再試';
+      const errorMessage = err?.message || t('chat.uploadFailedShort');
       setError(errorMessage);
       console.error('Upload error:', err);
       // 通知父組件上傳失敗
@@ -210,7 +212,7 @@ export function FileUploader({
           {isUploading ? (
             <div className="flex flex-col items-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-              <p className="text-sm font-medium text-blue-600">正在安全地傳送到雲端...</p>
+              <p className="text-sm font-medium text-blue-600">{t('chat.uploading')}</p>
               {uploadProgress > 0 && (
                 <div className="w-full max-w-xs mt-2">
                   <div className="bg-gray-200 rounded-full h-2">
@@ -234,12 +236,12 @@ export function FileUploader({
                   onClick={() => fileInputRef.current?.click()}
                   className="text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  點擊上傳
+                  {t('chat.clickToUpload')}
                 </button>
-                <span className="text-gray-600"> 或拖放檔案至此</span>
+                <span className="text-gray-600"> {t('chat.orDragFile')}</span>
               </div>
               <p className="text-xs text-gray-500">
-                支援格式：JPEG, PNG, PDF, WORD, TXT (最大 {maxSize / 1024 / 1024}MB)
+                {t('chat.uploadFormat', { max: maxSize / 1024 / 1024 })}
               </p>
             </>
           )}
