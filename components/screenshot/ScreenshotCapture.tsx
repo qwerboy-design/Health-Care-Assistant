@@ -71,16 +71,17 @@ export function ScreenshotCapture({ onCapture, onCancel }: ScreenshotCaptureProp
     }
 
     try {
-      // 截取整個頁面
+      // 截取整個頁面（使用 window.devicePixelRatio 提升解析度）
       const canvas = await html2canvas(document.body, {
-        scale: 2,
         useCORS: true,
         allowTaint: true,
         logging: false,
-      });
+        windowWidth: document.documentElement.scrollWidth,
+        windowHeight: document.documentElement.scrollHeight,
+      } as any);
 
-      // 計算裁切區域（考慮 scale）
-      const scale = 2;
+      // 計算裁切區域（canvas 已使用 devicePixelRatio）
+      const scale = window.devicePixelRatio || 1;
       const x = Math.min(rectangle.startX, rectangle.endX) * scale;
       const y = Math.min(rectangle.startY, rectangle.endY) * scale;
       const w = width * scale;
