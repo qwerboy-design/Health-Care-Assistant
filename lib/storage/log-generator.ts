@@ -54,9 +54,15 @@ export function generateLogFilename(serialNumber: number = 1): string {
 
 /**
  * Generate R2 storage path for logs
- * Format: logs/{customerId}/{conversationId}.md
- * 使用對話 ID 作為檔名，確保同一對話自動上傳時會覆蓋前一份，節省空間且路徑唯一
+ * Format: logs/{customerId}/{YYYY-MM-DD}/{conversationId}.md
+ * 按日期分層，便於後續過濾及追蹤
  */
 export function generateLogStoragePath(customerId: string, conversationId: string): string {
-  return `logs/${customerId}/${conversationId}.md`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateFolder = `${year}-${month}-${day}`;
+  
+  return `logs/${customerId}/${dateFolder}/${conversationId}.md`;
 }

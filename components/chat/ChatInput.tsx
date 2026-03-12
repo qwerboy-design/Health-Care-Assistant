@@ -214,8 +214,8 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
 
           {(selectedFile || uploadedFileUrl) && (
             <div className="space-y-2 mb-3">
-              <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                <span className="text-sm text-blue-900">
+              <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg gap-2">
+                <span className="text-sm text-blue-900 truncate flex-1 min-w-0">
                   📎 {uploadedFileName || selectedFile?.name}
                   {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
                   {uploadedFileUrl && ` ✓ ${t('chat.uploaded')}`}
@@ -230,7 +230,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
                     setUploadError(null);
                     setModelVisionWarning(null);
                   }}
-                  className="text-blue-600 hover:text-blue-700 text-sm"
+                  className="text-blue-600 hover:text-blue-700 text-sm flex-shrink-0"
                 >
                   {t('chat.remove')}
                 </button>
@@ -247,7 +247,7 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
 
         {/* 文字輸入區域 */}
         <div className="px-4 pb-4 pt-2">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <textarea
               ref={textareaRef}
               value={message}
@@ -256,12 +256,12 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0 }: ChatInp
               placeholder={t('chat.inputPlaceholder')}
               disabled={disabled}
               rows={1}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed max-h-[150px] overflow-y-auto"
             />
             <button
               type="submit"
               disabled={disabled || (!message.trim() && !uploadedFileUrl)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition sm:self-end"
             >
               {t('chat.send')}
             </button>

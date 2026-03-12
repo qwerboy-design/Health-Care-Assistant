@@ -13,6 +13,13 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processing, setProcessing] = useState<string | null>(null);
+  
+  // 密碼重設相關狀態
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+  const [passwordCustomerName, setPasswordCustomerName] = useState('');
+  const [passwordCustomerEmail, setPasswordCustomerEmail] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -92,6 +99,44 @@ export default function AdminPage() {
     } finally {
       setProcessing(null);
     }
+  };
+
+  const handleResetPassword = async (customerId: string, customerName: string, customerEmail: string) => {
+    if (!confirm(t('admin.confirmResetPassword'))) {
+      return;
+    }
+
+    setProcessing(customerId);
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setTempPassword(data.data.temporaryPassword);
+        setPasswordCustomerName(customerName);
+        setPasswordCustomerEmail(customerEmail);
+        setShowPasswordModal(true);
+        setCopySuccess(false);
+      } else {
+        alert(data.error || t('admin.resetPasswordFailed'));
+      }
+    } catch (err) {
+      alert(t('common.errorNetwork'));
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(tempPassword).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -230,28 +275,87 @@ export default function AdminPage() {
                       )}
                     </div>
                   </div>
-                  {customer.approval_status === 'pending' && (
-                    <div className="flex space-x-2 ml-4">
-                      <button
-                        onClick={() => handleApprove(customer.id)}
-                        disabled={processing === customer.id}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                      >
-                        {processing === customer.id ? t('admin.processing') : t('admin.approve')}
-                      </button>
-                      <button
-                        onClick={() => handleReject(customer.id)}
-                        disabled={processing === customer.id}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                      >
-                        {processing === customer.id ? t('admin.processing') : t('admin.reject')}
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-2 ml-4">
+                    {/* 重設密碼按鈕（所有狀態都可用） */}
+                    <button
+                      onClick={() => handleResetPassword(customer.id, customer.name, customer.email)}
+                      disabled={processing === customer.id}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+                    >
+                      {processing === customer.id ? t('admin.processing') : t('admin.resetPassword')}
+                    </button>
+                    
+                    {/* 審核按鈕（僅 pending 狀態顯示） */}
+                    {customer.approval_status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleApprove(customer.id)}
+                          disabled={processing === customer.id}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        >
+                          {processing === customer.id ? t('admin.processing') : t('admin.approve')}
+                        </button>
+                        <button
+                          onClick={() => handleReject(customer.id)}
+                          disabled={processing === customer.id}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                        >
+                          {processing === customer.id ? t('admin.processing') : t('admin.reject')}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* 密碼 Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {t('admin.resetPasswordSuccess')}
+            </h2>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <span className="font-medium">{t('admin.email')}:</span> {passwordCustomerEmail}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                <span className="font-medium">姓名:</span> {passwordCustomerName}
+              </p>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-amber-800 mb-2">
+                  ⚠️ {t('admin.resetPasswordHint')}
+                </p>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
+                <p className="text-xs text-gray-600 mb-2 font-medium">{t('admin.temporaryPassword')}:</p>
+                <p className="text-2xl font-mono font-bold text-blue-600 break-all">
+                  {tempPassword}
+                </p>
+              </div>
+
+              <button
+                onClick={handleCopyPassword}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium"
+              >
+                {copySuccess ? `✓ ${t('admin.passwordCopied')}` : t('admin.copyPassword')}
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition font-medium"
+            >
+              {t('admin.closeModal')}
+            </button>
+          </div>
         </div>
       )}
     </div>
