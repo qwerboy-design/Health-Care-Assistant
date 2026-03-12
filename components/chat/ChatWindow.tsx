@@ -25,9 +25,10 @@ interface ChatWindowProps {
   }) => void;
   disabled?: boolean;
   userCredits?: number;
+  externalFile?: File | null;
 }
 
-export function ChatWindow({ messages, isLoading, onSend, disabled, userCredits = 0 }: ChatWindowProps) {
+export function ChatWindow({ messages, isLoading, onSend, disabled, userCredits = 0, externalFile = null }: ChatWindowProps) {
   // 計算對話輪次（每一輪包含一個用戶訊息和一個助手回覆）
   const conversationRounds = Math.floor(messages.length / 2);
   // 空白狀態：對話輪次 <= 2
@@ -51,6 +52,7 @@ export function ChatWindow({ messages, isLoading, onSend, disabled, userCredits 
           disabled={disabled || isLoading} 
           userCredits={userCredits}
           isEmptyState={isEmptyState}
+          externalFile={externalFile}
         />
       </div>
     </div>

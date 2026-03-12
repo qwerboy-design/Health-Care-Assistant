@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { CreditsDisplay } from '@/components/chat/CreditsDisplay';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
+import { ScreenshotCapture } from '@/components/screenshot/ScreenshotCapture';
 import { useLocale } from '@/components/providers/LocaleProvider';
-import { Download } from 'lucide-react';
+import { Download, Camera } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -24,6 +25,8 @@ export default function ChatPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isSavingLog, setIsSavingLog] = useState(false);
   const [userCredits, setUserCredits] = useState<number>(0);
+  const [showScreenshot, setShowScreenshot] = useState(false);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
 
   // 追蹤已自動上傳的對話輪次，避免重複上傳
   const autoUploadedRounds = useRef<Set<string>>(new Set());
@@ -96,6 +99,9 @@ export default function ChatPage() {
     // #region agent log
     fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'handleSend called',data:{hasMessage:!!message,hasFileUrl:!!options.fileUrl,fileName:options.fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
+
+    // 清理截圖檔案狀態
+    setScreenshotFile(null);
 
     // 添加使用者訊息到 UI
     const userMessage: Message = {
@@ -346,16 +352,43 @@ export default function ChatPage() {
     }
   };
 
+  const handleScreenshot = () => {
+    setShowScreenshot(true);
+  };
+
+  const handleScreenshotCapture = (file: File) => {
+    setScreenshotFile(file);
+    setShowScreenshot(false);
+  };
+
+  const handleScreenshotCancel = () => {
+    setShowScreenshot(false);
+  };
+
   return (
     <>
       {showOnboarding && (
         <OnboardingModal onClose={() => setShowOnboarding(false)} />
+      )}
+      {showScreenshot && (
+        <ScreenshotCapture 
+          onCapture={handleScreenshotCapture}
+          onCancel={handleScreenshotCancel}
+        />
       )}
       <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
         {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b">
           <h1 className="text-xl font-semibold">{t('chat.title')}</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={handleScreenshot}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              title={t('chat.screenshot')}
+            >
+              <Camera size={18} />
+              {t('chat.screenshot')}
+            </button>
             <CreditsDisplay
               initialCredits={userCredits}
               onCreditsUpdate={setUserCredits}
@@ -378,6 +411,7 @@ export default function ChatPage() {
             isLoading={isLoading}
             onSend={handleSend}
             userCredits={userCredits}
+            externalFile={screenshotFile}
           />
         </div>
       </div>

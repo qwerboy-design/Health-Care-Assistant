@@ -214,6 +214,10 @@ const zhTW: TranslationMap = {
   },
   chat: {
     title: '對話',
+    screenshot: '截圖',
+    screenshotHint: '拖曳選取要截圖的區域，ESC 取消',
+    screenshotFailed: '截圖失敗，請重試',
+    screenshotTooSmall: '選取區域過小',
     downloadLog: '下載記錄',
     saving: '保存中...',
     startConversation: '請先開始對話',
@@ -479,6 +483,10 @@ const en: TranslationMap = {
   },
   chat: {
     title: 'Chat',
+    screenshot: 'Screenshot',
+    screenshotHint: 'Drag to select area, ESC to cancel',
+    screenshotFailed: 'Screenshot failed, please try again',
+    screenshotTooSmall: 'Selected area too small',
     downloadLog: 'Download log',
     saving: 'Saving...',
     startConversation: 'Please start a conversation first',

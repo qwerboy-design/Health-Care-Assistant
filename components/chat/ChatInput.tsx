@@ -19,9 +19,10 @@ interface ChatInputProps {
   disabled?: boolean;
   userCredits?: number;
   isEmptyState?: boolean;
+  externalFile?: File | null;
 }
 
-export function ChatInput({ onSend, disabled = false, userCredits = 0, isEmptyState = false }: ChatInputProps) {
+export function ChatInput({ onSend, disabled = false, userCredits = 0, isEmptyState = false, externalFile = null }: ChatInputProps) {
   const { t } = useLocale();
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState<string>('');
@@ -59,6 +60,15 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0, isEmptySt
     };
     fetchModels();
   }, []);
+
+  // 處理外部傳入的檔案（如截圖）
+  useEffect(() => {
+    if (externalFile) {
+      setSelectedFile(externalFile);
+      setUploadedFileName(externalFile.name);
+      setUploadedFileType(externalFile.type);
+    }
+  }, [externalFile]);
 
   // 檢查上傳的檔案是否需要支持視覺的模型
   const checkVisionRequirement = (fileType: string | null): boolean => {
