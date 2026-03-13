@@ -6,6 +6,8 @@ import { CreditsDisplay } from '@/components/chat/CreditsDisplay';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { ScreenshotCapture } from '@/components/screenshot/ScreenshotCapture';
 import { useLocale } from '@/components/providers/LocaleProvider';
+import { useCustomerSettings } from '@/hooks/useCustomerSettings';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { Download, Camera } from 'lucide-react';
 
 interface Message {
@@ -27,6 +29,15 @@ export default function ChatPage() {
   const [userCredits, setUserCredits] = useState<number>(0);
   const [showScreenshot, setShowScreenshot] = useState(false);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+
+  // 客戶設定與裝置偵測
+  const { settings, loading: settingsLoading } = useCustomerSettings();
+  const { isMobile } = useDeviceType();
+
+  // 動態控制 UI 顯示
+  const shouldShowScreenshot = isMobile ? false : (settings?.show_screenshot ?? false);
+  const shouldShowFunction = settings?.show_function_selector ?? false;
+  const shouldShowWorkload = settings?.show_workload_selector ?? false;
 
   // 追蹤已自動上傳的對話輪次，避免重複上傳
   const autoUploadedRounds = useRef<Set<string>>(new Set());
@@ -381,14 +392,16 @@ export default function ChatPage() {
         <div className="flex justify-between items-center p-4 border-b">
           <h1 className="text-xl font-semibold">{t('chat.title')}</h1>
           <div className="flex items-center gap-4">
-            <button
-              onClick={handleScreenshot}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              title={t('chat.screenshot')}
-            >
-              <Camera size={18} />
-              {t('chat.screenshot')}
-            </button>
+            {shouldShowScreenshot && (
+              <button
+                onClick={handleScreenshot}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                title={t('chat.screenshot')}
+              >
+                <Camera size={18} />
+                {t('chat.screenshot')}
+              </button>
+            )}
             <CreditsDisplay
               initialCredits={userCredits}
               onCreditsUpdate={setUserCredits}
@@ -412,6 +425,8 @@ export default function ChatPage() {
             onSend={handleSend}
             userCredits={userCredits}
             externalFile={screenshotFile}
+            showFunctionSelector={shouldShowFunction}
+            showWorkloadSelector={shouldShowWorkload}
           />
         </div>
       </div>

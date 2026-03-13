@@ -20,9 +20,19 @@ interface ChatInputProps {
   userCredits?: number;
   isEmptyState?: boolean;
   externalFile?: File | null;
+  showFunctionSelector?: boolean;
+  showWorkloadSelector?: boolean;
 }
 
-export function ChatInput({ onSend, disabled = false, userCredits = 0, isEmptyState = false, externalFile = null }: ChatInputProps) {
+export function ChatInput({ 
+  onSend, 
+  disabled = false, 
+  userCredits = 0, 
+  isEmptyState = false, 
+  externalFile = null,
+  showFunctionSelector = true,
+  showWorkloadSelector = true,
+}: ChatInputProps) {
   const { t } = useLocale();
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState<string>('');
@@ -173,8 +183,12 @@ export function ChatInput({ onSend, disabled = false, userCredits = 0, isEmptySt
                   onChange={setSelectedModel}
                   userCredits={userCredits}
                 />
-                <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
-                <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
+                {showFunctionSelector && (
+                  <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
+                )}
+                {showWorkloadSelector && (
+                  <WorkloadSelector value={workloadLevel} onChange={setWorkloadLevel} />
+                )}
               </div>
             </div>
           </div>

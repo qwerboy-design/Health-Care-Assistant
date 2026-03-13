@@ -114,3 +114,14 @@ export interface AddCreditsResult {
   error?: string;
 }
 
+// Customer Settings 類型
+export interface CustomerSettings {
+  id: string;
+  customer_id: string;
+  show_function_selector: boolean;
+  show_workload_selector: boolean;
+  show_screenshot: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
