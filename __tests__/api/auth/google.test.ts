@@ -105,6 +105,7 @@ describe('POST /api/auth/google - Credits Integration', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.credits).toBe(200);
+      expect(data.data.token).toBe('session-token'); // 驗證 token 有被返回
       expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
     });
 

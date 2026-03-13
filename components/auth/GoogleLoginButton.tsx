@@ -78,6 +78,11 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
       const data = await res.json();
 
       if (data.success) {
+        // 儲存 token 到 localStorage
+        if (data.data.token) {
+          localStorage.setItem('token', data.data.token);
+        }
+        
         onSuccess?.();
         router.push('/chat');
         router.refresh();

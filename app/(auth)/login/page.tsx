@@ -52,6 +52,11 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
+        // 儲存 token 到 localStorage（用於 API 呼叫）
+        if (data.data.token) {
+          localStorage.setItem('token', data.data.token);
+        }
+        
         if (data.data.requiresPasswordReset) {
           setStep('set-password');
           setError('');
@@ -120,6 +125,11 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
+        // 儲存 token 到 localStorage
+        if (data.data.token) {
+          localStorage.setItem('token', data.data.token);
+        }
+        
         // OTP 登入成功，直接進入聊天室
         router.push('/chat');
         router.refresh();

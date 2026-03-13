@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
         name: customer.name,
         credits,
         requiresPasswordReset: customer.requires_password_reset,
+        token, // 返回 token 給前端儲存至 localStorage
       },
       '登入成功'
     );

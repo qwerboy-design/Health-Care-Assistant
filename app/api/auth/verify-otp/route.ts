@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
         email: customer.email,
         name: customer.name,
         credits,
+        token: sessionToken, // 返回 token 給前端
       },
       '驗證成功'
     );

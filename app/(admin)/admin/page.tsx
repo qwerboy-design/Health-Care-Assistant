@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Customer } from '@/types';
+import { Customer, CustomerSettings } from '@/types';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface CustomerListItem extends Omit<Customer, 'password_hash'> {}
@@ -13,6 +13,8 @@ export default function AdminPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [processing, setProcessing] = useState<string | null>(null);
+  const [customerSettings, setCustomerSettings] = useState<Record<string, CustomerSettings>>({});
+  const [settingsLoading, setSettingsLoading] = useState(false);
   
   // 密碼重設相關狀態
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -40,7 +42,13 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (data.success) {
-        setCustomers(data.data.customers || []);
+        const customerList = data.data.customers || [];
+        setCustomers(customerList);
+        
+        // 批次載入客戶設定
+        if (customerList.length > 0) {
+          await fetchCustomerSettings(customerList.map((c: CustomerListItem) => c.id));
+        }
       } else {
         setError(data.error || t('admin.loadFailed'));
       }
@@ -48,6 +56,101 @@ export default function AdminPage() {
       setError(t('common.errorNetwork'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomerSettings = async (customerIds: string[]) => {
+    setSettingsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('[fetchCustomerSettings] No token found');
+        return;
+      }
+
+      console.log('[fetchCustomerSettings] Fetching settings for', customerIds.length, 'customers');
+      
+      const res = await fetch(
+        `/api/admin/customer-settings?batch=true&customerIds=${customerIds.join(',')}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      
+      console.log('[fetchCustomerSettings] Response status:', res.status);
+      
+      const data = await res.json();
+      console.log('[fetchCustomerSettings] Response data:', data);
+
+      if (data.success) {
+        setCustomerSettings(data.data.settings || {});
+        console.log('[fetchCustomerSettings] Settings loaded successfully', Object.keys(data.data.settings || {}).length, 'records');
+      } else {
+        console.error('[fetchCustomerSettings] API returned error:', data.error);
+      }
+    } catch (err) {
+      console.error('[fetchCustomerSettings] Exception:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleToggleSetting = async (
+    customerId: string, 
+    field: 'show_function_selector' | 'show_workload_selector' | 'show_screenshot',
+    value: boolean
+  ) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // 樂觀更新 UI
+      setCustomerSettings(prev => ({
+        ...prev,
+        [customerId]: {
+          ...prev[customerId],
+          [field]: value,
+        },
+      }));
+
+      const res = await fetch('/api/admin/customer-settings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerId,
+          settings: { [field]: value },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        // 恢復舊值
+        setCustomerSettings(prev => ({
+          ...prev,
+          [customerId]: {
+            ...prev[customerId],
+            [field]: !value,
+          },
+        }));
+        alert(data.error || t('admin.settingsUpdateFailed'));
+      }
+    } catch (err) {
+      console.error('更新設定失敗:', err);
+      // 恢復舊值
+      setCustomerSettings(prev => ({
+        ...prev,
+        [customerId]: {
+          ...prev[customerId],
+          [field]: !value,
+        },
+      }));
+      alert(t('common.errorNetwork'));
     }
   };
 
@@ -272,6 +375,58 @@ export default function AdminPage() {
                           <span className="font-medium">{t('admin.lastLogin')}:</span>{' '}
                           {new Date(customer.last_login_at).toLocaleString('zh-TW')}
                         </p>
+                      )}
+                    </div>
+                    
+                    {/* 系統設定區域 */}
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">{t('admin.systemSettings')}:</p>
+                      {settingsLoading ? (
+                        <p className="text-sm text-gray-500 italic">{t('admin.loading')}</p>
+                      ) : customerSettings[customer.id] ? (
+                        <div className="flex flex-wrap gap-3">
+                          {/* 功能選擇開關 */}
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={customerSettings[customer.id]?.show_function_selector || false}
+                              onChange={(e) => handleToggleSetting(customer.id, 'show_function_selector', e.target.checked)}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-gray-700">{t('admin.showFunctionSelector')}</span>
+                          </label>
+                          
+                          {/* 工作量級別開關 */}
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={customerSettings[customer.id]?.show_workload_selector || false}
+                              onChange={(e) => handleToggleSetting(customer.id, 'show_workload_selector', e.target.checked)}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-gray-700">{t('admin.showWorkloadSelector')}</span>
+                          </label>
+                          
+                          {/* 截圖功能開關 */}
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={customerSettings[customer.id]?.show_screenshot || false}
+                              onChange={(e) => handleToggleSetting(customer.id, 'show_screenshot', e.target.checked)}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-gray-700">{t('admin.showScreenshot')}</span>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          <p className="text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                            ⚠️ 設定載入失敗 - 請確認 customer_settings 資料表已建立
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            請在 Supabase 執行：supabase/migrations/20260312_create_customer_settings.sql
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>

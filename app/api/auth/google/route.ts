@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         email: customer.email,
         name: customer.name,
         credits,
+        token, // 返回 token 給前端
       },
       'Google 登入成功'
     );
