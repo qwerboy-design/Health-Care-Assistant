@@ -40,6 +40,9 @@ next-env.d.ts
 .cursor/debug.log
 *.log
 
+# 瀏覽器 Console 診斷腳本（僅本地，不納入版控／正式部署）
+public/diagnose.js
+
 # IDE
 .vscode/
 .idea/

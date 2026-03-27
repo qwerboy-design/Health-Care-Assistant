@@ -8,7 +8,8 @@ import { ScreenshotCapture } from '@/components/screenshot/ScreenshotCapture';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { useCustomerSettings } from '@/hooks/useCustomerSettings';
 import { useDeviceType } from '@/hooks/useDeviceType';
-import { Download, Camera } from 'lucide-react';
+import { Download, Camera, FileUp } from 'lucide-react';
+import { FHIRImportModal } from '@/components/fhir/FHIRImportModal';
 
 interface Message {
   id?: string;
@@ -29,6 +30,8 @@ export default function ChatPage() {
   const [userCredits, setUserCredits] = useState<number>(0);
   const [showScreenshot, setShowScreenshot] = useState(false);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [showFHIRImport, setShowFHIRImport] = useState(false);
+  const [fhirImportData, setFhirImportData] = useState<{ summary: string; rawJson: string } | null>(null);
 
   // 客戶設定與裝置偵測
   const { settings, loading: settingsLoading } = useCustomerSettings();
@@ -376,6 +379,11 @@ export default function ChatPage() {
     setShowScreenshot(false);
   };
 
+  const handleFHIRImport = (data: { summary: string; rawJson: string }) => {
+    setFhirImportData(data);
+    setShowFHIRImport(false);
+  };
+
   return (
     <>
       {showOnboarding && (
@@ -387,6 +395,11 @@ export default function ChatPage() {
           onCancel={handleScreenshotCancel}
         />
       )}
+      <FHIRImportModal
+        isOpen={showFHIRImport}
+        onClose={() => setShowFHIRImport(false)}
+        onImport={handleFHIRImport}
+      />
       <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
         {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b">
@@ -402,6 +415,14 @@ export default function ChatPage() {
                 {t('chat.screenshot')}
               </button>
             )}
+            <button
+              onClick={() => setShowFHIRImport(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              title={t('fhir.importButton')}
+            >
+              <FileUp size={18} />
+              {t('fhir.importButton')}
+            </button>
             <CreditsDisplay
               initialCredits={userCredits}
               onCreditsUpdate={setUserCredits}
@@ -425,6 +446,8 @@ export default function ChatPage() {
             onSend={handleSend}
             userCredits={userCredits}
             externalFile={screenshotFile}
+            externalMessage={fhirImportData?.summary || null}
+            onExternalMessageConsumed={() => setFhirImportData(null)}
             showFunctionSelector={shouldShowFunction}
             showWorkloadSelector={shouldShowWorkload}
           />

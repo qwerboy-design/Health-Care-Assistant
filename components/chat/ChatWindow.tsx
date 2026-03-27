@@ -26,6 +26,8 @@ interface ChatWindowProps {
   disabled?: boolean;
   userCredits?: number;
   externalFile?: File | null;
+  externalMessage?: string | null;
+  onExternalMessageConsumed?: () => void;
   showFunctionSelector?: boolean;
   showWorkloadSelector?: boolean;
 }
@@ -37,6 +39,8 @@ export function ChatWindow({
   disabled, 
   userCredits = 0, 
   externalFile = null,
+  externalMessage = null,
+  onExternalMessageConsumed,
   showFunctionSelector = true,
   showWorkloadSelector = true,
 }: ChatWindowProps) {
@@ -64,6 +68,8 @@ export function ChatWindow({
           userCredits={userCredits}
           isEmptyState={isEmptyState}
           externalFile={externalFile}
+          externalMessage={externalMessage}
+          onExternalMessageConsumed={onExternalMessageConsumed}
           showFunctionSelector={showFunctionSelector}
           showWorkloadSelector={showWorkloadSelector}
         />

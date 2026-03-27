@@ -1,0 +1,150 @@
+{
+  "resourceType": "MedicationStatement",
+  "id": "metformin-treatment",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-03-26T10:00:00+08:00"
+  },
+  "status": "recorded",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/medication-statement-category",
+          "code": "outpatient",
+          "display": "Outpatient"
+        }
+      ],
+      "text": "門診用藥"
+    }
+  ],
+  "medication": {
+    "concept": {
+      "coding": [
+        {
+          "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+          "code": "860974",
+          "display": "Metformin hydrochloride 500 MG Oral Tablet"
+        }
+      ],
+      "text": "Metformin（二甲雙胍）500mg 口服錠"
+    }
+  },
+  "subject": {
+    "reference": "Patient/patient-example-001",
+    "display": "王大明"
+  },
+  "encounter": {
+    "reference": "Encounter/outpatient-2020-01",
+    "display": "2020年1月門診"
+  },
+  "effectivePeriod": {
+    "start": "2020-01-20",
+    "end": null
+  },
+  "dateAsserted": "2020-01-20",
+  "informationSource": [
+    {
+      "reference": "Practitioner/dr-chen",
+      "display": "陳醫師"
+    }
+  ],
+  "reason": [
+    {
+      "concept": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "44054006",
+            "display": "Diabetes mellitus type 2"
+          }
+        ],
+        "text": "第二型糖尿病"
+      }
+    }
+  ],
+  "note": [
+    {
+      "text": "病人耐受性良好，血糖控制穩定。建議繼續服用並定期追蹤 HbA1c。"
+    }
+  ],
+  "renderedDosageInstruction": "每日兩次，每次500毫克，隨餐服用",
+  "dosage": [
+    {
+      "sequence": 1,
+      "text": "每日兩次，每次500毫克，隨餐服用",
+      "additionalInstruction": [
+        {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "311504000",
+              "display": "With or after food"
+            }
+          ],
+          "text": "隨餐或餐後服用"
+        }
+      ],
+      "timing": {
+        "repeat": {
+          "frequency": 2,
+          "period": 1,
+          "periodUnit": "d",
+          "when": ["MORN", "EVE"]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+              "code": "BID",
+              "display": "BID"
+            }
+          ],
+          "text": "每日兩次"
+        }
+      },
+      "route": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "26643006",
+            "display": "Oral route"
+          }
+        ],
+        "text": "口服"
+      },
+      "doseAndRate": [
+        {
+          "type": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                "code": "ordered",
+                "display": "Ordered"
+              }
+            ],
+            "text": "醫囑劑量"
+          },
+          "doseQuantity": {
+            "value": 500,
+            "unit": "毫克",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg"
+          }
+        }
+      ]
+    }
+  ],
+  "adherence": {
+    "code": {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/medication-statement-adherence",
+          "code": "taking",
+          "display": "Taking"
+        }
+      ],
+      "text": "規律服用中"
+    }
+  }
+}

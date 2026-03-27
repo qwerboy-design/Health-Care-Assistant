@@ -2,8 +2,8 @@
 
 智能臨床分析助手，提供檢驗、放射、病歷、藥物分析功能。
 
-> 版本：v1.2.3  
-> 最後更新：2026-03-12
+> 版本：v1.3.0（與 `package.json` 同步）  
+> 最後更新：2026-03-27
 
 ## 技術架構
 
@@ -13,6 +13,7 @@
 - **認證**: JWT Session、Google OAuth 2.0、OTP驗證
 - **資料庫**: Supabase (PostgreSQL)
 - **AI整合**: Anthropic Claude API（直接整合）
+- **FHIR**: HL7 FHIR R5 檔案匯入、結構化臨床敘事（Markdown）送交模型分析（見 `docs/FHIR-ARCHITECTURE.md`）
 - **儲存**: Cloudflare R2（物件儲存）
 - **Email**: Resend（OTP 發送）
 - **語系**: 繁體中文 (ZW) / 英文 (EN)，登錄頁切換、全站介面同步，持久化於 localStorage 與 cookie
@@ -349,11 +350,23 @@ https://github.com/K-Dense-AI/claude-scientific-skills
 - 儲存：Cloudflare R2（物件儲存）
 - 圖片處理：自動轉換為 base64 格式傳遞給 AI
 
+## 部署（GitHub + Vercel）
+
+1. **GitHub**：將 `main` 推送到已連線之遠端（本專案：`origin` → `qwerboy-design/Health-Care-Assistant`）。
+2. **Vercel**：於 [Vercel Dashboard](https://vercel.com) 匯入同一 GitHub 儲存庫並綁定專案；對 `main` 的 push 會觸發 Production／Preview 建置（依專案設定而定）。
+3. **環境變數**：在 Vercel 專案設定中填入與本地 `.env.local` 對應之變數（詳見 `Reference documents/ENV_VARIABLES.md`）。
+4. **建置設定**：已含根目錄 `vercel.json`（Next.js、`/api/chat` 逾時與記憶體等）。
+
+CLI 選用：`npx vercel`（連結專案）、`npx vercel --prod`（需已登入且具權限）。部署後可用 `npm run test:vercel <production-url>` 依環境驗證。
+
 ## 技術文件
 
 - **[ARCHITECTURE.md](Reference documents/ARCHITECTURE.md)** - 系統架構文件（技術棧、資料流、模組設計、語系架構等）
 - **[SPECIFICATIONS.md](Reference documents/SPECIFICATIONS.md)** - 系統規格文件（功能規格、API 規格、資料庫規格等）
 - **[DEPLOYMENT_GUIDE.md](Reference documents/DEPLOYMENT_GUIDE.md)** - 部署指南（GitHub + Vercel）
+- **[FHIR-ARCHITECTURE.md](docs/FHIR-ARCHITECTURE.md)** - FHIR R5 整合與 FHIR → LLM 臨床敘事架構
+- **[FHIR-IMPLEMENTATION-SUMMARY.md](docs/FHIR-IMPLEMENTATION-SUMMARY.md)** - FHIR 實作摘要與版本對照
+- **[FHIR-TEST-REPORT.md](docs/FHIR-TEST-REPORT.md)** - FHIR 相關測試報告
 - **[ENV_VARIABLES.md](Reference documents/ENV_VARIABLES.md)** - 環境變數說明
 - **[I18N_IMPLEMENTATION.md](Reference documents/I18N_IMPLEMENTATION.md)** - 語系 (i18n) 實作說明（ZW/EN 切換、使用方式、擴展）
 - **[IMPLEMENTATION_COMPLETE.md](Reference documents/IMPLEMENTATION_COMPLETE.md)** - 實作完成報告

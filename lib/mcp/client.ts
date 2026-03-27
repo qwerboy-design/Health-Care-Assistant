@@ -57,6 +57,12 @@ export class MCPClient {
         }
       }
 
+      const hasFHIRData = request.message.includes('[FHIR 臨床資料匯入]') ||
+        request.message.includes('[FHIR Clinical Data Import]');
+      if (hasFHIRData) {
+        systemPrompt += '\n\n使用者已匯入 FHIR R5 標準格式的臨床資料。請仔細分析所提供的病患數據，包括檢驗數值、診斷、用藥和生命徵象。注意各項數值是否在正常範圍內，指出異常項目，並根據整體臨床資料提供綜合分析與建議。使用醫學編碼（如 LOINC、SNOMED、ICD-10）來精確識別臨床概念。';
+      }
+
       // 準備使用者訊息內容
       // 如果有檔案 URL，需要根據檔案類型處理
       let userContent: string | Array<any> = request.message;

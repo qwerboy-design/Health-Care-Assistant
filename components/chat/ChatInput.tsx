@@ -20,6 +20,8 @@ interface ChatInputProps {
   userCredits?: number;
   isEmptyState?: boolean;
   externalFile?: File | null;
+  externalMessage?: string | null;
+  onExternalMessageConsumed?: () => void;
   showFunctionSelector?: boolean;
   showWorkloadSelector?: boolean;
 }
@@ -30,6 +32,8 @@ export function ChatInput({
   userCredits = 0, 
   isEmptyState = false, 
   externalFile = null,
+  externalMessage = null,
+  onExternalMessageConsumed,
   showFunctionSelector = true,
   showWorkloadSelector = true,
 }: ChatInputProps) {
@@ -79,6 +83,17 @@ export function ChatInput({
       setUploadedFileType(externalFile.type);
     }
   }, [externalFile]);
+
+  // 處理外部傳入的訊息（如 FHIR 匯入）
+  useEffect(() => {
+    if (externalMessage) {
+      setMessage(externalMessage);
+      onExternalMessageConsumed?.();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }
+  }, [externalMessage, onExternalMessageConsumed]);
 
   // 檢查上傳的檔案是否需要支持視覺的模型
   const checkVisionRequirement = (fileType: string | null): boolean => {
