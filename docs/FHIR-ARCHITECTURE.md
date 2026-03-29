@@ -1,8 +1,8 @@
 # HL7 FHIR 系統架構文件
 
-> 文件版本: 1.1.0  
-> 對應應用程式版本: **1.3.0**（`package.json`）  
-> 最後更新: 2026-03-27  
+> 文件版本: 1.2.0  
+> 對應應用程式版本: **1.3.1**（`package.json`）  
+> 最後更新: 2026-03-29  
 > 依據規範: [HL7 FHIR R5](https://hl7.org/fhir/)
 
 ## 目錄
@@ -173,7 +173,8 @@ Health Care Assistant/
 │   ├── fhir/
 │   │   ├── types.ts              # FHIR 類型定義
 │   │   ├── parser.ts             # 解析、驗證、UI 摘要（formatFHIRSummary）
-│   │   └── formatter.ts        # FHIR → LLM 用的 Markdown 臨床敘事（formatFHIRForLLM）
+│   │   ├── formatter.ts          # FHIR → LLM Markdown（formatFHIRForLLM、結尾區塊輔助函式）
+│   │   └── mergeFhirImport.ts    # 多檔合併為單一訊息（mergeFhirImportsForLLM）
 │   ├── mcp/
 │   │   └── client.ts             # Anthropic API：偵測 FHIR 標記並追加臨床分析 system 提示
 │   └── i18n/
@@ -184,7 +185,8 @@ Health Care Assistant/
 │   ├── lib/
 │   │   └── fhir/
 │   │       ├── parser.test.ts
-│   │       └── formatter.test.ts
+│   │       ├── formatter.test.ts
+│   │       └── mergeFhirImport.test.ts
 │   ├── integration/
 │   │   ├── fhir.integration.test.ts
 │   │   └── fhir-formatter.integration.test.ts
@@ -443,6 +445,13 @@ sequenceDiagram
     API-->>Page: 顯示 AI 回應
 ```
 
+#### 4.1.1 多檔匯入（補充）
+
+- 使用者可於 `FHIRImportModal` **一次選取或拖放多個** JSON/XML（上限 20 個）；副檔名／MIME 不符之檔案會整批拒絕並列出檔名。
+- 每檔依序呼叫 `processFHIRContent`；**任一模組失敗**則不進入預覽，改顯示各檔錯誤。
+- 確認匯入時由 **`lib/fhir/mergeFhirImport.ts`** 的 `mergeFhirImportsForLLM`：對每檔呼叫 `formatFHIRForLLM`，以 `stripFHIRLLMFooterBlockFromFormattedText` 移除各段尾端之 `---` + 免責說明，區塊之間以 `---` 分隔，最後 **`getFHIRLLMFooterClosingBlock` 只附加一次**結尾文案（避免多檔重複同一段「以上為 FHIR R5…」）。
+- `rawJson` 為多段 `// file: <name>` 註解 + 各檔 `summary.rawJson` 串接。
+
 ### 4.2 Bundle 解析流程
 
 ```mermaid
@@ -576,6 +585,11 @@ flowchart TD
 
 - **語系**：`locale` 為 `zh-TW` 或 `en`，標籤與段落標題隨語系切換。
 - **隱私**：LLM 敘事為**臨床完整度優先**，可能含 PII／PHI；實際部署應與 §6 安全性政策、同意與遮罩策略一致，並告知使用者送出內容將由模型處理。
+
+#### 4.4.5 多檔合併後的結尾文案
+
+- 單檔 `formatFHIRForLLM` 輸出仍含一段 `---` 後接繁中／英文免責說明（與 MCP 偵測用標頭分離）。
+- **多檔**經 `mergeFhirImportsForLLM` 時，各檔內嵌之免責段會被移除，**整份訊息末尾僅保留一組** `---` + 說明，以減少重複並節省 token。
 
 ---
 

@@ -11,6 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import { parseFHIR, processFHIRContent } from '@/lib/fhir/parser';
 import { formatFHIRForLLM } from '@/lib/fhir/formatter';
+import { mergeFhirImportsForLLM } from '@/lib/fhir/mergeFhirImport';
 
 const fixturesPath = path.join(__dirname, '../fixtures/fhir');
 
@@ -215,6 +216,77 @@ describe('模擬 FHIRImportModal 匯入流程', () => {
     const llmText = formatFHIRForLLM(result.resource!, 'en');
 
     expect(llmText).toContain('[FHIR Clinical Data Import]');
+  });
+});
+
+// ============================================
+// 多檔匯入合併（mergeFhirImportsForLLM）
+// ============================================
+
+describe('多檔 FHIR 匯入合併（fixtures）', () => {
+  it('zh-TW：patient-valid + observation-vitals + condition 合併後含標記與各資源內容', () => {
+    const names = ['patient-valid.json', 'observation-vitals.json', 'condition.json'] as const;
+    const items = names.map((name) => {
+      const content = loadFixtureRaw(name);
+      const result = processFHIRContent(content, 'zh-TW');
+      expect(result.success).toBe(true);
+      expect(result.summary).toBeDefined();
+      expect(result.resource).toBeDefined();
+      return {
+        fileName: name,
+        summary: result.summary!,
+        resource: result.resource!,
+      };
+    });
+
+    const { llmText, rawJsonMerged } = mergeFhirImportsForLLM(items, 'zh-TW');
+
+    expect(llmText).toContain('[FHIR 臨床資料匯入]');
+    expect(llmText).toContain('## 檔案：patient-valid.json');
+    expect(llmText).toContain('## 檔案：observation-vitals.json');
+    expect(llmText).toContain('## 檔案：condition.json');
+    expect(llmText).toContain('王大明');
+    expect(llmText).toMatch(/Blood Pressure|收縮壓|Systolic|mmHg/);
+    expect(llmText).toContain('糖尿病');
+
+    expect(rawJsonMerged).toContain('// file: patient-valid.json');
+    expect(rawJsonMerged).toContain('// file: observation-vitals.json');
+    expect(rawJsonMerged).toContain('// file: condition.json');
+  });
+
+  it('en：三檔合併含 Clinical Data Import 標記', () => {
+    const names = ['patient-valid.json', 'observation-vitals.json', 'condition.json'] as const;
+    const items = names.map((name) => {
+      const result = processFHIRContent(loadFixtureRaw(name), 'en');
+      expect(result.success).toBe(true);
+      return {
+        fileName: name,
+        summary: result.summary!,
+        resource: result.resource!,
+      };
+    });
+    const { llmText } = mergeFhirImportsForLLM(items, 'en');
+    expect(llmText).toContain('[FHIR Clinical Data Import]');
+    expect(llmText).toContain('## File: patient-valid.json');
+  });
+
+  it('Bundle 與單一 Patient 混併仍含標記與 Bundle 內容', () => {
+    const bundle = processFHIRContent(loadFixtureRaw('bundle-collection.json'), 'zh-TW');
+    const patient = processFHIRContent(loadFixtureRaw('patient-valid.json'), 'zh-TW');
+    expect(bundle.success).toBe(true);
+    expect(patient.success).toBe(true);
+
+    const { llmText } = mergeFhirImportsForLLM(
+      [
+        { fileName: 'bundle-collection.json', summary: bundle.summary!, resource: bundle.resource! },
+        { fileName: 'patient-valid.json', summary: patient.summary!, resource: patient.resource! },
+      ],
+      'zh-TW'
+    );
+
+    expect(llmText).toContain('[FHIR 臨床資料匯入]');
+    expect(llmText).toContain('李小華');
+    expect(llmText).toContain('王大明');
   });
 });
 

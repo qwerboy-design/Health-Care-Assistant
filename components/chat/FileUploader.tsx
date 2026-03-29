@@ -7,17 +7,21 @@ interface FileUploaderProps {
   onFileSelect?: (file: File | null) => void;
   onUploadSuccess?: (url: string) => void; // 新增：上傳成功的回傳
   onUploadError?: (error: string) => void; // 新增：上傳失敗的回傳
-  maxSize?: number; 
+  maxSize?: number;
   acceptedTypes?: string[];
+  /** compact：精簡列高，適合對話側欄與手機 */
+  variant?: 'default' | 'compact';
 }
 
-export function FileUploader({ 
-  onFileSelect, 
+export function FileUploader({
+  onFileSelect,
   onUploadSuccess,
   onUploadError,
   maxSize = 100 * 1024 * 1024, // 100MB (R2 上限)
-  acceptedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
+  acceptedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+  variant = 'default',
 }: FileUploaderProps) {
+  const isCompact = variant === 'compact';
   const { t } = useLocale();
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState('');
@@ -186,18 +190,22 @@ export function FileUploader({
     }
   };
 
+  const dropZoneClass = isCompact
+    ? `rounded-md border border-dashed py-2 px-3 transition ${
+        dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+      } ${isUploading ? 'cursor-not-allowed opacity-50' : ''}`
+    : `rounded-lg border-2 border-dashed p-6 text-center transition ${
+        dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+      } ${isUploading ? 'cursor-not-allowed opacity-50' : ''}`;
+
   return (
-    <div className="space-y-2">
+    <div className={isCompact ? 'space-y-1' : 'space-y-2'}>
       <div
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        className={`
-          border-2 border-dashed rounded-lg p-6 text-center transition
-          ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
-          ${isUploading ? 'opacity-50 cursor-not-allowed' : ''} 
-        `}
+        className={dropZoneClass}
       >
         <input
           ref={fileInputRef}
@@ -207,45 +215,105 @@ export function FileUploader({
           className="hidden"
           disabled={isUploading}
         />
-        
-        <div className="space-y-2">
-          {isUploading ? (
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-              <p className="text-sm font-medium text-blue-600">{t('chat.uploading')}</p>
-              {uploadProgress > 0 && (
-                <div className="w-full max-w-xs mt-2">
-                  <div className="bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
+
+        {isCompact ? (
+          <div className="flex flex-wrap items-center gap-2 text-left">
+            {isUploading ? (
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                <div className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                <span className="text-sm font-medium text-blue-600">{t('chat.uploading')}</span>
+                {uploadProgress > 0 && (
+                  <div className="min-w-[120px] flex-1">
+                    <div className="h-1.5 rounded-full bg-gray-200">
+                      <div
+                        className="h-1.5 rounded-full bg-blue-600 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="mt-0.5 text-xs text-gray-600">{Math.round(uploadProgress)}%</p>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">{Math.round(uploadProgress)}%</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div>
+                )}
+              </div>
+            ) : (
+              <>
+                <svg
+                  className="h-5 w-5 shrink-0 text-gray-400"
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                  aria-hidden
+                >
+                  <path
+                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
                   {t('chat.clickToUpload')}
                 </button>
-                <span className="text-gray-600"> {t('chat.orDragFile')}</span>
+                <span className="text-xs text-gray-500">{t('chat.orDragFile')}</span>
+                <span className="w-full text-[11px] leading-tight text-gray-400 sm:w-auto">
+                  {t('chat.uploadFormat', { max: maxSize / 1024 / 1024 })}
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {isUploading ? (
+              <div className="flex flex-col items-center">
+                <div className="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                <p className="text-sm font-medium text-blue-600">{t('chat.uploading')}</p>
+                {uploadProgress > 0 && (
+                  <div className="mt-2 w-full max-w-xs">
+                    <div className="h-2 rounded-full bg-gray-200">
+                      <div
+                        className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-600">{Math.round(uploadProgress)}%</p>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-gray-500">
-                {t('chat.uploadFormat', { max: maxSize / 1024 / 1024 })}
-              </p>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                >
+                  <path
+                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    {t('chat.clickToUpload')}
+                  </button>
+                  <span className="text-gray-600"> {t('chat.orDragFile')}</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {t('chat.uploadFormat', { max: maxSize / 1024 / 1024 })}
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

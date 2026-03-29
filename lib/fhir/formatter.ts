@@ -33,7 +33,9 @@ import {
   isMedicationStatement,
 } from './types';
 
-type Locale = 'zh-TW' | 'en';
+export type FhirFormatterLocale = 'zh-TW' | 'en';
+
+type Locale = FhirFormatterLocale;
 
 // ============================================
 // 主入口
@@ -90,6 +92,24 @@ export function formatFHIRForLLM(resource: FHIRResource, locale: Locale = 'zh-TW
   }
 
   return lines.join('\n');
+}
+
+/**
+ * 自單檔 `formatFHIRForLLM` 輸出移除尾端 `\n\n---\n` + 免責說明，供多檔合併後只保留一次結尾。
+ */
+export function stripFHIRLLMFooterBlockFromFormattedText(text: string, locale: Locale): string {
+  const footer = getLabels(locale).footer;
+  const suffix = `\n\n---\n${footer}`;
+  if (text.endsWith(suffix)) {
+    return text.slice(0, -suffix.length).replace(/\s+$/, '');
+  }
+  return text;
+}
+
+/** 多檔合併後統一附加的結尾（含分隔線與免責說明） */
+export function getFHIRLLMFooterClosingBlock(locale: Locale): string {
+  const footer = getLabels(locale).footer;
+  return `\n\n---\n${footer}`;
 }
 
 // ============================================

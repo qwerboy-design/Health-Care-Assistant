@@ -4,8 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { processFHIRContent } from '@/lib/fhir/parser';
-import { FHIRSummary, FHIRResource } from '@/lib/fhir/types';
-import { formatFHIRForLLM } from '@/lib/fhir/formatter';
+import { mergeFhirImportsForLLM, type FhirParsedItem } from '@/lib/fhir/mergeFhirImport';
 
 interface FHIRImportModalProps {
   isOpen: boolean;
@@ -15,22 +14,39 @@ interface FHIRImportModalProps {
 
 type ImportState = 'idle' | 'loading' | 'preview' | 'error';
 
+const MAX_FILES = 20;
+
+function isValidFhirFile(file: File): boolean {
+  const validTypes = [
+    'application/json',
+    'application/fhir+json',
+    'text/xml',
+    'application/xml',
+    'application/fhir+xml',
+  ];
+  return (
+    validTypes.includes(file.type) ||
+    file.name.endsWith('.json') ||
+    file.name.endsWith('.xml')
+  );
+}
+
 export function FHIRImportModal({ isOpen, onClose, onImport }: FHIRImportModalProps) {
-  const { t, locale } = useLocale();
+  const { locale } = useLocale();
   const [state, setState] = useState<ImportState>('idle');
-  const [error, setError] = useState<string>('');
-  const [summary, setSummary] = useState<FHIRSummary | null>(null);
-  const [parsedResource, setParsedResource] = useState<FHIRResource | null>(null);
-  const [fileName, setFileName] = useState<string>('');
+  const [simpleError, setSimpleError] = useState<string>('');
+  const [parseErrors, setParseErrors] = useState<Array<{ fileName: string; message: string }>>([]);
+  const [parsedItems, setParsedItems] = useState<FhirParsedItem[]>([]);
+  const [loadingHint, setLoadingHint] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   const resetState = useCallback(() => {
     setState('idle');
-    setError('');
-    setSummary(null);
-    setParsedResource(null);
-    setFileName('');
+    setSimpleError('');
+    setParseErrors([]);
+    setParsedItems([]);
+    setLoadingHint('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -59,87 +75,127 @@ export function FHIRImportModal({ isOpen, onClose, onImport }: FHIRImportModalPr
     }
   }, [isOpen]);
 
-  const processFile = async (file: File) => {
-    setFileName(file.name);
-    setState('loading');
-    setError('');
+  const getErrorMessage = useCallback(
+    (errorCode: string): string => {
+      const errorMessages: Record<string, { zhTW: string; en: string }> = {
+        PARSE_ERROR: {
+          zhTW: '檔案格式錯誤，無法解析。請確認是有效的 JSON 或 XML 格式。',
+          en: 'File format error. Please ensure it is valid JSON or XML.',
+        },
+        MISSING_RESOURCE_TYPE: {
+          zhTW: '非有效的 FHIR 資源（缺少 resourceType 欄位）。',
+          en: 'Invalid FHIR resource (missing resourceType field).',
+        },
+        UNSUPPORTED_TYPE: {
+          zhTW: '暫不支援此資源類型。',
+          en: 'This resource type is not supported.',
+        },
+        UNKNOWN_ERROR: {
+          zhTW: '處理失敗，請稍後再試。',
+          en: 'Processing failed. Please try again.',
+        },
+      };
 
-    try {
-      const content = await file.text();
-      const fhirLocale = locale === 'zh-TW' ? 'zh-TW' : 'en';
-      const result = processFHIRContent(content, fhirLocale);
+      const msg = errorMessages[errorCode] || errorMessages.UNKNOWN_ERROR;
+      return locale === 'zh-TW' ? msg.zhTW : msg.en;
+    },
+    [locale]
+  );
 
-      if (result.success && result.summary) {
-        setSummary(result.summary);
-        if (result.resource) {
-          setParsedResource(result.resource);
-        }
-        setState('preview');
-      } else {
-        setError(getErrorMessage(result.error || 'UNKNOWN_ERROR'));
-        setState('error');
-      }
-    } catch (err) {
-      setError(getErrorMessage('PARSE_ERROR'));
+  const processFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+
+    const invalidExt = list.filter((f) => !isValidFhirFile(f));
+    if (invalidExt.length > 0) {
+      setParseErrors(
+        invalidExt.map((f) => ({
+          fileName: f.name,
+          message:
+            locale === 'zh-TW'
+              ? '請選擇 JSON 或 XML 格式的 FHIR 檔案。'
+              : 'Please select a FHIR file in JSON or XML format.',
+        }))
+      );
+      setSimpleError('');
       setState('error');
+      return;
     }
-  };
 
-  const getErrorMessage = (errorCode: string): string => {
-    const errorMessages: Record<string, { zhTW: string; en: string }> = {
-      PARSE_ERROR: {
-        zhTW: '檔案格式錯誤，無法解析。請確認是有效的 JSON 或 XML 格式。',
-        en: 'File format error. Please ensure it is valid JSON or XML.',
-      },
-      MISSING_RESOURCE_TYPE: {
-        zhTW: '非有效的 FHIR 資源（缺少 resourceType 欄位）。',
-        en: 'Invalid FHIR resource (missing resourceType field).',
-      },
-      UNSUPPORTED_TYPE: {
-        zhTW: '暫不支援此資源類型。',
-        en: 'This resource type is not supported.',
-      },
-      UNKNOWN_ERROR: {
-        zhTW: '處理失敗，請稍後重試。',
-        en: 'Processing failed. Please try again.',
-      },
-    };
+    if (list.length > MAX_FILES) {
+      setSimpleError(
+        locale === 'zh-TW'
+          ? `一次最多匯入 ${MAX_FILES} 個檔案。`
+          : `You can import at most ${MAX_FILES} files at once.`
+      );
+      setParseErrors([]);
+      setState('error');
+      return;
+    }
 
-    const msg = errorMessages[errorCode] || errorMessages.UNKNOWN_ERROR;
-    return locale === 'zh-TW' ? msg.zhTW : msg.en;
+    setState('loading');
+    setSimpleError('');
+    setParseErrors([]);
+    setLoadingHint(
+      list.length === 1
+        ? list[0].name
+        : locale === 'zh-TW'
+          ? `${list.length} 個檔案`
+          : `${list.length} files`
+    );
+
+    const fhirLocale = locale === 'zh-TW' ? 'zh-TW' : 'en';
+    const items: FhirParsedItem[] = [];
+    const errors: Array<{ fileName: string; message: string }> = [];
+
+    for (const file of list) {
+      try {
+        const content = await file.text();
+        const result = processFHIRContent(content, fhirLocale);
+
+        if (result.success && result.summary && result.resource) {
+          items.push({
+            fileName: file.name,
+            summary: result.summary,
+            resource: result.resource,
+          });
+        } else {
+          errors.push({
+            fileName: file.name,
+            message: getErrorMessage(result.error || 'UNKNOWN_ERROR'),
+          });
+        }
+      } catch {
+        errors.push({
+          fileName: file.name,
+          message: getErrorMessage('PARSE_ERROR'),
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      setParseErrors(errors);
+      setParsedItems([]);
+      setState('error');
+      return;
+    }
+
+    setParsedItems(items);
+    setState('preview');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const validTypes = [
-        'application/json',
-        'application/fhir+json',
-        'text/xml',
-        'application/xml',
-        'application/fhir+xml',
-      ];
-      const isValidType = validTypes.includes(file.type) || 
-        file.name.endsWith('.json') || 
-        file.name.endsWith('.xml');
-
-      if (!isValidType) {
-        setError(locale === 'zh-TW' 
-          ? '請選擇 JSON 或 XML 格式的 FHIR 檔案。'
-          : 'Please select a FHIR file in JSON or XML format.');
-        setState('error');
-        return;
-      }
-
-      processFile(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      void processFiles(files);
     }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      processFile(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      void processFiles(files);
     }
   };
 
@@ -148,18 +204,19 @@ export function FHIRImportModal({ isOpen, onClose, onImport }: FHIRImportModalPr
   };
 
   const handleConfirm = () => {
-    if (summary && parsedResource) {
-      const fhirLocale = locale === 'zh-TW' ? 'zh-TW' : 'en';
-      const llmText = formatFHIRForLLM(parsedResource, fhirLocale);
-      onImport({
-        summary: llmText,
-        rawJson: summary.rawJson,
-      });
-      handleClose();
-    }
+    if (parsedItems.length === 0) return;
+    const fhirLocale = locale === 'zh-TW' ? 'zh-TW' : 'en';
+    const { llmText, rawJsonMerged } = mergeFhirImportsForLLM(parsedItems, fhirLocale);
+    onImport({
+      summary: llmText,
+      rawJson: rawJsonMerged,
+    });
+    handleClose();
   };
 
   if (!isOpen) return null;
+
+  const zh = locale === 'zh-TW';
 
   return (
     <div
@@ -171,167 +228,181 @@ export function FHIRImportModal({ isOpen, onClose, onImport }: FHIRImportModalPr
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+        className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 id="fhir-modal-title" className="text-lg font-semibold text-gray-900">
-            {locale === 'zh-TW' ? '匯入 FHIR 資料' : 'Import FHIR Data'}
+            {zh ? '匯入 FHIR 資料' : 'Import FHIR Data'}
           </h2>
           <button
             onClick={handleClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-            aria-label={locale === 'zh-TW' ? '關閉' : 'Close'}
+            className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label={zh ? '關閉' : 'Close'}
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
+        <div className="max-h-[60vh] overflow-y-auto px-6 py-4">
           {state === 'idle' && (
             <div
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+              className="cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-blue-400 hover:bg-blue-50"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-4 text-sm font-medium text-gray-900">
-                {locale === 'zh-TW' ? '點擊或拖放 FHIR 檔案至此' : 'Click or drop FHIR file here'}
+                {zh ? '點擊或拖放 FHIR 檔案至此' : 'Click or drop FHIR files here'}
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                {locale === 'zh-TW' ? '支援 JSON, XML 格式' : 'Supports JSON, XML formats'}
+                {zh
+                  ? '支援 JSON、XML；可一次選擇或多檔拖放（最多 20 個）'
+                  : 'JSON or XML; multi-select or drop multiple files (max 20)'}
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json,.xml,application/json,application/xml,text/xml"
+                multiple
+                accept=".json,.xml,application/json,application/xml,text/xml,application/fhir+json,application/fhir+xml"
                 onChange={handleFileChange}
                 className="hidden"
-                aria-label={locale === 'zh-TW' ? '選擇 FHIR 檔案' : 'Select FHIR file'}
+                aria-label={zh ? '選擇 FHIR 檔案' : 'Select FHIR files'}
               />
             </div>
           )}
 
           {state === 'loading' && (
             <div className="flex flex-col items-center py-8">
-              <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
               <p className="mt-4 text-sm text-gray-600">
-                {locale === 'zh-TW' ? '正在解析 FHIR 資料...' : 'Parsing FHIR data...'}
+                {zh ? '正在解析 FHIR 資料...' : 'Parsing FHIR data...'}
               </p>
-              <p className="mt-1 text-xs text-gray-400">{fileName}</p>
+              <p className="mt-1 text-xs text-gray-400">{loadingHint}</p>
             </div>
           )}
 
           {state === 'error' && (
             <div className="py-4">
-              <div className="flex items-start gap-3 p-4 bg-red-50 rounded-lg">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
+              <div className="flex items-start gap-3 rounded-lg bg-red-50 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-red-800">
-                    {locale === 'zh-TW' ? '匯入失敗' : 'Import Failed'}
+                    {zh ? '匯入失敗' : 'Import Failed'}
                   </p>
-                  <p className="mt-1 text-sm text-red-700">{error}</p>
-                  {fileName && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {locale === 'zh-TW' ? '檔案' : 'File'}: {fileName}
-                    </p>
+                  {simpleError && <p className="mt-1 text-sm text-red-700">{simpleError}</p>}
+                  {parseErrors.length > 0 && (
+                    <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-red-700">
+                      {parseErrors.map((row, idx) => (
+                        <li key={`${row.fileName}-${idx}`}>
+                          <span className="font-medium">{row.fileName}</span>: {row.message}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
               <button
                 onClick={resetState}
-                className="mt-4 w-full px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                className="mt-4 w-full rounded-lg px-4 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
               >
-                {locale === 'zh-TW' ? '重新選擇檔案' : 'Select another file'}
+                {zh ? '重新選擇檔案' : 'Select files again'}
               </button>
             </div>
           )}
 
-          {state === 'preview' && summary && (
+          {state === 'preview' && parsedItems.length > 0 && (
             <div className="space-y-4">
-              {/* Success indicator */}
-              <div className="flex items-center gap-2 text-green-600">
+              <div className="flex flex-wrap items-center gap-2 text-green-600">
                 <CheckCircle size={18} />
                 <span className="text-sm font-medium">
-                  {locale === 'zh-TW' ? '解析成功' : 'Parsed successfully'}
+                  {zh ? '解析成功' : 'Parsed successfully'}
                 </span>
-                <span className="text-xs text-gray-400">({fileName})</span>
-              </div>
-
-              {/* Resource type badge */}
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-500" />
-                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                  {summary.resourceType}
+                <span className="text-xs text-gray-400">
+                  ({zh ? `共 ${parsedItems.length} 個檔案` : `${parsedItems.length} files`})
                 </span>
-                <span className="text-sm text-gray-600">{summary.resourceTypeDisplay}</span>
               </div>
 
-              {/* Summary details */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">
-                  {summary.title}
-                </h3>
-                <dl className="space-y-2">
-                  {summary.details.map((detail, index) => (
-                    <div key={index} className="flex text-sm">
-                      <dt className="w-1/3 text-gray-500">{detail.label}</dt>
-                      <dd className="w-2/3 text-gray-900 font-medium">{detail.value}</dd>
+              <div className="space-y-4">
+                {parsedItems.map((item) => (
+                  <div
+                    key={item.fileName}
+                    className="rounded-lg border border-gray-200 bg-gray-50/80 p-4"
+                  >
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-500" />
+                      <span className="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                        {item.summary.resourceType}
+                      </span>
+                      <span className="text-sm text-gray-600">{item.summary.resourceTypeDisplay}</span>
+                      <span className="text-xs text-gray-400">({item.fileName})</span>
                     </div>
-                  ))}
-                </dl>
-
-                {summary.statistics && (
-                  <>
-                    <hr className="my-3 border-gray-200" />
-                    <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
-                      {locale === 'zh-TW' ? '資源統計' : 'Resource Statistics'}
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(summary.statistics.byType).map(([type, count]) => (
-                        <span
-                          key={type}
-                          className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded"
-                        >
-                          {type}: {count}
-                        </span>
-                      ))}
+                    <div className="rounded-md bg-white p-3">
+                      <h3 className="mb-2 text-sm font-medium text-gray-700">{item.summary.title}</h3>
+                      <dl className="space-y-1">
+                        {item.summary.details.slice(0, 5).map((detail, index) => (
+                          <div key={index} className="flex text-sm">
+                            <dt className="w-1/3 text-gray-500">{detail.label}</dt>
+                            <dd className="w-2/3 font-medium text-gray-900">{detail.value}</dd>
+                          </div>
+                        ))}
+                        {item.summary.details.length > 5 && (
+                          <p className="text-xs text-gray-400">
+                            {zh
+                              ? `… 另有 ${item.summary.details.length - 5} 項`
+                              : `… ${item.summary.details.length - 5} more`}
+                          </p>
+                        )}
+                      </dl>
+                      {item.summary.statistics && (
+                        <>
+                          <hr className="my-2 border-gray-200" />
+                          <p className="mb-1 text-xs font-medium uppercase text-gray-500">
+                            {zh ? '資源統計' : 'Resource statistics'}
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(item.summary.statistics.byType).map(([type, count]) => (
+                              <span
+                                key={type}
+                                className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-700"
+                              >
+                                {type}: {count}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </>
-                )}
+                    <details className="mt-2 text-sm">
+                      <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
+                        {zh ? '查看此檔原始 JSON' : 'Raw JSON for this file'}
+                      </summary>
+                      <pre className="mt-2 max-h-32 overflow-x-auto overflow-y-auto rounded-lg bg-gray-900 p-2 text-xs text-gray-100">
+                        {item.summary.rawJson}
+                      </pre>
+                    </details>
+                  </div>
+                ))}
               </div>
-
-              {/* Collapsible raw JSON */}
-              <details className="text-sm">
-                <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
-                  {locale === 'zh-TW' ? '查看原始 JSON' : 'View raw JSON'}
-                </summary>
-                <pre className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs max-h-48">
-                  {summary.rawJson}
-                </pre>
-              </details>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors"
+            className="rounded-lg px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-900"
           >
-            {locale === 'zh-TW' ? '取消' : 'Cancel'}
+            {zh ? '取消' : 'Cancel'}
           </button>
           {state === 'preview' && (
             <button
               onClick={handleConfirm}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
             >
-              {locale === 'zh-TW' ? '確認匯入' : 'Confirm Import'}
+              {zh ? '確認匯入' : 'Confirm Import'}
             </button>
           )}
         </div>

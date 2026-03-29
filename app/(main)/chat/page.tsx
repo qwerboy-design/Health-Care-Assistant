@@ -400,7 +400,7 @@ export default function ChatPage() {
         onClose={() => setShowFHIRImport(false)}
         onImport={handleFHIRImport}
       />
-      <div className="h-[calc(100vh-4rem)] max-w-6xl mx-auto flex flex-col">
+      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col px-4">
         {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b">
           <h1 className="text-xl font-semibold">{t('chat.title')}</h1>

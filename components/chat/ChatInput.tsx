@@ -162,10 +162,10 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white">
-      <form onSubmit={handleSubmit} className="flex flex-col">
+    <div className="flex h-full min-h-0 flex-col border-t border-gray-200 bg-white lg:border-t-0">
+      <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-1 flex-col">
         {/* 功能選擇和工作量級別 - 可折疊區域 */}
-        <div className="border-b border-gray-100">
+        <div className="shrink-0 border-b border-gray-100">
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
@@ -209,10 +209,11 @@ export function ChatInput({
           </div>
         </div>
 
-        {/* 檔案上傳區域 */}
-        <div className="px-4 pt-3">
+        {/* 檔案上傳區域（精簡列，靠上） */}
+        <div className="shrink-0 px-4 pt-2">
           {!selectedFile && !uploadedFileUrl && (
             <FileUploader
+              variant="compact"
               onFileSelect={(file) => {
                 // #region agent log
                 fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onFileSelect', message: 'onFileSelect callback called', data: { fileIsNull: file === null, fileIsUndefined: file === undefined, hasFileName: !!file?.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
@@ -253,7 +254,7 @@ export function ChatInput({
           )}
 
           {(selectedFile || uploadedFileUrl) && (
-            <div className="space-y-2 mb-3">
+            <div className="mb-2 space-y-2">
               <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg gap-2">
                 <span className="text-sm text-blue-900 truncate flex-1 min-w-0">
                   📎 {uploadedFileName || selectedFile?.name}
@@ -285,9 +286,9 @@ export function ChatInput({
           )}
         </div>
 
-        {/* 文字輸入區域 */}
-        <div className="px-4 pb-4 pt-2">
-          <div className="flex flex-col sm:flex-row gap-2">
+        {/* 文字輸入區域：桌面左欄縱向填滿 */}
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 sm:flex-row lg:flex-col">
             <textarea
               ref={textareaRef}
               value={message}
@@ -296,14 +297,14 @@ export function ChatInput({
               placeholder={t('chat.inputPlaceholder')}
               disabled={disabled}
               rows={isEmptyState ? 3 : 1}
-              className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 disabled:cursor-not-allowed overflow-y-auto transition-all duration-300 ${
-                isEmptyState ? 'max-h-[300px]' : 'max-h-[150px]'
-              }`}
+              className={`min-h-0 flex-1 resize-none overflow-y-auto rounded-lg border border-gray-300 px-4 py-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+                isEmptyState ? 'max-h-[300px] lg:max-h-none' : 'max-h-[150px] lg:max-h-none'
+              } lg:min-h-[7rem]`}
             />
             <button
               type="submit"
               disabled={disabled || (!message.trim() && !uploadedFileUrl)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition sm:self-end"
+              className="shrink-0 rounded-lg bg-blue-600 px-6 py-2 text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:self-end lg:w-full lg:self-stretch"
             >
               {t('chat.send')}
             </button>

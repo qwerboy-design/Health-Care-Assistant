@@ -2,8 +2,8 @@
 
 > **專案**: Health Care Assistant  
 > **功能**: HL7 FHIR (Fast Healthcare Interoperability Resources) 匯入與臨床敘事輸出  
-> **日期**: 2026-03-27  
-> **狀態**: ✅ 完成並通過 FHIR 相關測試  
+> **日期**: 2026-03-29  
+> **狀態**: ✅ 完成並通過 FHIR 相關測試（含多檔匯入與合併結尾優化）  
 
 ---
 
@@ -13,9 +13,9 @@ FHIR 匯入功能已成功實作並完成驗證，包括：
 - ✅ 完整的系統架構文件（含 FHIR → Anthropic 資料流與架構文件第 4.4 節「臨床敘事規格」）
 - ✅ 核心解析引擎（`parser.ts`：解析、驗證、UI 摘要）與 **LLM 專用格式化器**（`formatter.ts`：`formatFHIRForLLM`）
 - ✅ `processFHIRContent` 成功時回傳 **`resource`**，供完整臨床資訊轉換，避免因摘要欄位過簡而損失 LOINC／參考範圍／component 等
-- ✅ UI 組件（`FHIRImportModal`：預覽用摘要、確認匯入時產出 Markdown 臨床敘事）
+- ✅ UI 組件（`FHIRImportModal`：**多檔**選取／拖放、逐檔預覽、確認時經 `mergeFhirImportsForLLM` 產出合併 Markdown；結尾免責說明僅一次）
 - ✅ **`lib/mcp/client.ts`**：偵測 FHIR 標記並追加臨床分析 system 提示
-- ✅ FHIR 專項測試：**141** 案例（Parser、Formatter、Modal、兩份整合測試），通過率 100%
+- ✅ FHIR 專項測試：Parser、Formatter、`mergeFhirImport`、Modal、兩份整合測試等（總數以本機 `npx vitest run` 為準），通過率 100%
 - ✅ 符合 HL7 FHIR R5 規範
 
 ---
@@ -45,24 +45,29 @@ FHIR 匯入功能已成功實作並完成驗證，包括：
 - **功能**: 將已解析之 FHIR 資源轉為 **Markdown 結構化臨床敘事**，優化 Anthropic Claude 可讀性
 - **核心函數**:
   - `formatFHIRForLLM(resource, locale)` - 主入口；locale: `zh-TW` | `en`
+  - `stripFHIRLLMFooterBlockFromFormattedText` / `getFHIRLLMFooterClosingBlock` - 供多檔合併時移除各段重複結尾、統一附加一次免責說明
 - **輸出特色**:
   - 標頭標記 `[FHIR 臨床資料匯入]` / `[FHIR Clinical Data Import]`（供 MCP 偵測）
   - 保留 LOINC、SNOMED、ICD-10、RxNorm 等 coding 脈絡
   - Observation 支援 component、referenceRange；MedicationStatement 含劑量與途徑；Bundle 內資源依臨床閱讀順序排列
 - **相依**: `lib/fhir/types.ts`
 
+#### lib/fhir/mergeFhirImport.ts
+- **功能**: 將多筆已解析項目合併為單一 chat 訊息字串與合併 `rawJson`
+- **核心函數**: `mergeFhirImportsForLLM(items, locale)`
+
 ### 2. UI 組件
 
 #### components/fhir/FHIRImportModal.tsx
 - **功能**: FHIR 檔案匯入 Modal
 - **特色**:
-  - 拖放/點擊上傳
+  - 拖放/點擊上傳；**`multiple`** 多檔（最多 20）；副檔名錯誤或任一模組解析失敗時列出檔名
   - 即時解析驗證（`processFHIRContent`）
-  - 摘要預覽（`result.summary`）
-  - **確認匯入時**：以 `formatFHIRForLLM(parsedResource, locale)` 產生完整臨床敘事，經 `onImport` 傳入 Chat（`summary` 欄位實際承載 LLM 用 Markdown；`rawJson` 仍保留原始 Bundle／Resource JSON 字串）
+  - 多檔時逐檔摘要預覽（可展開各檔 raw JSON）
+  - **確認匯入時**：呼叫 `mergeFhirImportsForLLM`，`summary` 為合併後 LLM 用 Markdown、`rawJson` 為多段註解分隔之原始 JSON
   - 多語言支援
   - 無障礙設計（ARIA）
-- **行數**: 360+ 行（依版本略有增減）
+- **行數**: 依版本增減
 
 #### lib/mcp/client.ts（FHIR 相關）
 - **行為**: 若使用者訊息包含 `[FHIR 臨床資料匯入]` 或 `[FHIR Clinical Data Import]`，於 **system prompt** 追加臨床分析指引（善用編碼、注意數值與參考範圍等）
@@ -93,16 +98,17 @@ FHIR 匯入功能已成功實作並完成驗證，包括：
 |---------|---------|--------|------|
 | FHIR Parser | 45 | 100% | `__tests__/lib/fhir/parser.test.ts` |
 | FHIR Formatter (LLM) | 45 | 100% | `__tests__/lib/fhir/formatter.test.ts` |
-| FHIR Modal | 8 | 100% | `__tests__/components/fhir/FHIRImportModal.test.tsx` |
+| FHIR Modal | 10+ | 100% | `__tests__/components/fhir/FHIRImportModal.test.tsx` |
+| mergeFhirImport | 4+ | 100% | `__tests__/lib/fhir/mergeFhirImport.test.ts` |
 
 ### 整合測試
 
 | 測試套件 | 測試數量 | 通過率 | 檔案 |
 |---------|---------|--------|------|
 | FHIR Integration（解析／摘要流程） | 15 | 100% | `__tests__/integration/fhir.integration.test.ts` |
-| FHIR Formatter Integration（解析 → `resource` → `formatFHIRForLLM`、Modal 模擬、MCP 偵測規則） | 28 | 100% | `__tests__/integration/fhir-formatter.integration.test.ts` |
+| FHIR Formatter Integration（解析 → `resource` → `formatFHIRForLLM`、多檔合併、Modal 模擬、MCP 偵測規則） | 30+ | 100% | `__tests__/integration/fhir-formatter.integration.test.ts` |
 
-**FHIR 相關小計**: 45 + 45 + 8 + 15 + 28 = **141** 項（專案內 `__tests__` 全套件另含其他模組；2026-03-27 本機 `npx vitest run __tests__` 約 **306** 項，請以 CI／本機為準）。
+**FHIR 相關小計**：以上表格為約略分類；實際案例數請以 `npx vitest run __tests__/lib/fhir __tests__/components/fhir __tests__/integration/fhir-formatter.integration.test.ts __tests__/integration/fhir.integration.test.ts` 結果為準。
 
 ### 測試資料
 

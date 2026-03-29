@@ -2,8 +2,8 @@
 
 智能臨床分析助手，提供檢驗、放射、病歷、藥物分析功能。
 
-> 版本：v1.3.0（與 `package.json` 同步）  
-> 最後更新：2026-03-27
+> 版本：v1.3.1（與 `package.json` 同步）  
+> 最後更新：2026-03-29
 
 ## 技術架構
 
@@ -13,7 +13,7 @@
 - **認證**: JWT Session、Google OAuth 2.0、OTP驗證
 - **資料庫**: Supabase (PostgreSQL)
 - **AI整合**: Anthropic Claude API（直接整合）
-- **FHIR**: HL7 FHIR R5 檔案匯入、結構化臨床敘事（Markdown）送交模型分析（見 `docs/FHIR-ARCHITECTURE.md`）
+- **FHIR**: HL7 FHIR R5 **單檔或多檔**匯入（JSON/XML）、`mergeFhirImportsForLLM` 合併臨床敘事、結尾免責說明僅出現一次；詳見 `docs/FHIR-ARCHITECTURE.md`
 - **儲存**: Cloudflare R2（物件儲存）
 - **Email**: Resend（OTP 發送）
 - **語系**: 繁體中文 (ZW) / 英文 (EN)，登錄頁切換、全站介面同步，持久化於 localStorage 與 cookie
@@ -64,17 +64,14 @@
 - ✅ ChatInput - 輸入區域（文字/檔案/選項，自適應高度）
 - ✅ FunctionSelector - 功能選擇器（檢驗/放射/病歷/藥物）
 - ✅ WorkloadSelector - 工作量級別選擇器（即時/初級/標準/專業）
-- ✅ FileUploader - 檔案上傳（拖放支援，10MB限制）
+- ✅ FileUploader - 檔案上傳（拖放、`default` / `compact` 變體；上限依 R2 設定，見上傳 API）
 
-**佈局優化（v1.2.3）：**
-- ✅ 動態佈局系統：根據對話輪次自動調整比例
-  - 空白狀態（≤2 輪）：輸入框 60%、訊息區 40%
-  - 活躍狀態（>2 輪）：平衡佈局，訊息區獲得更多空間
-- ✅ 自適應輸入框高度：
-  - 空白狀態：3 行初始高度，最大 300px
-  - 活躍狀態：1 行初始高度，最大 150px
-- ✅ 300ms 平滑過渡動畫
-- ✅ 完整測試覆蓋（42 個測試用例，100% 通過率）
+**佈局優化：**
+- ✅ **桌面（lg+）**：雙欄——左側輸入（選項、精簡上傳、文字與送出），右側訊息列表（`ChatWindow` 使用 `lg:flex-row-reverse`）
+- ✅ **手機**：維持上訊息、下輸入；`FileUploader` **compact** 變體減少上傳區高度
+- ✅ 空白狀態（≤2 輪）：訊息區較大（`flex-[3]`）、輸入區 `flex-[2]`，避免開場被輸入區佔滿
+- ✅ 自適應輸入框高度、300ms 過渡；對話頁容器 `max-w-7xl`
+- ✅ 對話元件測試（ChatWindow / ChatInput 等）持續於 CI 執行
 
 **頁面：**
 - ✅ /chat - 對話頁面
@@ -119,7 +116,7 @@
 
 1. ⚠️ SSE 串流回應實作（當前是完整回應）
 2. ⚠️ 更完善的錯誤處理和日誌
-3. ⚠️ 單元測試和整合測試
+3. ✅ 單元測試與整合測試（Vitest；含 FHIR、對話元件等，見 `npm run test`）
 4. ⚠️ 效能優化（緩存、分頁等）
 5. ⚠️ 無障礙功能（ARIA labels）
 6. ✅ 國際化支援（ZW/EN，已實作）
@@ -270,6 +267,7 @@ TEST_BASE_URL=http://localhost:3000 npm run test
 │   └── providers/        # 全域 Provider（LocaleProvider）
 ├── lib/
 │   ├── auth/             # 認證工具
+│   ├── fhir/             # FHIR 解析、formatter、多檔合併（mergeFhirImport）
 │   ├── i18n/             # 語系翻譯（translations.ts、getT）
 │   ├── email/            # Email 服務
 │   ├── mcp/              # MCP 整合
@@ -352,12 +350,12 @@ https://github.com/K-Dense-AI/claude-scientific-skills
 
 ## 部署（GitHub + Vercel）
 
-1. **GitHub**：將 `main` 推送到已連線之遠端（本專案：`origin` → `qwerboy-design/Health-Care-Assistant`）。
-2. **Vercel**：於 [Vercel Dashboard](https://vercel.com) 匯入同一 GitHub 儲存庫並綁定專案；對 `main` 的 push 會觸發 Production／Preview 建置（依專案設定而定）。
-3. **環境變數**：在 Vercel 專案設定中填入與本地 `.env.local` 對應之變數（詳見 `Reference documents/ENV_VARIABLES.md`）。
-4. **建置設定**：已含根目錄 `vercel.json`（Next.js、`/api/chat` 逾時與記憶體等）。
+1. **GitHub**：認可變更後於本機執行 `git push origin main`（需已設定 `origin` 與憑證）。遠端範例：`https://github.com/qwerboy-design/Health-Care-Assistant`。
+2. **Vercel**：若專案已「Connect Git Repository」至上述 repo，**每次 push 至綁定分支**（通常 `main`）會自動觸發建置；無需另手動上傳（除非使用 CLI 或 Dashboard Redeploy）。
+3. **環境變數**：在 Vercel Project → Settings → Environment Variables 填入與 `.env.local` 對應項目（詳見 `Reference documents/ENV_VARIABLES.md`）。
+4. **建置設定**：根目錄 `vercel.json`（Next.js、`/api/chat` 逾時與記憶體等）。
 
-CLI 選用：`npx vercel`（連結專案）、`npx vercel --prod`（需已登入且具權限）。部署後可用 `npm run test:vercel <production-url>` 依環境驗證。
+**CLI（選用）**：`npx vercel login` 後 `npx vercel --prod` 可手動觸發正式部署（須帳號已連結該專案）。部署後可執行 `npm run test:vercel <production-url>` 做基本驗證。
 
 ## 技術文件
 
@@ -367,6 +365,7 @@ CLI 選用：`npx vercel`（連結專案）、`npx vercel --prod`（需已登入
 - **[FHIR-ARCHITECTURE.md](docs/FHIR-ARCHITECTURE.md)** - FHIR R5 整合與 FHIR → LLM 臨床敘事架構
 - **[FHIR-IMPLEMENTATION-SUMMARY.md](docs/FHIR-IMPLEMENTATION-SUMMARY.md)** - FHIR 實作摘要與版本對照
 - **[FHIR-TEST-REPORT.md](docs/FHIR-TEST-REPORT.md)** - FHIR 相關測試報告
+- **[DEPLOYMENT_NOTES_v1.3.1.md](docs/DEPLOYMENT_NOTES_v1.3.1.md)** - v1.3.1 發布與部署要點（GitHub / Vercel）
 - **[ENV_VARIABLES.md](Reference documents/ENV_VARIABLES.md)** - 環境變數說明
 - **[I18N_IMPLEMENTATION.md](Reference documents/I18N_IMPLEMENTATION.md)** - 語系 (i18n) 實作說明（ZW/EN 切換、使用方式、擴展）
 - **[IMPLEMENTATION_COMPLETE.md](Reference documents/IMPLEMENTATION_COMPLETE.md)** - 實作完成報告

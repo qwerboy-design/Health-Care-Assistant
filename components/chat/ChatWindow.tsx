@@ -50,21 +50,25 @@ export function ChatWindow({
   const isEmptyState = conversationRounds <= 2;
 
   return (
-    <div className="flex flex-col h-full bg-white transition-all duration-300 ease-in-out">
-      {/* 訊息列表 - 動態 flex 比例 */}
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-        isEmptyState ? 'flex-[2]' : 'flex-1'
-      }`}>
+    <div className="flex h-full min-h-0 flex-col bg-white transition-all duration-300 ease-in-out lg:flex-row-reverse">
+      {/* 訊息列表：手機在上；桌面 row-reverse 時在右欄 */}
+      <div
+        className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out lg:min-w-0 lg:flex-1 ${
+          isEmptyState ? 'flex-[3] lg:flex-1' : 'flex-1 lg:flex-1'
+        }`}
+      >
         <MessageList messages={messages} isLoading={isLoading} />
       </div>
 
-      {/* 輸入區域 - 動態 flex 比例 */}
-      <div className={`flex-shrink-0 transition-all duration-300 ease-in-out ${
-        isEmptyState ? 'flex-[3]' : ''
-      }`}>
-        <ChatInput 
-          onSend={onSend} 
-          disabled={disabled || isLoading} 
+      {/* 輸入區：手機在下；桌面為左欄 */}
+      <div
+        className={`flex min-h-0 flex-col transition-all duration-300 ease-in-out lg:h-full lg:w-full lg:max-w-sm lg:flex-shrink-0 lg:border-r lg:border-gray-200 xl:max-w-md ${
+          isEmptyState ? 'flex-[2] flex-shrink-0' : 'flex-shrink-0 lg:flex-shrink-0'
+        }`}
+      >
+        <ChatInput
+          onSend={onSend}
+          disabled={disabled || isLoading}
           userCredits={userCredits}
           isEmptyState={isEmptyState}
           externalFile={externalFile}
