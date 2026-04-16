@@ -47,11 +47,13 @@ export async function POST(request: NextRequest) {
     // 發送通知郵件
     try {
       console.log('正在發送審核通過郵件至:', customer.email);
-      await sendDefaultPasswordEmail({
-        to: customer.email,
-        name: customer.name,
-        password: defaultPassword,
-      });
+      if (customer.email) {
+        await sendDefaultPasswordEmail({
+          to: customer.email,
+          name: customer.name,
+          password: defaultPassword,
+        });
+      }
     } catch (emailError) {
       console.error('發送審核通過郵件失敗:', emailError);
       // 即使郵件發送失敗，審核狀態也已經更新了，所以我們仍然返回成功，但註記一下

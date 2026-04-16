@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { randomUUID } from 'crypto';
 import { registerSchema } from '@/lib/validation/schemas';
 import { findCustomerByEmail, createCustomer, checkPhoneExists } from '@/lib/supabase/customers';
 import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
@@ -55,22 +56,34 @@ export async function POST(request: NextRequest) {
 
     const { email, name, phone, password } = validation.data;
 
-    // Rate limiting - Email
-    const emailLimit = getRateLimitByEmail(email, 5);
-    if (!emailLimit.allowed) {
-      return errorResponse(Errors.TOO_MANY_REQUESTS.message, 429);
-    }
+    // 決定認證方式
+    const authProvider = password ? 'password' : 'otp';
+    const passwordHash = password ? await hashPassword(password) : undefined;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:65', message: 'Before findCustomerByEmail', data: { email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    // 檢查 Email 是否已被註冊
-    const existingCustomer = await findCustomerByEmail(email);
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:68', message: 'After findCustomerByEmail', data: { found: !!existingCustomer }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-    // #endregion
-    if (existingCustomer) {
-      return errorResponse(Errors.EMAIL_EXISTS.message, 409);
+    // OTP 註冊：email 必填，需做 Rate Limit 與重複檢查
+    if (authProvider === 'otp') {
+      if (!email) {
+        // 理論上不會發生（registerSchema 會保證）
+        return errorResponse('Email 不能為空', 400);
+      }
+
+      // Rate limiting - Email
+      const emailLimit = getRateLimitByEmail(email, 5);
+      if (!emailLimit.allowed) {
+        return errorResponse(Errors.TOO_MANY_REQUESTS.message, 429);
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:65', message: 'Before findCustomerByEmail', data: { email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+      // #endregion
+      // 檢查 Email 是否已被註冊
+      const existingCustomer = await findCustomerByEmail(email);
+      // #region agent log
+      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/register/route.ts:68', message: 'After findCustomerByEmail', data: { found: !!existingCustomer }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
+      // #endregion
+      if (existingCustomer) {
+        return errorResponse(Errors.EMAIL_EXISTS.message, 409);
+      }
     }
 
     // 檢查電話號碼是否已被註冊
@@ -87,18 +100,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 決定認證方式
-    const authProvider = password ? 'password' : 'otp';
-    const passwordHash = password ? await hashPassword(password) : undefined;
-
     // 建立客戶
-    const customer = await createCustomer({
-      email,
-      name,
-      phone,
-      password_hash: passwordHash,
-      auth_provider: authProvider,
-    });
+    const buildPasswordPlaceholderEmail = (): string => {
+      if (email) return email;
+      if (phone) {
+        const digits = phone.replace(/\D/g, '');
+        const localPart = digits.length > 0 ? digits : `user-${randomUUID().slice(0, 8)}`;
+        return `${localPart}@no-email.local`;
+      }
+      return `user-${randomUUID()}@no-email.local`;
+    };
+
+    const effectiveEmail = authProvider === 'password' ? buildPasswordPlaceholderEmail() : email;
+
+    const customerInput =
+      authProvider === 'password'
+        ? { email: effectiveEmail, name, phone, password_hash: passwordHash, auth_provider: authProvider as 'password' }
+        : { email: effectiveEmail, name, phone, password_hash: undefined, auth_provider: authProvider as 'otp' };
+
+    const customer = await createCustomer(customerInput);
 
     // 根據認證方式處理
     if (authProvider === 'password') {
@@ -113,11 +133,15 @@ export async function POST(request: NextRequest) {
       );
     } else {
       // OTP 註冊：發送 OTP，不建立 Session
+      const toEmail = email;
+      if (!toEmail) {
+        return errorResponse('Email 不能為空', 400);
+      }
       const otp = generateOTP();
       const expiresAt = getOTPExpiryTime();
 
-      await createOTPToken(email, otp, expiresAt);
-      await sendOTPEmail({ to: email, name: customer.name, otp });
+      await createOTPToken(toEmail, otp, expiresAt);
+      await sendOTPEmail({ to: toEmail, name: customer.name, otp });
 
       return successResponse(
         {
