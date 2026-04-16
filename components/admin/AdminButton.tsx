@@ -40,7 +40,7 @@ export function AdminButton() {
     <a
       href="/admin"
       onClick={handleClick}
-      className={`text-red-600 hover:text-red-900 px-3 py-2 rounded-md text-sm font-medium font-semibold ${
+      className={`text-terracotta hover:text-terracotta-deep px-3 py-2 rounded-md text-sm font-medium font-semibold transition-colors ${
         loading ? 'opacity-50 cursor-not-allowed' : ''
       }`}
     >

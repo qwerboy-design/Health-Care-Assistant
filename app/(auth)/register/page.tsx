@@ -32,9 +32,14 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
-    const payload = registerMethod === 'password'
-      ? formData
-      : { email: formData.email, name: formData.name, phone: formData.phone };
+    const trimmedEmail = formData.email.trim();
+
+    const payload =
+      registerMethod === 'password'
+        ? trimmedEmail.length > 0
+          ? { ...formData, email: trimmedEmail }
+          : { name: formData.name, phone: formData.phone, password: formData.password }
+        : { email: trimmedEmail, name: formData.name, phone: formData.phone };
 
     try {
       // #region agent log
@@ -145,15 +150,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-paper py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-paper border border-paper-gray100 p-8 rounded-xl shadow-card">
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-3xl font-bold text-paper-gray900 heading-serif">
             {t('register.title')}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-paper-gray700">
             {t('register.subtitle')}{' '}
-            <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <a href="/login" className="font-medium text-terracotta hover:text-terracotta-deep">
               {t('register.haveAccount')}
             </a>
           </p>
@@ -167,10 +172,10 @@ export default function RegisterPage() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-paper-gray100" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">{t('register.orUseEmail')}</span>
+                <span className="px-2 bg-paper text-paper-gray700">{t('register.orUseEmail')}</span>
               </div>
             </div>
 
@@ -181,8 +186,8 @@ export default function RegisterPage() {
                   setError('');
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${registerMethod === 'otp'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-terracotta text-white'
+                  : 'bg-paper-gray100 text-paper-gray900 hover:bg-paper-gray200'
                   }`}
               >
                 {t('register.otpRegister')}
@@ -193,8 +198,8 @@ export default function RegisterPage() {
                   setError('');
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${registerMethod === 'password'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-terracotta text-white'
+                  : 'bg-paper-gray100 text-paper-gray900 hover:bg-paper-gray200'
                   }`}
               >
                 {t('register.passwordRegister')}
@@ -203,7 +208,7 @@ export default function RegisterPage() {
 
             <form onSubmit={handleRegister} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="name" className="block text-sm font-medium text-paper-gray900">
                   {t('register.name')}
                 </label>
                 <input
@@ -212,28 +217,28 @@ export default function RegisterPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field mt-1 block w-full"
                   placeholder={t('register.placeholderName')}
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="block text-sm font-medium text-paper-gray900">
                   {t('register.email')}
                 </label>
                 <input
                   id="email"
                   type="email"
-                  required
+                  required={registerMethod === 'otp'}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field mt-1 block w-full"
                   placeholder={t('register.placeholderEmail')}
                 />
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="phone" className="block text-sm font-medium text-paper-gray900">
                   {t('register.phone')}
                 </label>
                 <input
@@ -241,14 +246,14 @@ export default function RegisterPage() {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field mt-1 block w-full"
                   placeholder={t('register.placeholderPhone')}
                 />
               </div>
 
               {registerMethod === 'password' && (
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="password" className="block text-sm font-medium text-paper-gray900">
                     {t('register.password')}
                   </label>
                   <input
@@ -257,21 +262,21 @@ export default function RegisterPage() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-field mt-1 block w-full"
                     placeholder={t('register.placeholderPassword')}
                   />
-                  <p className="mt-1 text-xs text-gray-500">{t('register.passwordHint')}</p>
+                  <p className="mt-1 text-xs text-paper-gray700">{t('register.passwordHint')}</p>
                 </div>
               )}
 
               {error && (
-                <p className="text-sm text-red-600 text-center">{error}</p>
+                <p className="text-sm text-error text-center">{error}</p>
               )}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="btn-primary w-full"
               >
                 {loading ? t('register.processing') : t('register.submit')}
               </button>
@@ -282,7 +287,7 @@ export default function RegisterPage() {
         {step === 'verify' && (
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 text-center mb-4">
+              <p className="text-sm text-paper-gray700 text-center mb-4">
                 {t('register.codeSentTo')} <strong>{formData.email}</strong>
               </p>
               <OTPInput
@@ -301,22 +306,22 @@ export default function RegisterPage() {
               <button
                 onClick={handleVerifyOTP}
                 disabled={loading || otp.length !== 6}
-                className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="btn-primary w-full"
               >
                 {loading ? t('register.verifying') : t('register.verifyAndComplete')}
               </button>
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 text-center mt-2">{error}</p>
+              <p className="text-sm text-error text-center mt-2">{error}</p>
             )}
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-paper-gray700">
               {canResend ? (
                 <button
                   onClick={handleResendOTP}
                   disabled={loading}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-terracotta hover:text-terracotta-deep font-medium"
                 >
                   {t('register.resendCode')}
                 </button>
@@ -333,7 +338,7 @@ export default function RegisterPage() {
                 setOtp('');
                 setError('');
               }}
-              className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
+              className="w-full py-2 text-sm text-paper-gray700 hover:text-paper-gray900"
             >
               {t('register.back')}
             </button>

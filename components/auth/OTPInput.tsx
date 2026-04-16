@@ -77,10 +77,11 @@ export function OTPInput({ length = 6, value, onChange, error = false }: OTPInpu
           onPaste={handlePaste}
           className={`
             w-12 h-14 text-center text-2xl font-bold rounded-lg border-2
-            focus:outline-none focus:ring-2 focus:ring-blue-500
+            focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta
+            transition-all duration-200
             ${error 
-              ? 'border-red-500 bg-red-50' 
-              : 'border-gray-300 bg-white'
+              ? 'border-error bg-error/5' 
+              : 'border-paper-gray100 bg-paper-gray50'
             }
           `}
           aria-label={`OTP digit ${index + 1}`}

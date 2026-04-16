@@ -402,13 +402,13 @@ export default function ChatPage() {
       />
       <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col px-4">
         {/* Header with download button and credits */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <h1 className="text-xl font-semibold">{t('chat.title')}</h1>
+        <div className="flex justify-between items-center p-4 border-b border-paper-gray100">
+          <h1 className="text-xl font-semibold heading-serif text-paper-gray900">{t('chat.title')}</h1>
           <div className="flex items-center gap-4">
             {shouldShowScreenshot && (
               <button
                 onClick={handleScreenshot}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors"
                 title={t('chat.screenshot')}
               >
                 <Camera size={18} />
@@ -417,7 +417,7 @@ export default function ChatPage() {
             )}
             <button
               onClick={() => setShowFHIRImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-medical-purple text-white rounded-lg hover:bg-medical-purple/90 transition-colors"
               title={t('fhir.importButton')}
             >
               <FileUp size={18} />
@@ -430,7 +430,7 @@ export default function ChatPage() {
             <button
               onClick={handleDownloadLog}
               disabled={isSavingLog || !conversationId}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="btn-primary flex items-center gap-2 disabled:opacity-50"
             >
               <Download size={18} />
               {isSavingLog ? t('chat.saving') : t('chat.downloadLog')}

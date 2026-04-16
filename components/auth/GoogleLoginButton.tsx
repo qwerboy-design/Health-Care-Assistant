@@ -104,10 +104,10 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
     <div>
       <div id="google-signin-button" className="w-full" />
       {isLoading && (
-        <p className="text-sm text-gray-600 text-center mt-2">{t('common.googleLoginLoading')}</p>
+        <p className="text-sm text-paper-gray700 text-center mt-2">{t('common.googleLoginLoading')}</p>
       )}
       {error && (
-        <p className="text-sm text-red-600 text-center mt-2">{error}</p>
+        <p className="text-sm text-error text-center mt-2">{error}</p>
       )}
     </div>
   );

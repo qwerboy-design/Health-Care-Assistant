@@ -162,18 +162,18 @@ export function ChatInput({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col border-t border-gray-200 bg-white lg:border-t-0">
+    <div className="flex h-full min-h-0 flex-col border-t border-paper-gray100 bg-paper lg:border-t-0">
       <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-1 flex-col">
         {/* 功能選擇和工作量級別 - 可折疊區域 */}
-        <div className="shrink-0 border-b border-gray-100">
+        <div className="shrink-0 border-b border-paper-gray100">
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex items-center justify-between transition-colors"
+            className="w-full px-4 py-2 text-sm text-paper-gray700 hover:text-paper-gray900 hover:bg-paper-gray50 flex items-center justify-between transition-colors"
           >
             <span className="flex items-center gap-2">
               {showOptions ? t('chat.hideOptions') : t('chat.showOptions')}
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-paper-gray700">
                 {t('chat.optionsHint')}
               </span>
             </span>
@@ -191,8 +191,8 @@ export function ChatInput({
             className={`overflow-hidden transition-all ${showOptions ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
             aria-hidden={!showOptions}
           >
-            <div className="max-h-64 overflow-y-auto border-t border-gray-100">
-              <div className="p-4 space-y-3 bg-gray-50">
+            <div className="max-h-64 overflow-y-auto border-t border-paper-gray100">
+              <div className="p-4 space-y-3 bg-paper-gray50">
                 <ModelSelector
                   value={selectedModel}
                   onChange={setSelectedModel}
@@ -255,8 +255,8 @@ export function ChatInput({
 
           {(selectedFile || uploadedFileUrl) && (
             <div className="mb-2 space-y-2">
-              <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg gap-2">
-                <span className="text-sm text-blue-900 truncate flex-1 min-w-0">
+              <div className="flex items-center justify-between p-2 bg-terracotta/10 border border-terracotta/20 rounded-lg gap-2">
+                <span className="text-sm text-paper-gray900 truncate flex-1 min-w-0">
                   📎 {uploadedFileName || selectedFile?.name}
                   {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
                   {uploadedFileUrl && ` ✓ ${t('chat.uploaded')}`}
@@ -271,16 +271,16 @@ export function ChatInput({
                     setUploadError(null);
                     setModelVisionWarning(null);
                   }}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex-shrink-0"
+                  className="text-terracotta hover:text-terracotta-deep text-sm flex-shrink-0"
                 >
                   {t('chat.remove')}
                 </button>
               </div>
               {uploadError && (
-                <p className="text-sm text-red-600 px-2">{uploadError}</p>
+                <p className="text-sm text-error px-2">{uploadError}</p>
               )}
               {modelVisionWarning && (
-                <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">{modelVisionWarning}</p>
+                <p className="text-sm text-warning bg-warning/10 px-3 py-2 rounded-lg border border-warning/20">{modelVisionWarning}</p>
               )}
             </div>
           )}
@@ -297,14 +297,14 @@ export function ChatInput({
               placeholder={t('chat.inputPlaceholder')}
               disabled={disabled}
               rows={isEmptyState ? 3 : 1}
-              className={`min-h-0 flex-1 resize-none overflow-y-auto rounded-lg border border-gray-300 px-4 py-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`input-field min-h-0 flex-1 resize-none overflow-y-auto ${
                 isEmptyState ? 'max-h-[300px] lg:max-h-none' : 'max-h-[150px] lg:max-h-none'
               } lg:min-h-[7rem]`}
             />
             <button
               type="submit"
               disabled={disabled || (!message.trim() && !uploadedFileUrl)}
-              className="shrink-0 rounded-lg bg-blue-600 px-6 py-2 text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:self-end lg:w-full lg:self-stretch"
+              className="btn-primary shrink-0 sm:self-end lg:w-full lg:self-stretch"
             >
               {t('chat.send')}
             </button>

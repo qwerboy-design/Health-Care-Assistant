@@ -2,26 +2,98 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Medical AI Design System - CSS Variables */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Colors */
+  --terracotta: #D97757;
+  --terracotta-soft: #F1A98A;
+  --terracotta-deep: #C35E3F;
+  
+  /* Neutral Colors */
+  --paper-white: #FDFAF7;
+  --warm-gray-50: #FAF8F6;
+  --warm-gray-100: #F5F2EE;
+  --warm-gray-200: #E8E4DF;
+  --warm-gray-700: #57534E;
+  --warm-gray-900: #292524;
+  
+  /* Semantic Colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+  --medical-purple: #8B5CF6;
+  
+  /* Legacy support */
+  --background: var(--paper-white);
+  --foreground: var(--warm-gray-900);
 }
 
+/* Optional: Dark mode support (can be removed if not needed) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper-white: #1C1917;
+    --warm-gray-50: #292524;
+    --warm-gray-100: #44403C;
+    --warm-gray-200: #57534E;
+    --warm-gray-700: #D6D3D1;
+    --warm-gray-900: #FAFAF9;
+    
+    --background: var(--paper-white);
+    --foreground: var(--warm-gray-900);
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Typography utilities */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  
+  .heading-serif {
+    font-family: 'Merriweather', 'Noto Serif TC', Georgia, serif;
+  }
+  
+  .text-mono {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+  }
+}
+
+/* Component base styles */
+@layer components {
+  .btn-primary {
+    @apply bg-terracotta text-white rounded-lg px-6 py-3 font-medium;
+    @apply hover:bg-terracotta-soft hover:shadow-terracotta hover:-translate-y-0.5;
+    @apply active:bg-terracotta-deep active:translate-y-0;
+    @apply disabled:bg-paper-gray200 disabled:text-paper-gray700 disabled:cursor-not-allowed;
+    @apply transition-all duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-paper text-terracotta border border-paper-gray100 rounded-lg px-6 py-3 font-medium;
+    @apply hover:bg-paper-gray50 hover:border-terracotta;
+    @apply transition-all duration-200;
+  }
+  
+  .input-field {
+    @apply bg-paper-gray50 border border-paper-gray100 rounded-md px-3.5 py-2.5 text-base;
+    @apply focus:outline-none focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta focus:bg-paper;
+    @apply transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-paper border border-paper-gray100 rounded-xl p-5 shadow-card;
+    @apply hover:shadow-hover hover:border-paper-gray200;
+    @apply transition-all duration-300;
   }
 }

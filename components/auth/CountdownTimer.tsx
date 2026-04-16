@@ -27,7 +27,7 @@ export function CountdownTimer({ seconds, onComplete }: CountdownTimerProps) {
   const secs = timeLeft % 60;
 
   return (
-    <span className="text-gray-600">
+    <span className="text-paper-gray700">
       {String(minutes).padStart(2, '0')}:{String(secs).padStart(2, '0')}
     </span>
   );

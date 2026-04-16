@@ -192,35 +192,35 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg relative">
+    <div className="min-h-screen flex items-center justify-center bg-paper py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-paper border border-paper-gray100 p-8 rounded-xl shadow-card relative">
         <div className="absolute top-4 right-4 flex gap-1">
           <button
             type="button"
             onClick={() => setLocale('zh-TW')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'zh-TW' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'zh-TW' ? 'bg-terracotta text-white' : 'bg-paper-gray100 text-paper-gray700 hover:bg-paper-gray200'}`}
           >
             ZW
           </button>
           <button
             type="button"
             onClick={() => setLocale('en')}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${locale === 'en' ? 'bg-terracotta text-white' : 'bg-paper-gray100 text-paper-gray700 hover:bg-paper-gray200'}`}
           >
             EN
           </button>
         </div>
         <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="text-center text-3xl font-bold text-paper-gray900 heading-serif">
             {step === 'set-password' ? t('login.titleSetPassword') : t('login.title')}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-paper-gray700">
             {step === 'set-password' ? (
               t('login.subtitleSetPassword')
             ) : (
               <>
                 {t('login.subtitle')}{' '}
-                <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                <a href="/register" className="font-medium text-terracotta hover:text-terracotta-deep">
                   {t('login.createAccount')}
                 </a>
               </>
@@ -239,10 +239,10 @@ function LoginForm() {
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-paper-gray100" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">{t('login.orUse')}</span>
+                <span className="px-2 bg-paper text-paper-gray700">{t('login.orUse')}</span>
               </div>
             </div>
 
@@ -255,8 +255,8 @@ function LoginForm() {
                   setError('');
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'password'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-terracotta text-white'
+                  : 'bg-paper-gray100 text-paper-gray900 hover:bg-paper-gray200'
                   }`}
               >
                 {t('login.passwordLogin')}
@@ -268,8 +268,8 @@ function LoginForm() {
                   setError('');
                 }}
                 className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${loginMethod === 'otp'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-terracotta text-white'
+                  : 'bg-paper-gray100 text-paper-gray900 hover:bg-paper-gray200'
                   }`}
               >
                 {t('login.otpLogin')}
@@ -282,7 +282,7 @@ function LoginForm() {
         {step === 'input' && loginMethod === 'password' && (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-paper-gray900">
                 {t('login.email')}
               </label>
               <input
@@ -291,13 +291,13 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field mt-1 block w-full"
                 placeholder={t('login.placeholderEmail')}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-paper-gray900">
                 {t('login.password')}
               </label>
               <input
@@ -306,19 +306,19 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field mt-1 block w-full"
                 placeholder={t('login.placeholderPassword')}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 text-center">{error}</p>
+              <p className="text-sm text-error text-center">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="btn-primary w-full"
             >
               {loading ? t('login.loggingIn') : t('login.submit')}
             </button>
@@ -331,7 +331,7 @@ function LoginForm() {
             {step === 'input' && (
               <form onSubmit={handleSendOTP} className="space-y-4">
                 <div>
-                  <label htmlFor="email-otp" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="email-otp" className="block text-sm font-medium text-paper-gray900">
                     {t('login.email')}
                   </label>
                   <input
@@ -340,19 +340,19 @@ function LoginForm() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="input-field mt-1 block w-full"
                     placeholder={t('login.placeholderEmail')}
                   />
                 </div>
 
                 {error && (
-                  <p className="text-sm text-red-600 text-center">{error}</p>
+                  <p className="text-sm text-error text-center">{error}</p>
                 )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="btn-primary w-full"
                 >
                   {loading ? t('login.sending') : t('login.sendCode')}
                 </button>
@@ -362,7 +362,7 @@ function LoginForm() {
             {step === 'verify' && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600 text-center mb-4">
+                  <p className="text-sm text-paper-gray700 text-center mb-4">
                     {t('login.codeSentTo')} <strong>{email}</strong>
                   </p>
                   <OTPInput
@@ -381,22 +381,22 @@ function LoginForm() {
                   <button
                     onClick={handleVerifyOTP}
                     disabled={loading || otp.length !== 6}
-                    className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="btn-primary w-full"
                   >
                     {loading ? t('login.verifying') : t('login.verifyAndContinue')}
                   </button>
                 </div>
 
                 {error && (
-                  <p className="text-sm text-red-600 text-center mt-2">{error}</p>
+                  <p className="text-sm text-error text-center mt-2">{error}</p>
                 )}
 
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-paper-gray700">
                   {canResend ? (
                     <button
                       onClick={handleSendOTP}
                       disabled={loading}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-terracotta hover:text-terracotta-deep font-medium"
                     >
                       {t('login.resendCode')}
                     </button>
@@ -413,7 +413,7 @@ function LoginForm() {
                     setOtp('');
                     setError('');
                   }}
-                  className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
+                  className="w-full py-2 text-sm text-paper-gray700 hover:text-paper-gray900"
                 >
                   {t('login.back')}
                 </button>
@@ -426,12 +426,12 @@ function LoginForm() {
         {step === 'set-password' && (
           <form onSubmit={handleSetPassword} className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-paper-gray700 mb-4">
                 {t('login.settingPasswordFor')} <strong>{email}</strong> {t('login.setPassword')}
               </p>
             </div>
             <div>
-              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="new-password" className="block text-sm font-medium text-paper-gray900">
                 {t('login.newPassword')}
               </label>
               <input
@@ -440,12 +440,12 @@ function LoginForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field mt-1 block w-full"
                 placeholder={t('login.placeholderNewPassword')}
               />
             </div>
             <div>
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-paper-gray900">
                 {t('login.confirmPassword')}
               </label>
               <input
@@ -454,19 +454,19 @@ function LoginForm() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field mt-1 block w-full"
                 placeholder={t('login.placeholderConfirm')}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 text-center">{error}</p>
+              <p className="text-sm text-error text-center">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="btn-primary w-full"
             >
               {loading ? t('login.processing') : t('login.setPasswordAndDone')}
             </button>
@@ -478,7 +478,7 @@ function LoginForm() {
                 setLoginMethod('password');
                 setError('');
               }}
-              className="w-full py-2 text-sm text-gray-600 hover:text-gray-800"
+              className="w-full py-2 text-sm text-paper-gray700 hover:text-paper-gray900"
             >
               {t('login.cancelBackToLogin')}
             </button>

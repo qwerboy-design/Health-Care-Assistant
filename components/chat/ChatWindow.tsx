@@ -50,7 +50,7 @@ export function ChatWindow({
   const isEmptyState = conversationRounds <= 2;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white transition-all duration-300 ease-in-out lg:flex-row-reverse">
+    <div className="flex h-full min-h-0 flex-col bg-paper transition-all duration-300 ease-in-out lg:flex-row-reverse">
       {/* 訊息列表：手機在上；桌面 row-reverse 時在右欄 */}
       <div
         className={`min-h-0 overflow-hidden transition-all duration-300 ease-in-out lg:min-w-0 lg:flex-1 ${
@@ -62,7 +62,7 @@ export function ChatWindow({
 
       {/* 輸入區：手機在下；桌面為左欄 */}
       <div
-        className={`flex min-h-0 flex-col transition-all duration-300 ease-in-out lg:h-full lg:w-full lg:max-w-sm lg:flex-shrink-0 lg:border-r lg:border-gray-200 xl:max-w-md ${
+        className={`flex min-h-0 flex-col transition-all duration-300 ease-in-out lg:h-full lg:w-full lg:max-w-sm lg:flex-shrink-0 lg:border-r lg:border-paper-gray100 xl:max-w-md ${
           isEmptyState ? 'flex-[2] flex-shrink-0' : 'flex-shrink-0 lg:flex-shrink-0'
         }`}
       >
