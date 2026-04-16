@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
 
     // 建立 Session
     const clientIP = getClientIP(request);
+    if (!customer.email) {
+      // Google OAuth 註冊本應包含 email；若缺漏代表資料不一致
+      return errorResponse('此帳號未設定信箱', 500);
+    }
     const { token, expiresAt } = await createSession(customer.id, customer.email, clientIP);
 
     // 設定 Cookie

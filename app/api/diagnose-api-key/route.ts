@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
  * API 路由用於診斷 Anthropic API Key 設定
  * GET /api/diagnose-api-key
  */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // 獲取環境變數
@@ -25,8 +27,6 @@ export async function GET(request: NextRequest) {
         exists: !!apiKey,
         source: rawAnthropicKey ? 'ANTHROPIC_API_KEY' : (rawMCPKey ? 'MCP_API_KEY' : 'none'),
         length: apiKey.length,
-        // 只顯示前 15 個字元以保護完整 Key
-        prefix: apiKey.substring(0, 15),
         hasCorrectPrefix: apiKey.startsWith('sk-ant-api'),
         isAdminKey: apiKey.startsWith('sk-ant-admin'),
         hasWhitespace: apiKeyRaw ? (apiKeyRaw !== apiKeyRaw.trim() || /\n|\r/.test(apiKeyRaw)) : false,

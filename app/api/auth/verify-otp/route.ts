@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
 
     // 建立 Session
     const clientIP = getClientIP(request);
+    if (!customer.email) {
+      // OTP/Email 註冊本應有 email；若缺漏代表資料不一致
+      return errorResponse('此帳號未設定信箱', 500);
+    }
     const { token: sessionToken, expiresAt } = await createSession(
       customer.id,
       customer.email,

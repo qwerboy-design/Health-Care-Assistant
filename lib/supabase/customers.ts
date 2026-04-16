@@ -82,7 +82,7 @@ export async function findCustomerByOAuthId(oauthId: string): Promise<Customer |
  * 建立客戶
  */
 export async function createCustomer(customer: {
-  email: string;
+  email?: string;
   name: string;
   phone?: string;
   password_hash?: string;

@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * 測試 Anthropic API 的簡單端點
  * GET /api/test-anthropic-direct
+ *
+ * 必須動態執行：若設為靜態，next build 會預先執行 GET 並把除錯日誌（含金鑰片段）寫入建置輸出。
  */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -14,8 +18,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log('[Test] Starting Anthropic API test...');
-    console.log('[Test] API Key prefix:', apiKey.substring(0, 15));
+    console.log('[Test] Starting Anthropic API test (key redacted from logs)');
     console.log('[Test] Environment:', {
       VERCEL: process.env.VERCEL,
       VERCEL_REGION: process.env.VERCEL_REGION,
@@ -40,10 +43,10 @@ export async function GET(request: NextRequest) {
       'anthropic-version': '2023-06-01',
     };
 
-    console.log('[Test] Request headers (without API key):', {
+    console.log('[Test] Request headers (redacted):', {
       'Content-Type': headers['Content-Type'],
       'anthropic-version': headers['anthropic-version'],
-      'x-api-key': apiKey.substring(0, 15) + '...',
+      'x-api-key': '[REDACTED]',
     });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
           VERCEL_ENV: process.env.VERCEL_ENV,
         },
         apiKeyInfo: {
-          prefix: apiKey.substring(0, 15),
+          configured: true,
           length: apiKey.length,
         }
       }, { status: response.status });

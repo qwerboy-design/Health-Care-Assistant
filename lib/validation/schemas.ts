@@ -1,12 +1,32 @@
 import { z } from 'zod';
 
-// 註冊 Schema（暫時放寬驗證，開發階段）
-export const registerSchema = z.object({
-  email: z.string().min(1, 'Email 不能為空'), // 暫時移除 email 格式驗證
-  name: z.string().min(1, '姓名不能為空'), // 暫時移除最小長度限制
-  phone: z.string().optional(), // 暫時移除電話格式驗證
-  password: z.string().optional(), // 暫時移除密碼長度限制
-});
+// 註冊 Schema
+// - `otp` 註冊：必填 `email`
+// - `password` 註冊：`email` 非必填（可缺漏或送空字串視為未填）
+export const registerSchema = z
+  .object({
+    email: z.preprocess(
+      (v) => {
+        if (typeof v !== 'string') return v;
+        const trimmed = v.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      },
+      z.string().min(1, 'Email 不能為空').optional()
+    ), // 暫時移除 email 格式驗證
+    name: z.string().min(1, '姓名不能為空'),
+    phone: z.string().optional(), // 暫時移除電話格式驗證
+    password: z.string().min(1, '請輸入密碼').optional(), // 只有密碼註冊會帶入
+  })
+  .superRefine((data, ctx) => {
+    // password 未提供 -> 走 OTP 註冊，email 必填
+    if (!data.password && !data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['email'],
+        message: 'Email 不能為空',
+      });
+    }
+  });
 
 // 登入 Schema（暫時放寬驗證，開發階段）
 export const loginSchema = z.object({

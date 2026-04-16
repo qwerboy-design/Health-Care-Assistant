@@ -1,7 +1,7 @@
 # 📋 系統規格文件
 
-> 最後更新：2026-01-29  
-> 版本：v1.2.2
+> 最後更新：2026-04-05
+> 版本：v1.3.1
 
 ## 📋 目錄
 
@@ -155,6 +155,7 @@
 - 查看待審核帳號列表
 - 審核通過（`approval_status: 'approved'`）
 - 審核拒絕（`approval_status: 'rejected'`）
+- 批次審核操作
 
 **權限**：
 - 只有 `role: 'admin'` 的使用者可以存取
@@ -168,6 +169,214 @@
 - 列出所有客戶
 - 查看客戶詳細資訊
 - 查看客戶審核狀態
+- 管理客戶 UI 自訂設定
+
+#### 3.3 模型管理
+
+**功能描述**：管理員可以管理 AI 模型與定價
+
+**功能**：
+- 查看所有可用模型
+- 設定模型定價（每 1K tokens 價格）
+- 啟用/停用模型
+- 設定模型顯示順序
+
+**業務規則**：
+- 模型定價以 credits 為單位
+- 支援動態調整定價
+- 可設定模型是否對使用者可見
+
+#### 3.4 點數管理
+
+**功能描述**：管理員可以管理使用者點數
+
+**功能**：
+- 查看使用者點數餘額
+- 手動增加/扣除點數
+- 查看點數交易記錄
+- 匯出點數使用報表
+
+---
+
+### 4. FHIR 匯入系統
+
+#### 4.1 FHIR R5 資料匯入
+
+**功能描述**：使用者可以匯入 FHIR R5 格式的醫療資料
+
+**支援資源類型**：
+- Patient（病患資料）
+- Observation（觀察/檢驗數據）
+- Condition（診斷/病況）
+- MedicationRequest（用藥處方）
+- DiagnosticReport（診斷報告）
+- Procedure（醫療程序）
+- Encounter（就診記錄）
+- AllergyIntolerance（過敏資訊）
+- Immunization（疫苗接種）
+- CarePlan（照護計畫）
+
+**匯入方式**：
+1. **單檔匯入**：上傳單一 FHIR JSON 檔案
+2. **多檔匯入**：同時上傳多個 FHIR 檔案
+3. **Bundle 匯入**：上傳 FHIR Bundle 格式
+
+**處理流程**：
+1. 驗證 FHIR 資源格式（符合 R5 規範）
+2. 解析 FHIR 資源內容
+3. 轉換為 LLM 可讀的臨床敘述
+4. 自動建立對話並附加 FHIR 資料
+5. 生成初步分析報告
+
+#### 4.2 FHIR 資料格式化
+
+**功能描述**：將 FHIR 資源轉換為結構化的臨床敘述
+
+**格式化規則**：
+- **Patient**：基本資料、聯絡方式、緊急聯絡人
+- **Observation**：檢驗項目、數值、單位、參考範圍、異常標記
+- **Condition**：診斷名稱、嚴重度、發病日期、臨床狀態
+- **MedicationRequest**：藥物名稱、劑量、頻率、療程
+- **DiagnosticReport**：報告類型、結論、相關檢驗數據
+- **Procedure**：醫療程序名稱、執行日期、執行者
+- **Encounter**：就診類型、日期、診斷、處置
+- **AllergyIntolerance**：過敏原、反應類型、嚴重度
+- **Immunization**：疫苗名稱、接種日期、劑次
+- **CarePlan**：照護目標、活動、時程
+
+**輸出格式**：
+```
+=== 病患基本資料 ===
+姓名：[Name]
+性別：[Gender]
+出生日期：[Birth Date]
+...
+
+=== 檢驗數據 ===
+[Observation 1]
+- 項目：[Code]
+- 數值：[Value] [Unit]
+- 參考範圍：[Reference Range]
+- 狀態：[Status]
+...
+```
+
+#### 4.3 FHIR 資料驗證
+
+**驗證項目**：
+- FHIR 版本檢查（必須為 R5）
+- 資源類型驗證
+- 必填欄位檢查
+- 資料格式驗證（日期、編碼系統等）
+- 參照完整性檢查（Resource references）
+
+**錯誤處理**：
+- 格式錯誤：返回詳細錯誤訊息
+- 部分資源失敗：記錄錯誤但繼續處理其他資源
+- 全部失敗：返回錯誤並建議修正方式
+
+---
+
+### 5. 客戶 UI 自訂系統
+
+#### 5.1 UI 設定管理
+
+**功能描述**：客戶可以自訂系統 UI 外觀
+
+**可自訂項目**：
+- **主題色彩**：主色調、強調色
+- **Logo**：上傳自訂 Logo（支援 PNG、SVG）
+- **網站標題**：自訂瀏覽器標題
+- **歡迎訊息**：首頁歡迎文字
+- **頁尾資訊**：版權聲明、聯絡資訊
+
+**儲存方式**：
+- 設定儲存在 `customer_settings` 資料表
+- 每個客戶一筆設定記錄
+- 使用 JSONB 格式儲存彈性設定
+
+**套用規則**：
+- 登入後自動載入客戶設定
+- 未設定項目使用系統預設值
+- 即時預覽功能
+
+#### 5.2 設定 API
+
+**功能**：
+- 取得客戶設定
+- 更新客戶設定
+- 重設為預設值
+- 上傳 Logo 檔案
+
+---
+
+### 6. 點數系統
+
+#### 6.1 點數機制
+
+**功能描述**：使用者使用 AI 功能需消耗點數
+
+**點數計算**：
+- 根據使用的 AI 模型計費
+- 計費單位：每 1K tokens
+- 不同模型有不同價格
+- 輸入 tokens 與輸出 tokens 分別計費
+
+**點數來源**：
+- 新註冊贈送初始點數
+- 管理員手動增加
+- 未來可擴展：購買點數、訂閱方案
+
+#### 6.2 點數交易記錄
+
+**功能描述**：記錄所有點數異動
+
+**記錄內容**：
+- 交易類型（`usage`、`purchase`、`admin_adjustment`、`refund`）
+- 異動金額（正數為增加、負數為扣除）
+- 交易前餘額
+- 交易後餘額
+- 關聯對話 ID（若為使用扣除）
+- 交易時間
+- 備註說明
+
+**查詢功能**：
+- 使用者可查看自己的交易記錄
+- 管理員可查看所有交易記錄
+- 支援日期範圍篩選
+- 支援交易類型篩選
+
+---
+
+### 7. 模型管理系統
+
+#### 7.1 模型定價
+
+**功能描述**：動態管理 AI 模型與定價
+
+**資料結構**：
+- 模型 ID（對應 Anthropic API）
+- 模型顯示名稱
+- 輸入價格（per 1K tokens）
+- 輸出價格（per 1K tokens）
+- 是否啟用
+- 顯示順序
+
+**支援模型**：
+- Claude 3.5 Sonnet
+- Claude 3 Opus
+- Claude 3 Haiku
+- 未來可擴展其他模型
+
+#### 7.2 模型選擇
+
+**功能描述**：使用者可選擇使用的 AI 模型
+
+**選擇規則**：
+- 只顯示已啟用的模型
+- 顯示模型價格資訊
+- 預設選擇最便宜的模型
+- 點數不足時提示
 
 ---
 
@@ -456,6 +665,434 @@ conversationId?: string
 {
   success: true;
   message: string;
+}
+```
+
+### FHIR 匯入 API
+
+#### POST `/api/fhir/import`
+
+**功能**：匯入單一 FHIR R5 資源
+
+**認證**：需要 Session Cookie
+
+**請求格式**：`FormData`
+```
+fhirFile: File (JSON 格式)
+autoAnalyze?: boolean (是否自動生成分析，預設 true)
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    resourceType: string;
+    resourceId: string;
+    conversationId: string;
+    clinicalNarrative: string;
+  };
+}
+```
+
+**錯誤回應**：
+```typescript
+{
+  success: false;
+  error: string;
+  details?: {
+    validationErrors: string[];
+  };
+}
+```
+
+#### POST `/api/fhir/import/bundle`
+
+**功能**：匯入 FHIR Bundle（多資源批次匯入）
+
+**認證**：需要 Session Cookie
+
+**請求格式**：`FormData`
+```
+bundleFile: File (FHIR Bundle JSON)
+autoAnalyze?: boolean
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    totalResources: number;
+    successCount: number;
+    failedCount: number;
+    conversationId: string;
+    resources: Array<{
+      resourceType: string;
+      resourceId: string;
+      status: 'success' | 'failed';
+      error?: string;
+    }>;
+  };
+}
+```
+
+#### POST `/api/fhir/import/multiple`
+
+**功能**：同時匯入多個 FHIR 檔案
+
+**認證**：需要 Session Cookie
+
+**請求格式**：`FormData`
+```
+files: File[] (多個 FHIR JSON 檔案)
+autoAnalyze?: boolean
+```
+
+**回應格式**：同 Bundle 匯入
+
+#### GET `/api/fhir/resources`
+
+**功能**：查詢已匯入的 FHIR 資源
+
+**認證**：需要 Session Cookie
+
+**查詢參數**：
+- `conversationId?`: string (篩選特定對話)
+- `resourceType?`: string (篩選資源類型)
+- `limit?`: number (預設 50)
+- `offset?`: number (預設 0)
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    resources: Array<{
+      id: string;
+      resourceType: string;
+      conversationId: string;
+      importedAt: string;
+      clinicalNarrative: string;
+    }>;
+    total: number;
+  };
+}
+```
+
+### 客戶設定 API
+
+#### GET `/api/customer/settings`
+
+**功能**：取得客戶 UI 自訂設定
+
+**認證**：需要 Session Cookie
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    settings: {
+      theme: {
+        primaryColor?: string;
+        accentColor?: string;
+      };
+      branding: {
+        logoUrl?: string;
+        siteTitle?: string;
+        welcomeMessage?: string;
+        footerText?: string;
+      };
+      features: {
+        enableFhirImport?: boolean;
+        enableModelSelection?: boolean;
+      };
+    };
+  };
+}
+```
+
+#### PUT `/api/customer/settings`
+
+**功能**：更新客戶 UI 設定
+
+**認證**：需要管理員權限
+
+**請求格式**：
+```typescript
+{
+  theme?: {
+    primaryColor?: string;
+    accentColor?: string;
+  };
+  branding?: {
+    siteTitle?: string;
+    welcomeMessage?: string;
+    footerText?: string;
+  };
+  features?: {
+    enableFhirImport?: boolean;
+    enableModelSelection?: boolean;
+  };
+}
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    settings: CustomerSettings;
+  };
+}
+```
+
+#### POST `/api/customer/settings/logo`
+
+**功能**：上傳客戶 Logo
+
+**認證**：需要管理員權限
+
+**請求格式**：`FormData`
+```
+logo: File (PNG 或 SVG，最大 2MB)
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    logoUrl: string;
+  };
+}
+```
+
+#### DELETE `/api/customer/settings/logo`
+
+**功能**：刪除客戶 Logo（恢復預設）
+
+**認證**：需要管理員權限
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  message: string;
+}
+```
+
+### 模型管理 API
+
+#### GET `/api/models`
+
+**功能**：取得可用的 AI 模型列表（使用者端）
+
+**認證**：需要 Session Cookie
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    models: Array<{
+      id: string;
+      name: string;
+      displayName: string;
+      inputPricePerK: number;
+      outputPricePerK: number;
+      isEnabled: boolean;
+      description?: string;
+    }>;
+  };
+}
+```
+
+#### GET `/api/admin/models`
+
+**功能**：取得所有模型（含停用模型）
+
+**認證**：需要管理員權限
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    models: Array<{
+      id: string;
+      name: string;
+      displayName: string;
+      inputPricePerK: number;
+      outputPricePerK: number;
+      isEnabled: boolean;
+      displayOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  };
+}
+```
+
+#### PUT `/api/admin/models/:id`
+
+**功能**：更新模型設定
+
+**認證**：需要管理員權限
+
+**請求格式**：
+```typescript
+{
+  displayName?: string;
+  inputPricePerK?: number;
+  outputPricePerK?: number;
+  isEnabled?: boolean;
+  displayOrder?: number;
+}
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    model: Model;
+  };
+}
+```
+
+#### POST `/api/admin/models`
+
+**功能**：新增模型
+
+**認證**：需要管理員權限
+
+**請求格式**：
+```typescript
+{
+  name: string;
+  displayName: string;
+  inputPricePerK: number;
+  outputPricePerK: number;
+  isEnabled?: boolean;
+  displayOrder?: number;
+}
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    model: Model;
+  };
+}
+```
+
+### 點數 API
+
+#### GET `/api/credits/balance`
+
+**功能**：查詢點數餘額
+
+**認證**：需要 Session Cookie
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    balance: number;
+    lastUpdated: string;
+  };
+}
+```
+
+#### GET `/api/credits/transactions`
+
+**功能**：查詢點數交易記錄
+
+**認證**：需要 Session Cookie
+
+**查詢參數**：
+- `type?`: 'usage' | 'purchase' | 'admin_adjustment' | 'refund'
+- `startDate?`: string (ISO 8601)
+- `endDate?`: string (ISO 8601)
+- `limit?`: number (預設 50)
+- `offset?`: number (預設 0)
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    transactions: Array<{
+      id: string;
+      type: 'usage' | 'purchase' | 'admin_adjustment' | 'refund';
+      amount: number;
+      balanceBefore: number;
+      balanceAfter: number;
+      conversationId?: string;
+      description?: string;
+      createdAt: string;
+    }>;
+    total: number;
+  };
+}
+```
+
+#### POST `/api/admin/credits/adjust`
+
+**功能**：管理員調整使用者點數
+
+**認證**：需要管理員權限
+
+**請求格式**：
+```typescript
+{
+  customerId: string;
+  amount: number; // 正數為增加，負數為扣除
+  description: string;
+}
+```
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    transaction: CreditTransaction;
+    newBalance: number;
+  };
+}
+```
+
+#### GET `/api/admin/credits/report`
+
+**功能**：匯出點數使用報表
+
+**認證**：需要管理員權限
+
+**查詢參數**：
+- `startDate`: string (必填)
+- `endDate`: string (必填)
+- `format?`: 'json' | 'csv' (預設 json)
+
+**回應格式**：
+```typescript
+{
+  success: true;
+  data: {
+    summary: {
+      totalUsage: number;
+      totalPurchase: number;
+      totalAdjustment: number;
+      totalRefund: number;
+      activeUsers: number;
+    };
+    transactions: CreditTransaction[];
+  };
 }
 ```
 

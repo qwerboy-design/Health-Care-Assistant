@@ -1,7 +1,7 @@
 // 客戶類型
 export interface Customer {
   id: string;
-  email: string;
+  email?: string;
   name: string;
   phone?: string;
   password_hash?: string;

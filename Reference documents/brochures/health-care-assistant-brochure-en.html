@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>health-care-assistant-brochure-en</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #e7eefc;
+      color: #0f172a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      min-height: calc(297mm - 20mm);
+      padding: 16mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(239, 245, 255, 0.98) 100%);
+      border: 1px solid #d6e2f4;
+      border-radius: 22px;
+      box-shadow: 0 22px 60px rgba(15, 23, 42, 0.1);
+      page-break-after: always;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 6px;
+      background: linear-gradient(90deg, #0f3d91 0%, #2563eb 55%, #7fb3ff 100%);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at top right, rgba(147, 197, 253, 0.24), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(96, 165, 250, 0.22), transparent 26%),
+        linear-gradient(135deg, #0b1f47 0%, #123a82 48%, #2563eb 100%);
+      color: #ffffff;
+    }
+
+    .hero::before {
+      background: linear-gradient(90deg, #dbeafe 0%, #ffffff 45%, #93c5fd 100%);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 14px;
+      font-size: 32px;
+      line-height: 1.18;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      line-height: 1.25;
+      color: #0f3d91;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      line-height: 1.35;
+      color: #0f3d91;
+    }
+
+    .hero h2,
+    .hero h3 {
+      color: #ffffff;
+    }
+
+    p {
+      margin: 0;
+      font-size: 13.5px;
+    }
+
+    .lead {
+      max-width: 670px;
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .section-intro {
+      max-width: 700px;
+      margin-bottom: 18px;
+      color: #334155;
+    }
+
+    .section-label {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: #2563eb;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.17);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .page:not(.hero) .pill {
+      background: #dceaff;
+      border-color: #bfd5fb;
+      color: #103f90;
+    }
+
+    .grid-two,
+    .grid-three {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card,
+    .layer,
+    .callout,
+    .metric-card,
+    .process-item {
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #d9e5f6;
+      border-radius: 18px;
+      padding: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero .callout {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      min-height: 164px;
+    }
+
+    .metric-value {
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .metric-label {
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .metric-card p {
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 12.5px;
+    }
+
+    .card p,
+    .layer li,
+    .callout p,
+    li {
+      color: #334155;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .layer-wrap {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 1.1fr;
+      gap: 14px;
+      align-items: stretch;
+      margin-top: 14px;
+    }
+
+    .process-shell {
+      margin-top: 6px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #edf4ff 0%, #f7faff 100%);
+      border: 1px solid #d6e4f7;
+    }
+
+    .process-diagram {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .process-item {
+      min-height: 166px;
+      background: #ffffff;
+    }
+
+    .process-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #dceaff;
+      color: #0f3d91;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .process-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3b82f6;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .arrow-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 16px 0 10px;
+      color: #1d4ed8;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .arrow {
+      width: 22px;
+      height: 2px;
+      background: #60a5fa;
+      position: relative;
+      top: -1px;
+    }
+
+    .arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border-left: 8px solid #60a5fa;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .flow-step {
+      background: #ffffff;
+      border: 1px solid #d7e3f6;
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 120px;
+    }
+
+    .flow-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: #dceaff;
+      color: #0f3d91;
+      font-weight: 800;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .hero .footer-note {
+      color: rgba(255, 255, 255, 0.75);
+      border-top-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .small-stack {
+      margin-top: 18px;
+    }
+  </style>
+</head>
+<body>
+  <section class="page hero">
+    <div>
+      <span class="eyebrow">Project Brochure</span>
+      <h1>Health Care Assistant</h1>
+      <p class="lead">A clinical AI support platform for structured analysis, controlled access, conversation traceability, and operational governance.</p>
+      <div class="callout" style="margin-top: 28px;">
+        <h3>Why it matters</h3>
+        <p>Health Care Assistant brings secure user onboarding, multi-turn AI conversations, clinical-context intake, model governance, and credit-based usage control into a single Next.js application. It is designed for organizations that want practical AI support workflows without losing visibility over who can access the system, which models are used, and how activity is recorded.</p>
+      </div>
+      <div class="pill-row"><span class="pill">Next.js 14 App Router</span><span class="pill">Supabase + PostgreSQL</span><span class="pill">Anthropic Claude</span><span class="pill">Cloudflare R2</span><span class="pill">JWT + OTP + Google OAuth</span></div>
+      <div class="metric-grid">
+        <article class="metric-card">
+          <div class="metric-value">3</div>
+          <div class="metric-label">Access Paths</div>
+          <p>Password, email OTP, and Google OAuth help lower adoption friction while keeping controlled onboarding.</p>
+        </article>
+        
+        <article class="metric-card">
+          <div class="metric-value">4</div>
+          <div class="metric-label">Clinical Modes</div>
+          <p>Lab, radiology, medical records, and medication analysis align the workspace to common healthcare use cases.</p>
+        </article>
+        
+        <article class="metric-card">
+          <div class="metric-value">1</div>
+          <div class="metric-label">Governed Platform</div>
+          <p>Identity, AI interaction, storage, pricing, and admin control are managed within one application boundary.</p>
+        </article>
+        </div>
+    </div>
+    <div class="footer-note">Built for clinical support workflows. It should operate under organizational privacy, security, and professional-review policies rather than as a standalone diagnosis system.</div>
+  </section>
+
+  <section class="page">
+    <div>
+      <span class="section-label">Executive Summary</span>
+      <h2>Key Capabilities</h2>
+      <p class="section-intro">The platform combines end-user workflow features with the controls healthcare teams typically need for adoption, oversight, and staged rollout.</p>
+      <div class="grid-two">
+    <article class="card">
+      <h3>Flexible Access and Approval</h3>
+      <p>Users can sign in with password, email OTP, or Google OAuth. New accounts stay under approval control before clinical chat functions become available.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Clinical AI Workspace</h3>
+      <p>The main workspace supports multi-turn conversations, selectable workload depth, and clinical analysis modes for lab, radiology, records, and medication scenarios.</p>
+    </article>
+    
+    <article class="card">
+      <h3>File and Context Intake</h3>
+      <p>The solution accepts common document and image formats, supports screenshots, and includes FHIR-oriented import and formatting workflows for richer context.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Conversation Traceability</h3>
+      <p>Persistent conversation history, downloadable logs, and saved message records help teams revisit prior AI discussions and keep an auditable trail.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Model and Cost Governance</h3>
+      <p>Credits are checked before AI use, deducted per model policy, and written to a transaction ledger. Admins can manage model availability and pricing.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Organization-ready Experience</h3>
+      <p>Customer-specific UI settings, bilingual interface support, and role-based admin functions make the platform easier to align with institutional workflows.</p>
+    </article>
+    </div>
+    </div>
+    <div class="footer-note">Health Care Assistant | Structured Clinical AI Support with Governance</div>
+  </section>
+
+  <section class="page">
+    <div>
+      <span class="section-label">Operating Model</span>
+      <h2>Architecture at a Glance</h2>
+      <p class="section-intro">The application follows a full-stack Next.js design: the browser experience, API routes, business logic, and integrations are organized within one codebase for simpler delivery and consistent governance.</p>
+      <div class="process-shell">
+        <h3>Simple Delivery Flow</h3>
+        <p class="section-intro" style="margin-bottom: 14px;">This simplified flow illustrates how a governed clinical AI request moves through the platform.</p>
+        <div class="process-diagram">
+            <div class="process-item">
+              <span class="process-step">Step 1</span>
+              <h3>Authenticate</h3>
+              <p>Verify identity, session, and approval status before protected workflows begin.</p>
+            </div>
+            <div class="process-arrow">→</div>
+            
+            <div class="process-item">
+              <span class="process-step">Step 2</span>
+              <h3>Prepare Context</h3>
+              <p>Collect prompt, workload level, clinical mode, model selection, and optional files.</p>
+            </div>
+            <div class="process-arrow">→</div>
+            
+            <div class="process-item">
+              <span class="process-step">Step 3</span>
+              <h3>Run AI Policy</h3>
+              <p>Validate input, enforce credit rules, and route the request through the AI client layer.</p>
+            </div>
+            <div class="process-arrow">→</div>
+            
+            <div class="process-item">
+              <span class="process-step">Step 4</span>
+              <h3>Record Results</h3>
+              <p>Store messages, update credits, and retain conversation history for follow-up and review.</p>
+            </div>
+            
+            </div>
+      </div>
+      <div class="layer-wrap">
+    <section class="layer">
+      <h3>Client Experience</h3>
+      <ul><li>Login and registration pages</li><li>Chat workspace and conversation history</li><li>Admin dashboard and settings-driven UI</li><li>Traditional Chinese and English interface support</li></ul>
+    </section>
+    
+    <section class="layer">
+      <h3>Application Core</h3>
+      <ul><li>Next.js App Router pages and route handlers</li><li>Validation with Zod and session checks with JWT cookies</li><li>Workload mapping and clinical function routing</li><li>Conversation, credit, and model orchestration logic</li></ul>
+    </section>
+    
+    <section class="layer">
+      <h3>Data and Services</h3>
+      <ul><li>Supabase for users, sessions, messages, credits, and pricing</li><li>Anthropic Claude for AI responses</li><li>Resend for OTP email and Google OAuth for federated sign-in</li><li>Cloudflare R2 for uploaded files and artifacts</li></ul>
+    </section>
+    </div>
+      <div class="arrow-strip">
+        <span>User request</span>
+        <span class="arrow"></span>
+        <span>Controlled AI processing</span>
+        <span class="arrow"></span>
+        <span>Recorded outcome</span>
+      </div>
+      <div class="flow">
+            <div class="flow-step">
+              <span class="flow-index">01</span>
+              <p>Authenticate the user and verify account status.</p>
+            </div>
+            
+            <div class="flow-step">
+              <span class="flow-index">02</span>
+              <p>Select workload depth, analysis mode, model, and optional files.</p>
+            </div>
+            
+            <div class="flow-step">
+              <span class="flow-index">03</span>
+              <p>Validate payloads and resolve credit and pricing policy.</p>
+            </div>
+            
+            <div class="flow-step">
+              <span class="flow-index">04</span>
+              <p>Send structured context to Claude through the AI client layer.</p>
+            </div>
+            
+            <div class="flow-step">
+              <span class="flow-index">05</span>
+              <p>Save messages, update credits, and keep history available.</p>
+            </div>
+            </div>
+      <div class="small-stack">
+        <h3>Technology Stack</h3>
+        <div class="pill-row"><span class="pill">React 18</span><span class="pill">TypeScript 5</span><span class="pill">Tailwind CSS</span><span class="pill">Supabase</span><span class="pill">PostgreSQL</span><span class="pill">jose (JWT)</span><span class="pill">bcryptjs</span><span class="pill">Zod</span><span class="pill">Resend</span><span class="pill">Google OAuth</span><span class="pill">Cloudflare R2</span><span class="pill">Vitest</span></div>
+      </div>
+    </div>
+    <div class="footer-note">Built for clinical support workflows. It should operate under organizational privacy, security, and professional-review policies rather than as a standalone diagnosis system.</div>
+  </section>
+
+  <section class="page">
+    <div>
+      <span class="section-label">Governance</span>
+      <h2>Security, Governance, and Operations</h2>
+      <p class="section-intro">Beyond the chat interface, the project emphasizes controlled access, predictable cost management, and operational visibility.</p>
+      <div class="grid-three">
+    <article class="card">
+      <h3>Session and Access Control</h3>
+      <p>JWT sessions are stored in HttpOnly cookies. Approval status and admin role checks help enforce who can enter protected workflows.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Validation and Abuse Protection</h3>
+      <p>API payloads are validated with Zod, passwords are hashed with bcrypt, and rate limits reduce OTP and login abuse risk.</p>
+    </article>
+    
+    <article class="card">
+      <h3>Operational Transparency</h3>
+      <p>Credits, pricing, customer records, and model states are surfaced through admin APIs so teams can monitor adoption and usage behavior.</p>
+    </article>
+    </div>
+      <div class="grid-two" style="margin-top: 18px;">
+        <section class="card">
+          <h3>Ideal Use Cases</h3>
+          <ul><li>Clinical support conversations around lab reports and structured observations</li><li>Radiology-oriented discussions with image or document attachments</li><li>Medical record summarization with controlled conversation history</li><li>Medication review workflows with model-cost awareness</li></ul>
+        </section>
+        <section class="card">
+          <h3>Deployment Value</h3>
+          <p>Health Care Assistant is suitable for teams that want one governed platform covering authentication, AI interactions, storage, and cost tracking. The current architecture is well positioned for phased rollout, customer-level customization, and future healthcare workflow extensions.</p>
+        </section>
+      </div>
+    </div>
+    <div class="footer-note">Health Care Assistant | Structured Clinical AI Support with Governance</div>
+  </section>
+</body>
+</html>

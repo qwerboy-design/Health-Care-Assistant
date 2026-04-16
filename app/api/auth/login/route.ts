@@ -88,6 +88,10 @@ export async function POST(request: NextRequest) {
 
     // 建立 Session
     const clientIP = getClientIP(request);
+    if (!customer.email) {
+      // password 註冊若未提供 email，將導致無法建立 Session（login 需要 email）
+      return errorResponse('此帳號未設定信箱', 500);
+    }
     // #region agent log
     fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'app/api/auth/login/route.ts:64', message: 'Before createSession', data: { customerId: customer.id, email: customer.email }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'D' }) }).catch(() => { });
     // #endregion
