@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Coins } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -15,8 +15,7 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 從 API 獲取 Credits
-  const fetchCredits = async () => {
+  const fetchCredits = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -37,14 +36,12 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onCreditsUpdate, t]);
 
-  // 初始載入
   useEffect(() => {
     fetchCredits();
-  }, []);
+  }, [fetchCredits]);
 
-  // 根據 Credits 數量決定顏色
   const getCreditsColor = () => {
     if (credits === 0) return 'text-red-600';
     if (credits < 50) return 'text-orange-600';
@@ -75,7 +72,7 @@ export function CreditsDisplay({ initialCredits = 0, onCreditsUpdate }: CreditsD
         className="ml-2 text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400"
         title={t('chat.refresh')}
       >
-        ↻
+        Refresh
       </button>
     </div>
   );

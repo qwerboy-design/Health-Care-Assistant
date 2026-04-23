@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 import { otpSchema } from '@/lib/validation/schemas';
 import { findCustomerByEmail, updateLastLogin } from '@/lib/supabase/customers';
 import { getCustomerCredits } from '@/lib/supabase/credits';
@@ -6,46 +7,35 @@ import { verifyOTPToken, markOTPTokenAsUsed } from '@/lib/supabase/otp';
 import { createSession } from '@/lib/auth/session';
 import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
-import { cookies } from 'next/headers';
 
-// 此路由使用 cookies() 設定 Session，必須動態渲染
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const ipLimit = getRateLimitByIP(request, 10);
+    const ipLimit = await getRateLimitByIP(request, 10);
     if (!ipLimit.allowed) {
       return errorResponse(Errors.TOO_MANY_REQUESTS.message, 429);
     }
 
-    // 解析請求
     const body = await request.json();
-    
-    // 驗證輸入
     const validation = otpSchema.safeParse(body);
     if (!validation.success) {
       return errorResponse(validation.error.issues[0].message, 400);
     }
 
     const { email, token } = validation.data;
-
-    // 驗證 OTP
     const { valid, otpToken } = await verifyOTPToken(email, token);
     if (!valid || !otpToken) {
       return errorResponse(Errors.INVALID_OTP.message, 400);
     }
 
-    // 標記 OTP 為已使用
     await markOTPTokenAsUsed(otpToken.id);
 
-    // 查找客戶
     const customer = await findCustomerByEmail(email);
     if (!customer) {
-      return errorResponse(Errors.USER_NOT_FOUND.message, 404);
+      return errorResponse(Errors.INVALID_OTP.message, 400);
     }
 
-    // 檢查審核狀態
     if (customer.approval_status === 'pending') {
       return errorResponse(Errors.ACCOUNT_PENDING.message, 403);
     }
@@ -53,22 +43,19 @@ export async function POST(request: NextRequest) {
       return errorResponse(Errors.ACCOUNT_REJECTED.message, 403);
     }
 
-    // 更新最後登入時間
     await updateLastLogin(customer.id);
 
-    // 建立 Session
-    const clientIP = getClientIP(request);
     if (!customer.email) {
-      // OTP/Email 註冊本應有 email；若缺漏代表資料不一致
-      return errorResponse('此帳號未設定信箱', 500);
+      return errorResponse(Errors.INTERNAL_ERROR.message, 500);
     }
+
+    const clientIP = getClientIP(request);
     const { token: sessionToken, expiresAt } = await createSession(
       customer.id,
       customer.email,
       clientIP
     );
 
-    // 設定 Cookie
     const cookieStore = await cookies();
     cookieStore.set('session', sessionToken, {
       httpOnly: true,
@@ -78,13 +65,11 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    // 查詢用戶 Credits
     let credits = 0;
     try {
       credits = await getCustomerCredits(customer.id);
     } catch (error) {
-      console.error('查詢 Credits 失敗:', error);
-      // 即使查詢失敗，仍然允許登入，Credits 預設為 0
+      console.error('Failed to load credits during OTP login:', error);
     }
 
     return successResponse(
@@ -93,12 +78,11 @@ export async function POST(request: NextRequest) {
         email: customer.email,
         name: customer.name,
         credits,
-        token: sessionToken, // 返回 token 給前端
       },
       '驗證成功'
     );
   } catch (error) {
-    console.error('驗證 OTP 錯誤:', error);
+    console.error('Verify OTP error:', error);
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

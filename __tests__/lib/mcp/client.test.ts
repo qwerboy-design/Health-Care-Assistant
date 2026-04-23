@@ -43,7 +43,7 @@ describe('MCP Client - Model Selection', () => {
       // 驗證 fetch 被呼叫
       expect(global.fetch).toHaveBeenCalled();
 
-      // 獲取對 Anthropic API 的呼叫（過濾掉 agent log 的呼叫）
+      // Get the Anthropic API call.
       const fetchCalls = vi.mocked(global.fetch).mock.calls;
       const anthropicCall = fetchCalls.find(call =>
         call[0] === 'https://api.anthropic.com/v1/messages'

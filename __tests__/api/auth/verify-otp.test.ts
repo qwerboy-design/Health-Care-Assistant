@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-// Mock fetch globally
 global.fetch = vi.fn().mockResolvedValue({
   ok: true,
   json: async () => ({}),
 } as any);
 
-// Mock all dependencies
 vi.mock('@/lib/supabase/customers', () => ({
   findCustomerByEmail: vi.fn(),
   updateLastLogin: vi.fn(),
@@ -35,7 +33,6 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }));
 
-// Import after mocking
 import { POST } from '@/app/api/auth/verify-otp/route';
 import { findCustomerByEmail, updateLastLogin } from '@/lib/supabase/customers';
 import { getCustomerCredits } from '@/lib/supabase/credits';
@@ -65,7 +62,6 @@ describe('POST /api/auth/verify-otp - Credits Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup default mocks
     vi.mocked(getRateLimitByIP).mockReturnValue({ allowed: true } as any);
     vi.mocked(getClientIP).mockReturnValue('127.0.0.1');
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
@@ -75,96 +71,92 @@ describe('POST /api/auth/verify-otp - Credits Integration', () => {
     } as any);
   });
 
-  describe('Credits 返回', () => {
-    it('應該在 OTP 驗證成功後返回用戶的 Credits', async () => {
-      vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
-      vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockResolvedValue(150);
+  it('returns credits on successful OTP verification', async () => {
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
+    vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
+    vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
+    vi.mocked(updateLastLogin).mockResolvedValue(undefined);
+    vi.mocked(getCustomerCredits).mockResolvedValue(150);
 
-      const request = new NextRequest('http://localhost/api/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          token: '123456',
-        }),
-      });
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(150);
-      expect(data.data.token).toBe('session-token'); // 驗證 token 有被返回
-      expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
+    const request = new NextRequest('http://localhost/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        token: '123456',
+      }),
     });
 
-    it('應該在 Credits 為 0 時也正確返回', async () => {
-      vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
-      vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockResolvedValue(0);
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          token: '123456',
-        }),
-      });
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.credits).toBe(150);
+    expect(data.data.token).toBeUndefined();
+    expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('falls back to zero credits when credit lookup fails', async () => {
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
+    vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
+    vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
+    vi.mocked(updateLastLogin).mockResolvedValue(undefined);
+    vi.mocked(getCustomerCredits).mockRejectedValue(new Error('Database error'));
 
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(0);
+    const request = new NextRequest('http://localhost/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        token: '123456',
+      }),
     });
 
-    it('應該在查詢 Credits 失敗時仍然允許登入', async () => {
-      vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
-      vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockRejectedValue(new Error('Database error'));
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          token: '123456',
-        }),
-      });
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.credits).toBe(0);
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('does not expose credits on invalid OTP', async () => {
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: false, otpToken: null });
 
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(0);
+    const request = new NextRequest('http://localhost/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        token: 'wrong-token',
+      }),
     });
 
-    it('應該在 OTP 無效時不返回 Credits', async () => {
-      vi.mocked(verifyOTPToken).mockResolvedValue({ valid: false, otpToken: null });
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          token: 'wrong-token',
-        }),
-      });
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.data?.credits).toBeUndefined();
+    expect(getCustomerCredits).not.toHaveBeenCalled();
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('returns generic invalid OTP when the customer record is missing', async () => {
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
+    vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
+    vi.mocked(findCustomerByEmail).mockResolvedValue(null);
 
-      expect(response.status).toBe(400);
-      expect(data.success).toBe(false);
-      expect(data.data?.credits).toBeUndefined();
-      expect(getCustomerCredits).not.toHaveBeenCalled();
+    const request = new NextRequest('http://localhost/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        token: '123456',
+      }),
     });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(getCustomerCredits).not.toHaveBeenCalled();
   });
 });

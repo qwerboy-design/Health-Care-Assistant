@@ -7,18 +7,16 @@ import { sendOTPEmail } from '@/lib/email/resend';
 import { getRateLimitByEmail, getRateLimitByIP } from '@/lib/rate-limit';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
 
+const GENERIC_SUCCESS_MESSAGE = '如果此 Email 已註冊，驗證碼已寄出';
+
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting - IP
-    const ipLimit = getRateLimitByIP(request, 10);
+    const ipLimit = await getRateLimitByIP(request, 10);
     if (!ipLimit.allowed) {
       return errorResponse(Errors.TOO_MANY_REQUESTS.message, 429);
     }
 
-    // 解析請求
     const body = await request.json();
-    
-    // 驗證輸入
     const validation = sendOTPSchema.safeParse(body);
     if (!validation.success) {
       return errorResponse(validation.error.issues[0].message, 400);
@@ -26,31 +24,23 @@ export async function POST(request: NextRequest) {
 
     const { email } = validation.data;
 
-    // Rate limiting - Email
-    const emailLimit = getRateLimitByEmail(email, 3);
+    const emailLimit = await getRateLimitByEmail(email, 3);
     if (!emailLimit.allowed) {
-      return errorResponse('發送過於頻繁，請稍後再試', 429);
+      return errorResponse(Errors.TOO_MANY_REQUESTS.message, 429);
     }
 
-    // 查找客戶
     const customer = await findCustomerByEmail(email);
-    if (!customer) {
-      return errorResponse(Errors.USER_NOT_FOUND.message, 404);
+    if (customer) {
+      const otp = generateOTP();
+      const expiresAt = getOTPExpiryTime();
+
+      await createOTPToken(email, otp, expiresAt);
+      await sendOTPEmail({ to: email, name: customer.name, otp });
     }
 
-    // 生成並發送 OTP
-    const otp = generateOTP();
-    const expiresAt = getOTPExpiryTime();
-    
-    await createOTPToken(email, otp, expiresAt);
-    await sendOTPEmail({ to: email, name: customer.name, otp });
-
-    return successResponse(
-      { email },
-      'OTP 驗證碼已發送到您的 Email'
-    );
+    return successResponse({ email }, GENERIC_SUCCESS_MESSAGE);
   } catch (error) {
-    console.error('發送 OTP 錯誤:', error);
+    console.error('Send OTP error:', error);
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

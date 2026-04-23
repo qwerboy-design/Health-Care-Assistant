@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Edit2, Power, PowerOff } from 'lucide-react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -23,19 +23,13 @@ export default function ModelsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [processing, setProcessing] = useState(false);
-
-  // Form states
   const [formData, setFormData] = useState({
     model_name: '',
     display_name: '',
     credits_cost: 0,
   });
 
-  useEffect(() => {
-    fetchModels();
-  }, []);
-
-  const fetchModels = async () => {
+  const fetchModels = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -52,7 +46,11 @@ export default function ModelsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    fetchModels();
+  }, [fetchModels]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,11 +97,11 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setModels(prev => prev.map(m =>
-          m.model_name === selectedModel.model_name
-            ? { ...m, credits_cost: formData.credits_cost }
-            : m
-        ));
+        setModels((prev) =>
+          prev.map((m) =>
+            m.model_name === selectedModel.model_name ? { ...m, credits_cost: formData.credits_cost } : m
+          )
+        );
         setShowEditModal(false);
         setSelectedModel(null);
         alert(t('admin.updateSuccess'));
@@ -131,9 +129,7 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setModels(prev => prev.map(m =>
-          m.model_name === modelName ? { ...m, is_active: false } : m
-        ));
+        setModels((prev) => prev.map((m) => (m.model_name === modelName ? { ...m, is_active: false } : m)));
         alert(t('admin.deactivateSuccess'));
       } else {
         alert(data.error || t('admin.deactivateFailed'));
@@ -160,9 +156,7 @@ export default function ModelsPage() {
       const data = await res.json();
 
       if (data.success) {
-        setModels(prev => prev.map(m =>
-          m.model_name === modelName ? { ...m, is_active: true } : m
-        ));
+        setModels((prev) => prev.map((m) => (m.model_name === modelName ? { ...m, is_active: true } : m)));
         alert(t('admin.activateSuccess'));
       } else {
         alert(data.error || t('admin.activateFailed'));
@@ -205,17 +199,15 @@ export default function ModelsPage() {
         </button>
       </div>
 
-      {/* 錯誤訊息 */}
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
-      {/* 模型列表 */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           <p className="mt-2 text-gray-600">{t('admin.loading')}</p>
         </div>
       ) : models.length === 0 ? (
@@ -230,9 +222,7 @@ export default function ModelsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {model.display_name}
-                      </h3>
+                      <h3 className="text-lg font-medium text-gray-900">{model.display_name}</h3>
                       {model.is_active ? (
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center gap-1">
                           <Power size={12} />
@@ -299,7 +289,6 @@ export default function ModelsPage() {
         </div>
       )}
 
-      {/* 創建模型 Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -369,7 +358,6 @@ export default function ModelsPage() {
         </div>
       )}
 
-      {/* 編輯定價 Modal */}
       {showEditModal && selectedModel && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">

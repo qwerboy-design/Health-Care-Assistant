@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Customer, CustomerSettings } from '@/types';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -15,19 +15,34 @@ export default function AdminPage() {
   const [processing, setProcessing] = useState<string | null>(null);
   const [customerSettings, setCustomerSettings] = useState<Record<string, CustomerSettings>>({});
   const [settingsLoading, setSettingsLoading] = useState(false);
-  
-  // 密碼重設相關狀態
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
   const [passwordCustomerName, setPasswordCustomerName] = useState('');
   const [passwordCustomerEmail, setPasswordCustomerEmail] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [filter]);
+  const fetchCustomerSettings = useCallback(async (customerIds: string[]) => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/customer-settings?batch=true&customerIds=${customerIds.join(',')}`
+      );
 
-  const fetchCustomers = async () => {
+      const data = await res.json();
+
+      if (data.success) {
+        setCustomerSettings(data.data.settings || {});
+      } else {
+        console.error('[fetchCustomerSettings] API returned error:', data.error);
+      }
+    } catch (err) {
+      console.error('[fetchCustomerSettings] Exception:', err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
+
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -44,8 +59,7 @@ export default function AdminPage() {
       if (data.success) {
         const customerList = data.data.customers || [];
         setCustomers(customerList);
-        
-        // 批次載入客戶設定
+
         if (customerList.length > 0) {
           await fetchCustomerSettings(customerList.map((c: CustomerListItem) => c.id));
         }
@@ -57,57 +71,19 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchCustomerSettings, filter, t]);
 
-  const fetchCustomerSettings = async (customerIds: string[]) => {
-    setSettingsLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('[fetchCustomerSettings] No token found');
-        return;
-      }
-
-      console.log('[fetchCustomerSettings] Fetching settings for', customerIds.length, 'customers');
-      
-      const res = await fetch(
-        `/api/admin/customer-settings?batch=true&customerIds=${customerIds.join(',')}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-      
-      console.log('[fetchCustomerSettings] Response status:', res.status);
-      
-      const data = await res.json();
-      console.log('[fetchCustomerSettings] Response data:', data);
-
-      if (data.success) {
-        setCustomerSettings(data.data.settings || {});
-        console.log('[fetchCustomerSettings] Settings loaded successfully', Object.keys(data.data.settings || {}).length, 'records');
-      } else {
-        console.error('[fetchCustomerSettings] API returned error:', data.error);
-      }
-    } catch (err) {
-      console.error('[fetchCustomerSettings] Exception:', err);
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const handleToggleSetting = async (
-    customerId: string, 
+    customerId: string,
     field: 'show_function_selector' | 'show_workload_selector' | 'show_screenshot',
     value: boolean
   ) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      // 樂觀更新 UI
-      setCustomerSettings(prev => ({
+      setCustomerSettings((prev) => ({
         ...prev,
         [customerId]: {
           ...prev[customerId],
@@ -117,10 +93,7 @@ export default function AdminPage() {
 
       const res = await fetch('/api/admin/customer-settings', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId,
           settings: { [field]: value },
@@ -130,8 +103,7 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (!data.success) {
-        // 恢復舊值
-        setCustomerSettings(prev => ({
+        setCustomerSettings((prev) => ({
           ...prev,
           [customerId]: {
             ...prev[customerId],
@@ -141,9 +113,8 @@ export default function AdminPage() {
         alert(data.error || t('admin.settingsUpdateFailed'));
       }
     } catch (err) {
-      console.error('更新設定失敗:', err);
-      // 恢復舊值
-      setCustomerSettings(prev => ({
+      console.error('設定更新失敗:', err);
+      setCustomerSettings((prev) => ({
         ...prev,
         [customerId]: {
           ...prev[customerId],
@@ -253,6 +224,7 @@ export default function AdminPage() {
       approved: t('admin.statusApproved'),
       rejected: t('admin.statusRejected'),
     };
+
     return (
       <span
         className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -287,9 +259,7 @@ export default function AdminPage() {
         <button
           onClick={() => setFilter('pending')}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'pending'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+            filter === 'pending' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
           {t('admin.filterPending')} ({customers.filter((c) => c.approval_status === 'pending').length})
@@ -297,9 +267,7 @@ export default function AdminPage() {
         <button
           onClick={() => setFilter('approved')}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'approved'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+            filter === 'approved' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
           {t('admin.filterApproved')}
@@ -307,9 +275,7 @@ export default function AdminPage() {
         <button
           onClick={() => setFilter('rejected')}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'rejected'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+            filter === 'rejected' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
           {t('admin.filterRejected')}
@@ -317,26 +283,22 @@ export default function AdminPage() {
         <button
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+            filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
           }`}
         >
           {t('admin.filterAll')}
         </button>
       </div>
 
-      {/* 錯誤訊息 */}
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
-      {/* 用戶列表 */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           <p className="mt-2 text-gray-600">{t('admin.loading')}</p>
         </div>
       ) : customers.length === 0 ? (
@@ -351,9 +313,7 @@ export default function AdminPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {customer.name}
-                      </h3>
+                      <h3 className="text-lg font-medium text-gray-900">{customer.name}</h3>
                       {getStatusBadge(customer.approval_status)}
                       {getRoleBadge(customer.role)}
                     </div>
@@ -377,37 +337,37 @@ export default function AdminPage() {
                         </p>
                       )}
                     </div>
-                    
-                    {/* 系統設定區域 */}
+
                     <div className="mt-3 pt-3 border-t border-gray-200">
                       <p className="text-sm font-medium text-gray-700 mb-2">{t('admin.systemSettings')}:</p>
                       {settingsLoading ? (
                         <p className="text-sm text-gray-500 italic">{t('admin.loading')}</p>
-                      ) : customerSettings[customer.id] ? (
+                      ) : (
                         <div className="flex flex-wrap gap-3">
-                          {/* 功能選擇開關 */}
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={customerSettings[customer.id]?.show_function_selector || false}
-                              onChange={(e) => handleToggleSetting(customer.id, 'show_function_selector', e.target.checked)}
+                              onChange={(e) =>
+                                handleToggleSetting(customer.id, 'show_function_selector', e.target.checked)
+                              }
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                             />
                             <span className="text-sm text-gray-700">{t('admin.showFunctionSelector')}</span>
                           </label>
-                          
-                          {/* 工作量級別開關 */}
+
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={customerSettings[customer.id]?.show_workload_selector || false}
-                              onChange={(e) => handleToggleSetting(customer.id, 'show_workload_selector', e.target.checked)}
+                              onChange={(e) =>
+                                handleToggleSetting(customer.id, 'show_workload_selector', e.target.checked)
+                              }
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                             />
                             <span className="text-sm text-gray-700">{t('admin.showWorkloadSelector')}</span>
                           </label>
-                          
-                          {/* 截圖功能開關 */}
+
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
@@ -418,20 +378,10 @@ export default function AdminPage() {
                             <span className="text-sm text-gray-700">{t('admin.showScreenshot')}</span>
                           </label>
                         </div>
-                      ) : (
-                        <div className="text-sm">
-                          <p className="text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
-                            ⚠️ 設定載入失敗 - 請確認 customer_settings 資料表已建立
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            請在 Supabase 執行：supabase/migrations/20260312_create_customer_settings.sql
-                          </p>
-                        </div>
                       )}
                     </div>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 ml-4">
-                    {/* 重設密碼按鈕（所有狀態都可用） */}
                     <button
                       onClick={() => handleResetPassword(customer.id, customer.name, customer.email || '')}
                       disabled={processing === customer.id}
@@ -439,8 +389,7 @@ export default function AdminPage() {
                     >
                       {processing === customer.id ? t('admin.processing') : t('admin.resetPassword')}
                     </button>
-                    
-                    {/* 審核按鈕（僅 pending 狀態顯示） */}
+
                     {customer.approval_status === 'pending' && (
                       <>
                         <button
@@ -467,14 +416,11 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 密碼 Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {t('admin.resetPasswordSuccess')}
-            </h2>
-            
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('admin.resetPasswordSuccess')}</h2>
+
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 <span className="font-medium">{t('admin.email')}:</span> {passwordCustomerEmail}
@@ -482,25 +428,21 @@ export default function AdminPage() {
               <p className="text-sm text-gray-600 mb-4">
                 <span className="font-medium">姓名:</span> {passwordCustomerName}
               </p>
-              
+
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-amber-800 mb-2">
-                  ⚠️ {t('admin.resetPasswordHint')}
-                </p>
+                <p className="text-sm text-amber-800 mb-2">{t('admin.resetPasswordHint')}</p>
               </div>
 
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
                 <p className="text-xs text-gray-600 mb-2 font-medium">{t('admin.temporaryPassword')}:</p>
-                <p className="text-2xl font-mono font-bold text-blue-600 break-all">
-                  {tempPassword}
-                </p>
+                <p className="text-2xl font-mono font-bold text-blue-600 break-all">{tempPassword}</p>
               </div>
 
               <button
                 onClick={handleCopyPassword}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition font-medium"
               >
-                {copySuccess ? `✓ ${t('admin.passwordCopied')}` : t('admin.copyPassword')}
+                {copySuccess ? `已${t('admin.passwordCopied')}` : t('admin.copyPassword')}
               </button>
             </div>
 

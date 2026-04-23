@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/chat/ChatWindow';
@@ -32,39 +32,27 @@ export default function ChatPage() {
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [showFHIRImport, setShowFHIRImport] = useState(false);
   const [fhirImportData, setFhirImportData] = useState<{ summary: string; rawJson: string } | null>(null);
-
-  // 客戶設定與裝置偵測
   const { settings, loading: settingsLoading } = useCustomerSettings();
   const { isMobile } = useDeviceType();
 
-  // 動態控制 UI 顯示
+  // ???批 UI 憿舐內
   const shouldShowScreenshot = isMobile ? false : (settings?.show_screenshot ?? false);
   const shouldShowFunction = settings?.show_function_selector ?? false;
   const shouldShowWorkload = settings?.show_workload_selector ?? false;
-
-  // 追蹤已自動上傳的對話輪次，避免重複上傳
   const autoUploadedRounds = useRef<Set<string>>(new Set());
   const uploadSerialNumber = useRef<number>(1);
   const conversationRoundCounter = useRef<number>(0);
 
-  // 檢查是否需要顯示 Onboarding
+  // 瑼Ｘ?臬?閬＊蝷?Onboarding
   useEffect(() => {
     const completed = localStorage.getItem('onboarding_completed');
     if (!completed) {
       setShowOnboarding(true);
     }
   }, []);
-
-  // 從 URL 參數獲取對話 ID（如果有）
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:31',message:'useEffect for URL params',data:{windowLocationSearch:window.location.search,windowLocationHref:window.location.href},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     const params = new URLSearchParams(window.location.search);
     const id = params.get('conversationId');
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:33',message:'Extracted conversationId from URL',data:{id,hasId:!!id,allParams:Object.fromEntries(params)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     if (id) {
       loadConversation(id);
     }
@@ -72,14 +60,8 @@ export default function ChatPage() {
 
   const loadConversation = async (id: string) => {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:39',message:'Before fetch GET /api/chat',data:{id,apiUrl:`/api/chat?conversationId=${id}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       const res = await fetch(`/api/chat?conversationId=${id}`);
       const data = await res.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:42',message:'After fetch GET /api/chat',data:{success:data.success,error:data.error,hasMessages:!!data.data?.messages},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
 
       if (data.success && data.data.messages) {
         setMessages(
@@ -89,13 +71,12 @@ export default function ChatPage() {
           }))
         );
         setConversationId(id);
-        // 載入對話時重置上傳追蹤
-        autoUploadedRounds.current.clear();
+          autoUploadedRounds.current.clear();
         uploadSerialNumber.current = 1;
         conversationRoundCounter.current = 0;
       }
     } catch (error) {
-      console.error('載入對話錯誤:', error);
+      console.error('頛撠店?航炊:', error);
     }
   };
 
@@ -110,14 +91,9 @@ export default function ChatPage() {
       modelName?: string;
     }
   ) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'handleSend called',data:{hasMessage:!!message,hasFileUrl:!!options.fileUrl,fileName:options.fileName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-    // #endregion
-
-    // 清理截圖檔案狀態
     setScreenshotFile(null);
 
-    // 添加使用者訊息到 UI
+    // 瘛餃?雿輻???臬 UI
     const userMessage: Message = {
       role: 'user',
       content: message,
@@ -129,7 +105,6 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      // 準備 JSON 請求體（不帶檔案，只有元數據）
       const requestBody = {
         message,
         workloadLevel: options.workloadLevel,
@@ -140,12 +115,6 @@ export default function ChatPage() {
         fileType: options.fileType,
         modelName: options.modelName,
       };
-
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Before fetch /api/chat',data:{requestBody},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-
-      // 發送請求（只傳送元數據，檔案已直傳到 Vercel Blob）
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -154,51 +123,41 @@ export default function ChatPage() {
         body: JSON.stringify(requestBody),
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'After fetch /api/chat',data:{status:res.status,ok:res.ok,statusText:res.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
 
       const data = await res.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Response parsed',data:{success:data.success,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
 
       if (data.success) {
-        // 更新對話 ID（如果是新對話）
+        // ?湔撠店 ID嚗???啣?閰梧?
         const finalConversationId = conversationId || data.data.conversationId;
         if (!conversationId) {
           setConversationId(data.data.conversationId);
-          // 更新 URL（不重新載入頁面）
           window.history.pushState(
             {},
             '',
             `/chat?conversationId=${data.data.conversationId}`
           );
-          // 新對話時重置上傳追蹤
+          // ?啣?閰望??蔭銝餈質馱
           autoUploadedRounds.current.clear();
           uploadSerialNumber.current = 1;
           conversationRoundCounter.current = 0;
         }
 
-        // 更新 Credits（如果 API 返回了）
+        // ?湔 Credits嚗???API 餈?鈭?
         if (typeof data.data.creditsAfter === 'number') {
           setUserCredits(data.data.creditsAfter);
         }
 
-        // 添加 AI 回應
+        // 瘛餃? AI ??
         const assistantMessage: Message = {
           role: 'assistant',
           content: data.data.message.content,
           createdAt: new Date(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
-
-        // 對話結束後自動上傳記錄
-        // 使用輪次計數器作為唯一標識，避免重複上傳
         conversationRoundCounter.current += 1;
         const roundKey = `${finalConversationId}-${conversationRoundCounter.current}`;
         
-        // 延遲執行以確保訊息已保存到資料庫
+        // 撱園?瑁?隞亦Ⅱ靽??臬歇靽??啗??澈
         setTimeout(() => {
           autoSaveLog(finalConversationId, roundKey);
         }, 500);
@@ -207,10 +166,7 @@ export default function ChatPage() {
         setMessages((prev) => prev.slice(0, -1));
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chat/page.tsx:handleSend',message:'Error caught in handleSend',data:{errorMessage:error?.message,errorName:error?.name,errorString:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
-      console.error('發送訊息錯誤:', error);
+      console.error('?潮??舫隤?', error);
       alert(t('common.errorNetwork'));
       setMessages((prev) => prev.slice(0, -1));
     } finally {
@@ -219,17 +175,16 @@ export default function ChatPage() {
   };
 
   /**
-   * 自動上傳對話記錄（靜默執行，不顯示提示）
+   * ?芸?銝撠店閮?嚗?暺銵?銝＊蝷箸?蝷綽?
    */
   const autoSaveLog = async (currentConversationId: string, roundKey: string) => {
-    // 檢查是否已經上傳過這一輪
     if (autoUploadedRounds.current.has(roundKey)) {
-      console.log('[auto-save-log] 已上傳過，跳過:', roundKey);
+      console.log('[auto-save-log] 撌脖??喲?嚗歲??', roundKey);
       return;
     }
 
     try {
-      console.log('[auto-save-log] 開始自動上傳對話記錄:', {
+      console.log('[auto-save-log] ???芸?銝撠店閮?:', {
         conversationId: currentConversationId,
         roundKey,
         serialNumber: uploadSerialNumber.current,
@@ -249,36 +204,33 @@ export default function ChatPage() {
       const data = await res.json();
 
       if (data.success) {
-        // 標記為已上傳
+        // 璅??箏歇銝
         autoUploadedRounds.current.add(roundKey);
         uploadSerialNumber.current += 1;
         
-        console.log('[auto-save-log] 自動上傳成功:', {
+        console.log('[auto-save-log] ?芸?銝??:', {
           filename: data.data.filename,
           url: data.data.url,
           messageCount: data.data.messageCount,
           roundKey,
         });
       } else {
-        console.error('[auto-save-log] 自動上傳失敗:', data.error);
-        // 靜默失敗，不影響用戶體驗
+        console.error('[auto-save-log] ?芸?銝憭望?:', data.error);
+        // ??憭望?嚗?敶梢?冽擃?
       }
     } catch (error: any) {
-      console.error('[auto-save-log] 自動上傳錯誤:', {
+      console.error('[auto-save-log] ?芸?銝?航炊:', {
         error: error.message,
         roundKey,
       });
-      // 靜默失敗，不影響用戶體驗
+      // ??憭望?嚗?敶梢?冽擃?
     }
   };
 
   /**
-   * 手動下載對話記錄（顯示提示）
+   * ??銝?撠店閮?嚗＊蝷箸?蝷綽?
    */
   const handleDownloadLog = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:entry',message:'handleDownloadLog called',data:{conversationId,hasConversationId:!!conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-    // #endregion
 
     if (!conversationId) {
       alert(t('chat.startConversation'));
@@ -287,9 +239,6 @@ export default function ChatPage() {
 
     setIsSavingLog(true);
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:before-fetch',message:'Before fetch /api/chat/save-log',data:{conversationId,serialNumber:uploadSerialNumber.current},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-      // #endregion
 
       const res = await fetch('/api/chat/save-log', {
         method: 'POST',
@@ -302,15 +251,9 @@ export default function ChatPage() {
         }),
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:after-fetch',message:'After fetch response',data:{status:res.status,ok:res.ok,statusText:res.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-      // #endregion
 
       const data = await res.json();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:data-parsed',message:'Response data parsed',data:{success:data.success,hasError:!!data.error,hasData:!!data.data,error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-      // #endregion
 
       if (data.success) {
         // Download the file
@@ -318,25 +261,18 @@ export default function ChatPage() {
         const filename = data.data.filename;
         const messageCount = data.data.messageCount || 0;
         
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:success',message:'API returned success',data:{downloadUrl,filename,messageCount},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-        // #endregion
 
-        console.log('[save-log] 上傳成功:', {
+        console.log('[save-log] 銝??:', {
           filename,
           url: downloadUrl,
           storagePath: data.data.storagePath,
           messageCount,
         });
 
-        // 更新序列號
-        uploadSerialNumber.current += 1;
+        // ?湔摨???        uploadSerialNumber.current += 1;
 
-        // 嘗試下載檔案
+        // ?岫銝?瑼?
         try {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:before-download',message:'Before download attempt',data:{downloadUrl,filename},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-          // #endregion
 
           const link = document.createElement('a');
           link.href = downloadUrl;
@@ -345,21 +281,18 @@ export default function ChatPage() {
           link.click();
           document.body.removeChild(link);
           
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/(main)/chat/page.tsx:handleDownloadLog:download-success',message:'Download link clicked',data:{downloadUrl,filename},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'ALL'})}).catch(()=>{});
-          // #endregion
           
           alert(`${t('chat.downloadSuccess')}\n\n${filename}\n${messageCount}`);
         } catch (downloadError) {
-          console.error('[save-log] 下載失敗:', downloadError);
+          console.error('[save-log] 銝?憭望?:', downloadError);
           alert(`${t('chat.downloadSuccessR2')}\n\n${filename}\n${messageCount}\n\n${downloadUrl}`);
         }
       } else {
-        console.error('[save-log] API 返回錯誤:', data);
+        console.error('[save-log] API 餈??航炊:', data);
         alert(`${t('chat.uploadFailed')}: ${data.error || t('chat.uploadErrorUnknown')}`);
       }
     } catch (error: any) {
-      console.error('[save-log] 網路錯誤:', { error: error.message, stack: error.stack });
+      console.error('[save-log] 蝬脰楝?航炊:', { error: error.message, stack: error.stack });
       alert(`${t('common.errorNetwork')} ${error.message || ''}`);
     } finally {
       setIsSavingLog(false);
@@ -456,3 +389,6 @@ export default function ChatPage() {
     </>
   );
 }
+
+
+

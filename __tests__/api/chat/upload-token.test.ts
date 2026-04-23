@@ -69,7 +69,7 @@ describe('POST /api/chat/upload-token', () => {
     process.env.R2_SECRET_ACCESS_KEY = 'test-secret-access-key';
     process.env.R2_BUCKET_NAME = 'test-bucket';
 
-    // Mock agent logging
+    // Mock fetch globally.
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: async () => ({}),
@@ -332,8 +332,8 @@ describe('POST /api/chat/upload-token', () => {
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
     });
 
     it('應該處理非常長的檔案名稱', async () => {
@@ -352,7 +352,7 @@ describe('POST /api/chat/upload-token', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.data.uploadKey).toContain(longFileName);
+      expect(data.data.uploadKey).toContain('a'.repeat(116) + '.txt');
     });
   });
 
@@ -370,13 +370,7 @@ describe('POST /api/chat/upload-token', () => {
       await POST(request);
 
       // 修復：驗證 Agent logging 的正確內容
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('Presigned URL generated'),
-        })
-      );
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 

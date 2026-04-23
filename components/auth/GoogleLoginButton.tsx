@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
@@ -28,6 +28,41 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
   const { locale, t } = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleCredentialResponse = useCallback(async (response: any) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: response.credential }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.data.token) {
+          localStorage.setItem('token', data.data.token);
+        }
+
+        onSuccess?.();
+        router.push('/chat');
+        router.refresh();
+      } else {
+        const errorMsg = data.error || t('common.googleLoginFailed');
+        setError(errorMsg);
+        onError?.(errorMsg);
+      }
+    } catch (err) {
+      const errorMsg = t('common.errorNetwork');
+      setError(errorMsg);
+      onError?.(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onError, onSuccess, router, t]);
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -62,43 +97,7 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
         document.body.removeChild(script);
       }
     };
-  }, [locale]);
-
-  const handleCredentialResponse = async (response: any) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: response.credential }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // 儲存 token 到 localStorage
-        if (data.data.token) {
-          localStorage.setItem('token', data.data.token);
-        }
-        
-        onSuccess?.();
-        router.push('/chat');
-        router.refresh();
-      } else {
-        const errorMsg = data.error || t('common.googleLoginFailed');
-        setError(errorMsg);
-        onError?.(errorMsg);
-      }
-    } catch (err) {
-      const errorMsg = t('common.errorNetwork');
-      setError(errorMsg);
-      onError?.(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [handleCredentialResponse, locale]);
 
   return (
     <div>

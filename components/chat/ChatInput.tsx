@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useLocale } from '@/components/providers/LocaleProvider';
@@ -59,7 +59,7 @@ export function ChatInput({
     }
   }, [message]);
 
-  // 獲取所有模型列表，用於檢查視覺支持
+  // ?脣???芋??銵剁??冽瑼Ｘ閬死?舀?
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -75,7 +75,7 @@ export function ChatInput({
     fetchModels();
   }, []);
 
-  // 處理外部傳入的檔案（如截圖）
+  // ??憭?喳??獢?憒??
   useEffect(() => {
     if (externalFile) {
       setSelectedFile(externalFile);
@@ -83,8 +83,6 @@ export function ChatInput({
       setUploadedFileType(externalFile.type);
     }
   }, [externalFile]);
-
-  // 處理外部傳入的訊息（如 FHIR 匯入）
   useEffect(() => {
     if (externalMessage) {
       setMessage(externalMessage);
@@ -95,7 +93,7 @@ export function ChatInput({
     }
   }, [externalMessage, onExternalMessageConsumed]);
 
-  // 檢查上傳的檔案是否需要支持視覺的模型
+  // 瑼Ｘ銝??獢?阡?閬??閬箇?璅∪?
   const checkVisionRequirement = (fileType: string | null): boolean => {
     const visionRequiredTypes = [
       'image/jpeg',
@@ -106,8 +104,6 @@ export function ChatInput({
     ];
     return fileType ? visionRequiredTypes.includes(fileType) : false;
   };
-
-  // 當上傳檔案時，檢查當前模型是否支持視覺
   useEffect(() => {
     if (uploadedFileUrl && uploadedFileType) {
       const needsVision = checkVisionRequirement(uploadedFileType);
@@ -124,7 +120,7 @@ export function ChatInput({
     } else {
       setModelVisionWarning(null);
     }
-  }, [uploadedFileUrl, uploadedFileType, selectedModel, allModels]);
+  }, [uploadedFileUrl, uploadedFileType, selectedModel, allModels, t]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +138,7 @@ export function ChatInput({
       modelName: selectedModel || undefined,
     });
 
-    // 重置表單
+    // ?蔭銵典
     setMessage('');
     setSelectedFile(null);
     setUploadedFileUrl(null);
@@ -164,7 +160,7 @@ export function ChatInput({
   return (
     <div className="flex h-full min-h-0 flex-col border-t border-paper-gray100 bg-paper lg:border-t-0">
       <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-1 flex-col">
-        {/* 功能選擇和工作量級別 - 可折疊區域 */}
+        {/* ??豢??極雿?蝝 - ?舀?????*/}
         <div className="shrink-0 border-b border-paper-gray100">
           <button
             type="button"
@@ -209,41 +205,26 @@ export function ChatInput({
           </div>
         </div>
 
-        {/* 檔案上傳區域（精簡列，靠上） */}
+        {/* 瑼?銝???蝎曄陛????嚗?*/}
         <div className="shrink-0 px-4 pt-2">
           {!selectedFile && !uploadedFileUrl && (
             <FileUploader
               variant="compact"
               onFileSelect={(file) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onFileSelect', message: 'onFileSelect callback called', data: { fileIsNull: file === null, fileIsUndefined: file === undefined, hasFileName: !!file?.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-                // #endregion
                 setSelectedFile(file);
                 if (file) {
                   setUploadedFileName(file.name);
                   setUploadedFileType(file.type);
                 } else {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onFileSelect', message: 'File is null, clearing state', data: {}, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-                  // #endregion
                   setUploadedFileName(null);
                   setUploadedFileType(null);
                 }
               }}
               onUploadSuccess={(url) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'onUploadSuccess callback called', data: { url, hasUrl: !!url }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-                // #endregion
                 try {
                   setUploadedFileUrl(url);
-                  setUploadError(null); // 清除錯誤訊息
-                  // #region agent log
-                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'setUploadedFileUrl called', data: { url }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-                  // #endregion
+                  setUploadError(null); // 皜?航炊閮
                 } catch (err: any) {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'ChatInput.tsx:onUploadSuccess', message: 'Error in onUploadSuccess', data: { errorMessage: err?.message, errorName: err?.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'run1', hypothesisId: 'A' }) }).catch(() => { });
-                  // #endregion
                   console.error('Error in onUploadSuccess:', err);
                 }
               }}
@@ -257,9 +238,9 @@ export function ChatInput({
             <div className="mb-2 space-y-2">
               <div className="flex items-center justify-between p-2 bg-terracotta/10 border border-terracotta/20 rounded-lg gap-2">
                 <span className="text-sm text-paper-gray900 truncate flex-1 min-w-0">
-                  📎 {uploadedFileName || selectedFile?.name}
+                  ?? {uploadedFileName || selectedFile?.name}
                   {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
-                  {uploadedFileUrl && ` ✓ ${t('chat.uploaded')}`}
+                  {uploadedFileUrl && ` ??${t('chat.uploaded')}`}
                 </span>
                 <button
                   type="button"
@@ -286,7 +267,7 @@ export function ChatInput({
           )}
         </div>
 
-        {/* 文字輸入區域：桌面左欄縱向填滿 */}
+        {/* ??頛詨???獢撌行?蝮勗?憛急遛 */}
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2">
           <div className="flex min-h-0 flex-1 flex-col gap-2 sm:flex-row lg:flex-col">
             <textarea
@@ -314,3 +295,4 @@ export function ChatInput({
     </div>
   );
 }
+

@@ -70,7 +70,7 @@ describe('POST /api/chat/upload', () => {
     process.env.R2_BUCKET_NAME = 'test-bucket';
     process.env.R2_BUCKET_DOMAIN = 'hca.qwerboy.com';
 
-    // Mock agent logging (suppress network calls)
+    // Mock fetch globally.
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
       json: async () => ({}),
@@ -218,7 +218,6 @@ describe('POST /api/chat/upload', () => {
       const testCases = [
         { type: 'image/png', name: 'image.png' },
         { type: 'application/pdf', name: 'document.pdf' },
-        { type: 'application/json', name: 'data.json' },
       ];
 
       for (const testCase of testCases) {
@@ -291,7 +290,7 @@ describe('POST /api/chat/upload', () => {
 
     it('應該能處理特殊字元的檔案名稱', async () => {
       const fileName = '測試 檔案 (1).txt';
-      const uploadKey = `test-customer-id/${Date.now()}-${fileName}`;
+      const uploadKey = `test-customer-id/${Date.now()}-_______1_.txt`;
 
       const file = new Blob(['test'], { type: 'text/plain' });
       Object.defineProperty(file, 'name', { value: fileName });
@@ -310,7 +309,7 @@ describe('POST /api/chat/upload', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.data.fileUrl).toContain('測試');
+      expect(data.data.fileUrl).toContain('_______1_.txt');
     });
   });
 
@@ -331,14 +330,7 @@ describe('POST /api/chat/upload', () => {
 
       await POST(request);
 
-      // Verify agent logging was called
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('127.0.0.1:7245'),
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('Before R2 upload'),
-        })
-      );
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 });

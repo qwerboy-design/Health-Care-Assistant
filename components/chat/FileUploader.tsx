@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef } from 'react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface FileUploaderProps {
   onFileSelect?: (file: File | null) => void;
-  onUploadSuccess?: (url: string) => void; // 新增：上傳成功的回傳
-  onUploadError?: (error: string) => void; // 新增：上傳失敗的回傳
+  onUploadSuccess?: (url: string) => void; // ?啣?嚗??單????
+  onUploadError?: (error: string) => void; // ?啣?嚗??喳仃???
   maxSize?: number;
   acceptedTypes?: string[];
-  /** compact：精簡列高，適合對話側欄與手機 */
+  /** compact嚗移蝪∪?擃??拙?撠店?湔???璈?*/
   variant?: 'default' | 'compact';
 }
 
@@ -17,7 +17,7 @@ export function FileUploader({
   onFileSelect,
   onUploadSuccess,
   onUploadError,
-  maxSize = 100 * 1024 * 1024, // 100MB (R2 上限)
+  maxSize = 100 * 1024 * 1024, // 100MB (R2 銝?)
   acceptedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
   variant = 'default',
 }: FileUploaderProps) {
@@ -45,22 +45,16 @@ export function FileUploader({
   const handleFile = async (file: File) => {
     if (!validateFile(file)) return;
 
-    // #region agent log
-    fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'File validated, calling onFileSelect',data:{fileName:file.name,fileSize:file.size,fileType:file.type,hasCallback:!!onFileSelect},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
-    // 1. 通知父組件檔案已選取
+    // 1. ??嗥?隞嗆?獢歇?詨?
     onFileSelect?.(file);
 
-    // 2. 開始執行 R2 代理上傳（通過 API 避免 CORS 問題）
+    // 2. ???瑁? R2 隞??銝嚗? API ?踹? CORS ??嚗?
     try {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // 2.1 取得上傳授權（upload key 和代理端點 URL）
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Before fetch upload-token',data:{fileName:file.name,fileSize:file.size,fileType:file.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
+      // 2.1 ??銝??嚗pload key ?誨?垢暺?URL嚗?
       const tokenRes = await fetch('/api/chat/upload-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,28 +65,16 @@ export function FileUploader({
         }),
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'After fetch upload-token',data:{status:tokenRes.status,ok:tokenRes.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
 
       const tokenData = await tokenRes.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Token data parsed',data:{success:tokenData.success,hasUploadUrl:!!tokenData.data?.uploadUrl,uploadUrlPreview:tokenData.data?.uploadUrl?.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       if (!tokenData.success) {
-        throw new Error(tokenData.error || '取得上傳授權失敗');
+        throw new Error(tokenData.error || '??銝??憭望?');
       }
 
       const { uploadUrl, uploadKey, fileUrl, method } = tokenData.data;
       
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Extracted upload credentials',data:{uploadUrl: uploadUrl?.substring(0, 100),uploadKey,fileUrl,method},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
 
-      // 2.2 使用 XMLHttpRequest 直接上傳到 R2（使用 Presigned URL，繞過 Vercel 4.5MB 限制）
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Before XHR direct R2 upload',data:{method: method || 'PUT',uploadKey,fileType:file.type,fileSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
+      // 2.2 雿輻 XMLHttpRequest ?湔銝??R2嚗蝙??Presigned URL嚗???Vercel 4.5MB ?嚗?
       const uploadedFileUrl = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
@@ -104,59 +86,41 @@ export function FileUploader({
         });
 
         xhr.addEventListener('load', () => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'XHR load event',data:{status:xhr.status,statusText:xhr.statusText,responseLength:xhr.responseText?.length,readyState:xhr.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
           
-          // Presigned URL PUT 成功時 R2 返回 200 OK（無 body）
+          // Presigned URL PUT ????R2 餈? 200 OK嚗 body嚗?
           if (xhr.status >= 200 && xhr.status < 300) {
-            // 直接使用預先計算的 fileUrl
+            // ?湔雿輻??閮???fileUrl
             resolve(fileUrl);
           } else {
-            // #region agent log
-            fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'XHR load failed',data:{status:xhr.status,statusText:xhr.statusText,responseText:xhr.responseText?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-            reject(new Error(`上傳失敗: ${xhr.statusText} (${xhr.status})`));
+            reject(new Error(`銝憭望?: ${xhr.statusText} (${xhr.status})`));
           }
         });
 
-        xhr.addEventListener('error', (e) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'XHR error event',data:{type:e.type,readyState:xhr.readyState,status:xhr.status,statusText:xhr.statusText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
-          reject(new Error('上傳過程中發生網路錯誤'));
+        xhr.addEventListener('error', () => {
+          reject(new Error('Upload failed because of a network error'));
         });
 
         xhr.addEventListener('abort', () => {
-          // #region agent log
-          fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'XHR abort event',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          reject(new Error('上傳已取消'));
+          reject(new Error('Upload was aborted'));
         });
 
-        // 使用 PUT 方法直接上傳到 R2 Presigned URL
+        // 雿輻 PUT ?寞??湔銝??R2 Presigned URL
         xhr.open(method || 'PUT', uploadUrl);
         xhr.setRequestHeader('Content-Type', file.type);
-        // #region agent log
-        fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'XHR PUT send called',data:{method: method || 'PUT',uploadKey,fileType:file.type,fileSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         xhr.send(file);
       });
 
-      // 3. 上傳成功，回傳 URL
+      // 3. 銝??嚗???URL
       onUploadSuccess?.(uploadedFileUrl);
       
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7245/ingest/6d2429d6-80c8-40d7-a840-5b2ce679569d',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FileUploader.tsx:handleFile',message:'Upload error caught',data:{errorMessage:err?.message,errorName:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const errorMessage = err?.message || t('chat.uploadFailedShort');
       setError(errorMessage);
       console.error('Upload error:', err);
-      // 通知父組件上傳失敗
+      // ??嗥?隞嗡??喳仃??
       onUploadError?.(errorMessage);
-      // 上傳失敗時不清除選取的檔案，讓用戶可以看到錯誤並有機會重試
-      // 檔案選擇狀態由用戶手動清除（通過移除按鈕）
+      // 銝憭望???皜?詨???獢?霈?嗅隞亦??圈隤支蒂????閰?
+      // 瑼??豢????冽??皜嚗?蝘駁??嚗?
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -319,3 +283,4 @@ export function FileUploader({
     </div>
   );
 }
+

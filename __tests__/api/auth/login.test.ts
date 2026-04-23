@@ -1,13 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-// Mock fetch globally
 global.fetch = vi.fn().mockResolvedValue({
   ok: true,
   json: async () => ({}),
 } as any);
 
-// Mock all dependencies
 vi.mock('@/lib/supabase/customers', () => ({
   findCustomerByEmail: vi.fn(),
   updateLastLogin: vi.fn(),
@@ -34,7 +32,6 @@ vi.mock('next/headers', () => ({
   cookies: vi.fn(),
 }));
 
-// Import after mocking
 import { POST } from '@/app/api/auth/login/route';
 import { findCustomerByEmail, updateLastLogin } from '@/lib/supabase/customers';
 import { getCustomerCredits } from '@/lib/supabase/credits';
@@ -60,7 +57,6 @@ describe('POST /api/auth/login - Credits Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup default mocks
     vi.mocked(getRateLimitByIP).mockReturnValue({ allowed: true } as any);
     vi.mocked(getClientIP).mockReturnValue('127.0.0.1');
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
@@ -70,115 +66,113 @@ describe('POST /api/auth/login - Credits Integration', () => {
     } as any);
   });
 
-  describe('Credits 返回', () => {
-    it('應該在登入成功後返回用戶的 Credits', async () => {
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(verifyPassword).mockResolvedValue(true);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockResolvedValue(100);
+  it('returns credits on successful login', async () => {
+    vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
+    vi.mocked(verifyPassword).mockResolvedValue(true);
+    vi.mocked(updateLastLogin).mockResolvedValue(undefined);
+    vi.mocked(getCustomerCredits).mockResolvedValue(100);
 
-      const request = new NextRequest('http://localhost/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          password: 'password123',
-        }),
-      });
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(100);
-      expect(data.data.token).toBe('session-token'); // 驗證 token 有被返回
-      expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
+    const request = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'password123',
+      }),
     });
 
-    it('應該在 Credits 為 0 時也正確返回', async () => {
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(verifyPassword).mockResolvedValue(true);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockResolvedValue(0);
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          password: 'password123',
-        }),
-      });
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.credits).toBe(100);
+    expect(data.data.token).toBeUndefined();
+    expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('falls back to zero credits when credit lookup fails', async () => {
+    vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
+    vi.mocked(verifyPassword).mockResolvedValue(true);
+    vi.mocked(updateLastLogin).mockResolvedValue(undefined);
+    vi.mocked(getCustomerCredits).mockRejectedValue(new Error('Database error'));
 
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(0);
+    const request = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'password123',
+      }),
     });
 
-    it('應該在查詢 Credits 失敗時仍然允許登入', async () => {
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(verifyPassword).mockResolvedValue(true);
-      vi.mocked(updateLastLogin).mockResolvedValue(undefined);
-      vi.mocked(getCustomerCredits).mockRejectedValue(new Error('Database error'));
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          password: 'password123',
-        }),
-      });
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.credits).toBe(0);
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('does not expose credits on invalid password', async () => {
+    vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
+    vi.mocked(verifyPassword).mockResolvedValue(false);
 
-      // 登入應該成功，但 Credits 為 0（預設值）
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data.credits).toBe(0);
+    const request = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'wrong-password',
+      }),
     });
 
-    it('應該在密碼錯誤時不返回 Credits', async () => {
-      vi.mocked(findCustomerByEmail).mockResolvedValue(mockCustomer as any);
-      vi.mocked(verifyPassword).mockResolvedValue(false);
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'test@example.com',
-          password: 'wrong-password',
-        }),
-      });
+    expect(response.status).toBe(401);
+    expect(data.success).toBe(false);
+    expect(data.data?.credits).toBeUndefined();
+    expect(getCustomerCredits).not.toHaveBeenCalled();
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('returns the same generic failure for unknown accounts', async () => {
+    vi.mocked(findCustomerByEmail).mockResolvedValue(null);
 
-      expect(response.status).toBe(401);
-      expect(data.success).toBe(false);
-      expect(data.data?.credits).toBeUndefined();
-      expect(getCustomerCredits).not.toHaveBeenCalled();
+    const request = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'nonexistent@example.com',
+        password: 'password123',
+      }),
     });
 
-    it('應該在用戶不存在時不返回 Credits', async () => {
-      vi.mocked(findCustomerByEmail).mockResolvedValue(null);
+    const response = await POST(request);
+    const data = await response.json();
 
-      const request = new NextRequest('http://localhost/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: 'nonexistent@example.com',
-          password: 'password123',
-        }),
-      });
+    expect(response.status).toBe(401);
+    expect(data.success).toBe(false);
+    expect(data.data?.credits).toBeUndefined();
+    expect(getCustomerCredits).not.toHaveBeenCalled();
+  });
 
-      const response = await POST(request);
-      const data = await response.json();
+  it('returns generic invalid credentials for non-password accounts', async () => {
+    vi.mocked(findCustomerByEmail).mockResolvedValue({
+      ...mockCustomer,
+      auth_provider: 'otp',
+    } as any);
 
-      expect(response.status).toBe(401);
-      expect(data.success).toBe(false);
-      expect(data.data?.credits).toBeUndefined();
-      expect(getCustomerCredits).not.toHaveBeenCalled();
+    const request = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'test@example.com',
+        password: 'password123',
+      }),
     });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.success).toBe(false);
+    expect(verifyPassword).not.toHaveBeenCalled();
+    expect(getCustomerCredits).not.toHaveBeenCalled();
   });
 });
