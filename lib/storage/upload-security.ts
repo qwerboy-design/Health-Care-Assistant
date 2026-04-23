@@ -1,3 +1,5 @@
+import { redactFileName } from '@/lib/privacy/redaction';
+
 export const MAX_UPLOAD_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export const ALLOWED_UPLOAD_CONTENT_TYPES = [
@@ -25,7 +27,8 @@ export interface ValidUploadMetadata {
 
 export function sanitizeFileName(fileName: string): string {
   const baseName = fileName.split(/[\\/]/).pop() || 'file';
-  const sanitized = baseName
+  const redacted = redactFileName(baseName);
+  const sanitized = redacted
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/^\.+/, '');
 

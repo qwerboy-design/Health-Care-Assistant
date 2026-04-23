@@ -1,21 +1,27 @@
-﻿'use client';
+'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { FunctionSelector } from './FunctionSelector';
 import { WorkloadSelector } from './WorkloadSelector';
 import { FileUploader } from './FileUploader';
 import { ModelSelector } from './ModelSelector';
+import { redactFileName, redactFreeText } from '@/lib/privacy/redaction';
+
+type WorkloadLevel = 'instant' | 'basic' | 'standard' | 'professional';
 
 interface ChatInputProps {
-  onSend: (message: string, options: {
-    workloadLevel: 'instant' | 'basic' | 'standard' | 'professional';
-    selectedFunction?: string;
-    fileUrl?: string;
-    fileName?: string;
-    fileType?: string;
-    modelName?: string;
-  }) => void;
+  onSend: (
+    message: string,
+    options: {
+      workloadLevel: WorkloadLevel;
+      selectedFunction?: string;
+      fileUrl?: string;
+      fileName?: string;
+      fileType?: string;
+      modelName?: string;
+    }
+  ) => void;
   disabled?: boolean;
   userCredits?: number;
   isEmptyState?: boolean;
@@ -26,11 +32,11 @@ interface ChatInputProps {
   showWorkloadSelector?: boolean;
 }
 
-export function ChatInput({ 
-  onSend, 
-  disabled = false, 
-  userCredits = 0, 
-  isEmptyState = false, 
+export function ChatInput({
+  onSend,
+  disabled = false,
+  userCredits = 0,
+  isEmptyState = false,
   externalFile = null,
   externalMessage = null,
   onExternalMessageConsumed,
@@ -39,9 +45,9 @@ export function ChatInput({
 }: ChatInputProps) {
   const { t } = useLocale();
   const [message, setMessage] = useState('');
-  const [selectedFunction, setSelectedFunction] = useState<string>('');
-  const [workloadLevel, setWorkloadLevel] = useState<'instant' | 'basic' | 'standard' | 'professional'>('standard');
-  const [selectedModel, setSelectedModel] = useState<string>('claude-sonnet-4-5-20250929');
+  const [selectedFunction, setSelectedFunction] = useState('');
+  const [workloadLevel, setWorkloadLevel] = useState<WorkloadLevel>('standard');
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-5-20250929');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
@@ -49,8 +55,25 @@ export function ChatInput({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showOptions, setShowOptions] = useState(false);
   const [modelVisionWarning, setModelVisionWarning] = useState<string | null>(null);
+  const [privacyAppliedNotice, setPrivacyAppliedNotice] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [allModels, setAllModels] = useState<Array<{ model_name: string; display_name: string; supports_vision: boolean }>>([]);
+  const [allModels, setAllModels] = useState<
+    Array<{ model_name: string; display_name: string; supports_vision: boolean }>
+  >([]);
+
+  const pendingRedactedMessage = redactFreeText(message).content;
+  const hasRedactedMessage = Boolean(message) && pendingRedactedMessage !== message;
+  const hasRedactedSelectedFile =
+    selectedFile !== null && redactFileName(selectedFile.name) !== selectedFile.name;
+  const hasPendingRedaction = hasRedactedMessage || hasRedactedSelectedFile;
+  const redactionPendingText =
+    t('chat.redactionPending') === 'chat.redactionPending'
+      ? '已偵測到姓名、身分證字號等敏感資料，送出時會自動移除。'
+      : t('chat.redactionPending');
+  const redactionAppliedText =
+    t('chat.redactionApplied') === 'chat.redactionApplied'
+      ? '已移除敏感資料後送出。'
+      : t('chat.redactionApplied');
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -59,7 +82,6 @@ export function ChatInput({
     }
   }, [message]);
 
-  // ?脣???芋??銵剁??冽瑼Ｘ閬死?舀?
   useEffect(() => {
     const fetchModels = async () => {
       try {
@@ -72,17 +94,18 @@ export function ChatInput({
         console.error('Failed to fetch models:', err);
       }
     };
-    fetchModels();
+
+    void fetchModels();
   }, []);
 
-  // ??憭?喳??獢?憒??
   useEffect(() => {
     if (externalFile) {
       setSelectedFile(externalFile);
-      setUploadedFileName(externalFile.name);
+      setUploadedFileName(redactFileName(externalFile.name));
       setUploadedFileType(externalFile.type);
     }
   }, [externalFile]);
+
   useEffect(() => {
     if (externalMessage) {
       setMessage(externalMessage);
@@ -93,7 +116,24 @@ export function ChatInput({
     }
   }, [externalMessage, onExternalMessageConsumed]);
 
-  // 瑼Ｘ銝??獢?阡?閬??閬箇?璅∪?
+  useEffect(() => {
+    if (!privacyAppliedNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPrivacyAppliedNotice(null);
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [privacyAppliedNotice]);
+
+  useEffect(() => {
+    if (privacyAppliedNotice && (message.trim() || selectedFile)) {
+      setPrivacyAppliedNotice(null);
+    }
+  }, [message, privacyAppliedNotice, selectedFile]);
+
   const checkVisionRequirement = (fileType: string | null): boolean => {
     const visionRequiredTypes = [
       'image/jpeg',
@@ -102,13 +142,15 @@ export function ChatInput({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
+
     return fileType ? visionRequiredTypes.includes(fileType) : false;
   };
+
   useEffect(() => {
     if (uploadedFileUrl && uploadedFileType) {
       const needsVision = checkVisionRequirement(uploadedFileType);
       if (needsVision) {
-        const currentModel = allModels.find(m => m.model_name === selectedModel);
+        const currentModel = allModels.find((model) => model.model_name === selectedModel);
         if (currentModel && !currentModel.supports_vision) {
           setModelVisionWarning(t('chat.modelVisionWarning'));
         } else {
@@ -120,7 +162,16 @@ export function ChatInput({
     } else {
       setModelVisionWarning(null);
     }
-  }, [uploadedFileUrl, uploadedFileType, selectedModel, allModels, t]);
+  }, [uploadedFileType, uploadedFileUrl, selectedModel, allModels, t]);
+
+  const clearFileState = () => {
+    setSelectedFile(null);
+    setUploadedFileUrl(null);
+    setUploadedFileName(null);
+    setUploadedFileType(null);
+    setUploadError(null);
+    setModelVisionWarning(null);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,22 +180,27 @@ export function ChatInput({
       return;
     }
 
-    onSend(message, {
+    const safeMessage = pendingRedactedMessage;
+    const safeFileName =
+      uploadedFileName || (selectedFile ? redactFileName(selectedFile.name) : undefined);
+    const redactionApplied =
+      safeMessage !== message || (selectedFile ? safeFileName !== selectedFile.name : false);
+
+    onSend(safeMessage, {
       workloadLevel,
       selectedFunction: selectedFunction || undefined,
       fileUrl: uploadedFileUrl || undefined,
-      fileName: uploadedFileName || undefined,
+      fileName: safeFileName || undefined,
       fileType: uploadedFileType || undefined,
       modelName: selectedModel || undefined,
     });
 
-    // ?蔭銵典
+    if (redactionApplied) {
+      setPrivacyAppliedNotice(redactionAppliedText);
+    }
+
     setMessage('');
-    setSelectedFile(null);
-    setUploadedFileUrl(null);
-    setUploadedFileName(null);
-    setUploadedFileType(null);
-    setUploadError(null);
+    clearFileState();
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -160,21 +216,18 @@ export function ChatInput({
   return (
     <div className="flex h-full min-h-0 flex-col border-t border-paper-gray100 bg-paper lg:border-t-0">
       <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-1 flex-col">
-        {/* ??豢??極雿?蝝 - ?舀?????*/}
         <div className="shrink-0 border-b border-paper-gray100">
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="w-full px-4 py-2 text-sm text-paper-gray700 hover:text-paper-gray900 hover:bg-paper-gray50 flex items-center justify-between transition-colors"
+            className="flex w-full items-center justify-between px-4 py-2 text-sm text-paper-gray700 transition-colors hover:bg-paper-gray50 hover:text-paper-gray900"
           >
             <span className="flex items-center gap-2">
               {showOptions ? t('chat.hideOptions') : t('chat.showOptions')}
-              <span className="text-xs text-paper-gray700">
-                {t('chat.optionsHint')}
-              </span>
+              <span className="text-xs text-paper-gray700">{t('chat.optionsHint')}</span>
             </span>
             <svg
-              className={`w-4 h-4 transition-transform ${showOptions ? 'rotate-180' : ''}`}
+              className={`h-4 w-4 transition-transform ${showOptions ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -188,7 +241,7 @@ export function ChatInput({
             aria-hidden={!showOptions}
           >
             <div className="max-h-64 overflow-y-auto border-t border-paper-gray100">
-              <div className="p-4 space-y-3 bg-paper-gray50">
+              <div className="space-y-3 bg-paper-gray50 p-4">
                 <ModelSelector
                   value={selectedModel}
                   onChange={setSelectedModel}
@@ -205,7 +258,6 @@ export function ChatInput({
           </div>
         </div>
 
-        {/* 瑼?銝???蝎曄陛????嚗?*/}
         <div className="shrink-0 px-4 pt-2">
           {!selectedFile && !uploadedFileUrl && (
             <FileUploader
@@ -213,7 +265,7 @@ export function ChatInput({
               onFileSelect={(file) => {
                 setSelectedFile(file);
                 if (file) {
-                  setUploadedFileName(file.name);
+                  setUploadedFileName(redactFileName(file.name));
                   setUploadedFileType(file.type);
                 } else {
                   setUploadedFileName(null);
@@ -223,7 +275,7 @@ export function ChatInput({
               onUploadSuccess={(url) => {
                 try {
                   setUploadedFileUrl(url);
-                  setUploadError(null); // 皜?航炊閮
+                  setUploadError(null);
                 } catch (err: any) {
                   console.error('Error in onUploadSuccess:', err);
                 }
@@ -236,40 +288,52 @@ export function ChatInput({
 
           {(selectedFile || uploadedFileUrl) && (
             <div className="mb-2 space-y-2">
-              <div className="flex items-center justify-between p-2 bg-terracotta/10 border border-terracotta/20 rounded-lg gap-2">
-                <span className="text-sm text-paper-gray900 truncate flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-terracotta/20 bg-terracotta/10 p-2">
+                <span className="min-w-0 flex-1 truncate text-sm text-paper-gray900">
                   ?? {uploadedFileName || selectedFile?.name}
                   {selectedFile && ` (${(selectedFile.size / 1024).toFixed(1)} KB)`}
                   {uploadedFileUrl && ` ??${t('chat.uploaded')}`}
                 </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    setUploadedFileUrl(null);
-                    setUploadedFileName(null);
-                    setUploadedFileType(null);
-                    setUploadError(null);
-                    setModelVisionWarning(null);
-                  }}
-                  className="text-terracotta hover:text-terracotta-deep text-sm flex-shrink-0"
+                  onClick={clearFileState}
+                  className="flex-shrink-0 text-sm text-terracotta hover:text-terracotta-deep"
                 >
                   {t('chat.remove')}
                 </button>
               </div>
-              {uploadError && (
-                <p className="text-sm text-error px-2">{uploadError}</p>
-              )}
+              {uploadError && <p className="px-2 text-sm text-error">{uploadError}</p>}
               {modelVisionWarning && (
-                <p className="text-sm text-warning bg-warning/10 px-3 py-2 rounded-lg border border-warning/20">{modelVisionWarning}</p>
+                <p className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
+                  {modelVisionWarning}
+                </p>
               )}
             </div>
           )}
         </div>
 
-        {/* ??頛詨???獢撌行?蝮勗?憛急遛 */}
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-2">
           <div className="flex min-h-0 flex-1 flex-col gap-2 sm:flex-row lg:flex-col">
+            {(privacyAppliedNotice || hasPendingRedaction) && (
+              <div className="space-y-2">
+                {privacyAppliedNotice && (
+                  <p
+                    role="status"
+                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+                  >
+                    {privacyAppliedNotice}
+                  </p>
+                )}
+                {hasPendingRedaction && (
+                  <p
+                    role="status"
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700"
+                  >
+                    {redactionPendingText}
+                  </p>
+                )}
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={message}
@@ -278,7 +342,7 @@ export function ChatInput({
               placeholder={t('chat.inputPlaceholder')}
               disabled={disabled}
               rows={isEmptyState ? 3 : 1}
-              className={`input-field min-h-0 flex-1 resize-none overflow-y-auto ${
+              className={`input-field min-h-0 flex-1 resize-none overflow-y-auto transition-all duration-300 ${
                 isEmptyState ? 'max-h-[300px] lg:max-h-none' : 'max-h-[150px] lg:max-h-none'
               } lg:min-h-[7rem]`}
             />
@@ -295,4 +359,3 @@ export function ChatInput({
     </div>
   );
 }
-

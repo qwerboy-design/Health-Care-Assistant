@@ -8,6 +8,7 @@ import {
   getFHIRLLMFooterClosingBlock,
 } from '@/lib/fhir/formatter';
 import type { FHIRResource, FHIRSummary } from '@/lib/fhir/types';
+import { redactFileName, redactFhirResource } from '@/lib/privacy/redaction';
 
 export type FhirParsedItem = {
   fileName: string;
@@ -36,13 +37,16 @@ export function mergeFhirImportsForLLM(
       : (name: string) => `## File: ${name}`;
 
   const llmParts = items.map((item) => {
-    const formatted = formatFHIRForLLM(item.resource, locale);
+    const safeFileName = redactFileName(item.fileName);
+    const formatted = formatFHIRForLLM(redactFhirResource(item.resource), locale);
     const body = stripFHIRLLMFooterBlockFromFormattedText(formatted, locale);
-    return `${fileHeading(item.fileName)}\n\n${body}`;
+    return `${fileHeading(safeFileName)}\n\n${body}`;
   });
   const llmText = llmParts.join(LLM_BLOCK_SEPARATOR) + getFHIRLLMFooterClosingBlock(locale);
 
-  const rawParts = items.map((item) => `// file: ${item.fileName}\n${item.summary.rawJson}`);
+  const rawParts = items.map(
+    (item) => `// file: ${redactFileName(item.fileName)}\n${item.summary.rawJson}`
+  );
   const rawJsonMerged = rawParts.join('\n\n');
 
   return { llmText, rawJsonMerged };

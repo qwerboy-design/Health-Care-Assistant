@@ -375,4 +375,31 @@ describe('ChatInput', () => {
       }));
     });
   });
+  describe('privacy redaction notice', () => {
+    it('shows a pending privacy notice and sends redacted content', async () => {
+      const user = userEvent.setup();
+      render(<ChatInput onSend={mockOnSend} userCredits={100} />);
+
+      const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+      await user.type(textarea, '姓名: 王大明{shift>}{enter}{/shift}身分證字號: A123456789');
+
+      expect(
+        screen.getByText('已偵測到姓名、身分證字號等敏感資料，送出時會自動移除。')
+      ).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: '發送' }));
+
+      expect(mockOnSend).toHaveBeenCalledWith(
+        expect.stringContaining('[REDACTED_NAME]'),
+        expect.objectContaining({
+          workloadLevel: 'standard',
+        })
+      );
+      expect(mockOnSend).toHaveBeenCalledWith(
+        expect.stringContaining('[REDACTED_TW_ID]'),
+        expect.anything()
+      );
+      expect(screen.getByText('已移除敏感資料後送出。')).toBeInTheDocument();
+    });
+  });
 });

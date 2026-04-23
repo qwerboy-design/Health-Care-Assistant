@@ -10,6 +10,7 @@ import {
 describe('upload security helpers', () => {
   it('sanitizes file names before using them in object keys', () => {
     expect(sanitizeFileName('../medical report (final).pdf')).toBe('medical_report__final_.pdf');
+    expect(sanitizeFileName('王大明-A123456789-report.pdf')).toContain('redacted-tw-id');
     expect(sanitizeFileName('')).toBe('file');
   });
 

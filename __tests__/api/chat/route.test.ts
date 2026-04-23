@@ -104,7 +104,7 @@ describe('POST /api/chat - Credits Integration', () => {
 
       expect(response.status).toBe(400);
       expect(data.success).toBe(false);
-      expect(data.error).toContain('Credits 不足');
+      expect(data.error).toContain('Insufficient credits');
       expect(getModelPricing).toHaveBeenCalledWith(modelName);
       expect(getCustomerCredits).toHaveBeenCalledWith(mockSession.customerId);
     });
@@ -193,7 +193,7 @@ describe('POST /api/chat - Credits Integration', () => {
 
       expect(response.status).toBe(400);
       expect(data.success).toBe(false);
-      expect(data.error).toContain('模型不存在');
+      expect(data.error).toContain('Model is not available');
     });
 
     it('應該在未提供 modelName 時使用預設模型', async () => {
@@ -279,7 +279,7 @@ describe('POST /api/chat - Credits Integration', () => {
       vi.mocked(createConversation).mockResolvedValue(mockConversation as any);
       vi.mocked(deductCredits).mockResolvedValue({
         success: false,
-        error: 'Credits 不足',
+        error: 'Insufficient credits',
       });
 
       const request = new NextRequest('http://localhost/api/chat', {
@@ -296,7 +296,7 @@ describe('POST /api/chat - Credits Integration', () => {
 
       expect(response.status).toBe(400);
       expect(data.success).toBe(false);
-      expect(data.error).toContain('Credits 不足');
+      expect(data.error).toContain('Insufficient credits');
     });
 
     it('應該在回應中返回更新後的 Credits', async () => {

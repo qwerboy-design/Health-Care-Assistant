@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 import { Errors } from '@/lib/errors';
+import { redactUploadMetadata } from '@/lib/privacy/redaction';
+import { sanitizeFileName, sanitizePathSegment } from '@/lib/storage/upload-security';
 
 // 甇方楝?曹蝙??cookies() ?脰?頨思遢撽?嚗????葡??export const dynamic = 'force-dynamic';
 
@@ -70,8 +72,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           }
         }
         const timestamp = Date.now();
-        const sanitizedPathname = pathname.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const userPathname = `${session.customerId}/${timestamp}-${sanitizedPathname}`;
+        const redactedMetadata = redactUploadMetadata({ pathname });
+        const safePathname = sanitizeFileName(redactedMetadata.pathname || pathname);
+        const userPathname = `${sanitizePathSegment(session.customerId)}/${timestamp}-${safePathname}`;
 
         const tokenConfig = {
           allowedContentTypes: fileType && ALLOWED_TYPES.includes(fileType) 
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({
             customerId: session.customerId,
-            originalPathname: pathname,
+            pathname: safePathname,
             fileType,
           }),
           pathname: userPathname,
@@ -90,14 +93,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         // 銝摰?敺??矽嚗?賂??湔鞈?摨怒?蝑?
         console.log('瑼?銝摰?:', blob.url);
-        if (tokenPayload) {
-          try {
-            const payload = JSON.parse(tokenPayload);
-            console.log('銝???', payload);
-          } catch {
-            // 敹賜閫???航炊
-          }
-        }
       },
     });
 

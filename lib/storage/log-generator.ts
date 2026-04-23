@@ -1,30 +1,29 @@
-import { Message, Conversation } from '@/types';
+import { Conversation, Message } from '@/types';
+import { redactFreeText } from '@/lib/privacy/redaction';
 
 /**
- * Generate a markdown log from conversation messages
+ * Generate a markdown log from conversation messages.
  */
-export function generateMarkdownLog(
-  conversation: Conversation,
-  messages: Message[]
-): string {
+export function generateMarkdownLog(conversation: Conversation, messages: Message[]): string {
   const date = new Date(conversation.created_at);
   const formattedDate = date.toLocaleString('zh-TW');
+  const redactedTitle = redactFreeText(conversation.title).content;
 
-  let markdown = `# 對話記錄\n\n`;
-  markdown += `**對話標題:** ${conversation.title}\n`;
+  let markdown = '# 對話紀錄\n\n';
+  markdown += `**對話標題:** ${redactedTitle}\n`;
   markdown += `**建立時間:** ${formattedDate}\n`;
-  markdown += `**工作量級別:** ${conversation.workload_level}\n`;
+  markdown += `**工作負載:** ${conversation.workload_level}\n`;
 
   if (conversation.selected_function) {
-    markdown += `**選擇功能:** ${conversation.selected_function}\n`;
+    markdown += `**分析功能:** ${conversation.selected_function}\n`;
   }
 
-  markdown += `\n---\n\n`;
+  markdown += '\n---\n\n';
 
-  // Add messages
-  messages.forEach((message, index) => {
+  for (const message of messages) {
     const messageDate = new Date(message.created_at);
     const messageTime = messageDate.toLocaleTimeString('zh-TW');
+    const redactedContent = redactFreeText(message.content).content;
 
     if (message.role === 'user') {
       markdown += `## 使用者 (${messageTime})\n\n`;
@@ -32,15 +31,15 @@ export function generateMarkdownLog(
       markdown += `## 助手 (${messageTime})\n\n`;
     }
 
-    markdown += `${message.content}\n\n`;
-  });
+    markdown += `${redactedContent}\n\n`;
+  }
 
   return markdown;
 }
 
 /**
- * Generate log filename with date and serial number
- * Format: YYYYMMDD_XXX.md (where XXX is serial number)
+ * Generate log filename with date and serial number.
+ * Format: YYYYMMDD_XXX.md
  */
 export function generateLogFilename(serialNumber: number = 1): string {
   const now = new Date();
@@ -53,9 +52,8 @@ export function generateLogFilename(serialNumber: number = 1): string {
 }
 
 /**
- * Generate R2 storage path for logs
+ * Generate R2 storage path for logs.
  * Format: logs/{customerId}/{YYYY-MM-DD}/{conversationId}.md
- * 按日期分層，便於後續過濾及追蹤
  */
 export function generateLogStoragePath(customerId: string, conversationId: string): string {
   const now = new Date();
@@ -63,6 +61,6 @@ export function generateLogStoragePath(customerId: string, conversationId: strin
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const dateFolder = `${year}-${month}-${day}`;
-  
+
   return `logs/${customerId}/${dateFolder}/${conversationId}.md`;
 }

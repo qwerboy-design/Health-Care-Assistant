@@ -1,4 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { redactFileName } from '@/lib/privacy/redaction';
+import { sanitizeFileName } from '@/lib/storage/upload-security';
 
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (Vercel limit is 4.5MB)
 const ALLOWED_FILE_TYPES = [
@@ -87,7 +89,8 @@ export async function uploadFile(file: File, customerId: string): Promise<Upload
   }
 
   const timestamp = Date.now();
-  const fileName = `${customerId}/${timestamp}-${file.name}`;
+  const safeFileName = sanitizeFileName(file.name);
+  const fileName = `${customerId}/${timestamp}-${safeFileName}`;
   const s3Client = getR2Client();
   const bucket = getR2Bucket();
 
@@ -110,7 +113,7 @@ export async function uploadFile(file: File, customerId: string): Promise<Upload
 
     return {
       url: getR2PublicUrl(fileName),
-      fileName: file.name || fileName.split('/').pop() || 'file',
+      fileName: redactFileName(file.name || fileName.split('/').pop() || 'file'),
       fileType: file.type || 'application/octet-stream',
       fileSize: file.size,
     };
@@ -136,4 +139,3 @@ export async function deleteFile(filePath: string): Promise<void> {
     throw new Error(`Delete failed: ${error.message || 'Unknown error'}`);
   }
 }
-

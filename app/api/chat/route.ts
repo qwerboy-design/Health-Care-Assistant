@@ -7,6 +7,11 @@ import { getCustomerCredits, deductCredits, addCredits } from '@/lib/supabase/cr
 import { getModelPricing } from '@/lib/supabase/model-pricing';
 import { createMCPClient } from '@/lib/mcp/client';
 import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import {
+  redactConversationMessages,
+  redactFileName,
+  redactFreeText,
+} from '@/lib/privacy/redaction';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +55,9 @@ async function handleChatMessage(request: NextRequest) {
       return errorResponse('Message or file is required', 400);
     }
 
+    const redactedMessage = typeof message === 'string' ? redactFreeText(message).content : '';
+    const redactedFileName = typeof fileName === 'string' ? redactFileName(fileName) : undefined;
+
     const selectedModel = modelName || 'claude-sonnet-4-5-20250929';
     const modelPricing = await getModelPricing(selectedModel);
     if (!modelPricing) {
@@ -67,7 +75,7 @@ async function handleChatMessage(request: NextRequest) {
     let currentConversationId = conversationId;
 
     if (!currentConversationId) {
-      const title = message?.substring(0, 50) || 'File conversation';
+      const title = redactedMessage.substring(0, 50) || 'File conversation';
       const conversation = await createConversation(
         session.customerId,
         title,
@@ -97,14 +105,14 @@ async function handleChatMessage(request: NextRequest) {
     await createMessage(
       currentConversationId,
       'user',
-      message || `Uploaded file: ${fileName}`,
+      redactedMessage || `Uploaded file: ${redactedFileName || 'file'}`,
       fileUrl,
-      fileName,
+      redactedFileName,
       fileType
     );
 
     const historyMessages = await getMessagesByConversationId(currentConversationId, 20);
-    const conversationHistory = historyMessages.map((msg) => ({
+    const conversationHistory = redactConversationMessages(historyMessages).map((msg) => ({
       role: msg.role,
       content: msg.content,
     }));
@@ -113,7 +121,7 @@ async function handleChatMessage(request: NextRequest) {
     try {
       const mcpClient = createMCPClient();
       mcpResponse = await mcpClient.sendMessage({
-        message: message || `Please analyze this file: ${fileName}`,
+        message: redactedMessage || `Please analyze the attached file: ${redactedFileName || 'file'}`,
         workloadLevel: workloadLevel as 'instant' | 'basic' | 'standard' | 'professional',
         selectedFunction: selectedFunction as 'lab' | 'radiology' | 'medical_record' | 'medication' | undefined,
         fileUrl,

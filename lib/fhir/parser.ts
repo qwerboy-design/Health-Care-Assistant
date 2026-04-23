@@ -34,6 +34,7 @@ import {
   VALID_BUNDLE_TYPES,
   VALID_DIAGNOSTIC_REPORT_STATUS,
 } from './types';
+import { redactFhirResource } from '@/lib/privacy/redaction';
 
 // ============================================
 // 解析函數
@@ -932,7 +933,8 @@ export function processFHIRContent(
     };
   }
 
-  const summary = formatFHIRSummary(parseResult.data, locale);
+  const redactedResource = redactFhirResource(parseResult.data);
+  const summary = formatFHIRSummary(redactedResource, locale);
 
   return {
     success: true,
