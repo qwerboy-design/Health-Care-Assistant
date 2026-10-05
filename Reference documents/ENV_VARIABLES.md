@@ -138,6 +138,25 @@ ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 # claude-3-haiku-20240307 (最快速、預設)
 ```
 
+### OpenAI API（可選，server-side）
+
+```env
+OPENAI_API_KEY=sk-your_openai_api_key_here
+OPENAI_MODEL=gpt-4o-mini
+```
+
+- `OPENAI_API_KEY` 與 `OPENAI_MODEL` 只由 server-side provider client 讀取，不可使用 `NEXT_PUBLIC_` 前綴，也不會寫入 Supabase 或回傳瀏覽器。
+- 後台只顯示 API key 是否已設定的 boolean；OpenAI provider 需先套用 `supabase/migrations/007_add_llm_runtime_settings.sql` 與 `011_add_openai_provider.sql`。
+- 正式環境的 OpenAI model pricing 請由後台模型管理新增；不要把價格寫入 migration 或 seed。
+
+### Resend 寄件網域
+
+```env
+RESEND_FROM_EMAIL=verified-sender@example.com
+```
+
+`RESEND_FROM_EMAIL` 的網域必須先在 Resend 完成驗證；未驗證或 API 回應失敗時，系統會回傳可重試訊息並只在 server log 記錄安全的 status/name/code。
+
 ---
 
 ### MCP Server (可選，進階功能)

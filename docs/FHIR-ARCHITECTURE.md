@@ -89,7 +89,7 @@ flowchart TB
 
     subgraph API["Chat API 層"]
         ChatRoute[POST /api/chat]
-        MCP[lib/mcp/client.ts<br/>Anthropic 請求組裝]
+        MCP[lib/mcp/client.ts<br/>LLM provider 請求組裝]
     end
 
     subgraph External["外部資料來源"]
@@ -98,8 +98,8 @@ flowchart TB
         PACS[影像系統<br/>PACS/RIS]
     end
 
-    subgraph AI["Anthropic Claude"]
-        LLM[臨床分析]
+    subgraph AI["LLM Provider"]
+        LLM[Anthropic Claude、OpenAI 或本地 Ollama]
     end
 
     HIS -->|Export FHIR| FileUpload[FHIR 檔案<br/>.json/.xml]
@@ -117,6 +117,8 @@ flowchart TB
     MCP --> LLM
     LLM --> UI
 ```
+
+> LLM provider 可由後台 `/admin/llm-settings` 全站切換。Anthropic 與 OpenAI key 可同時存在，但同一時間只使用 active provider；provider 失敗不會自動 fallback。Ollama 模式僅代表 LLM 推論走本機 Ollama；Supabase 對話資料、R2 附件與 log 儲存仍依既有設定運作，除非另行啟用全資料本地化設計。
 
 ### 2.2 組件依賴關係
 
@@ -176,7 +178,12 @@ Health Care Assistant/
 │   │   ├── formatter.ts          # FHIR → LLM Markdown（formatFHIRForLLM、結尾區塊輔助函式）
 │   │   └── mergeFhirImport.ts    # 多檔合併為單一訊息（mergeFhirImportsForLLM）
 │   ├── mcp/
-│   │   └── client.ts             # Anthropic API：偵測 FHIR 標記並追加臨床分析 system 提示
+│   │   └── client.ts             # LLM provider router：Anthropic、OpenAI 或 Ollama，並偵測 FHIR 標記
+│   ├── llm/
+│   │   ├── settings.ts           # LLM runtime singleton 設定
+│   │   ├── openai-client.ts      # OpenAI Chat Completions API 呼叫
+│   │   ├── ollama-client.ts      # Ollama /api/chat 呼叫
+│   │   └── attachments.ts        # Ollama 本地附件處理
 │   └── i18n/
 │       └── translations.ts       # 國際化翻譯
 ├── __tests__/
@@ -499,7 +506,7 @@ flowchart TD
 | 產出 | 模組 / 函數 | 用途 |
 |------|-------------|------|
 | UI 摘要 | `formatFHIRSummary`（內含於 `processFHIRContent` 回傳的 `summary`） | Modal 預覽、人類快速瀏覽 |
-| LLM 臨床敘事 | `formatFHIRForLLM(parsedResource, locale)` | 寫入 Chat 輸入框，送交 Anthropic API |
+| LLM 臨床敘事 | `formatFHIRForLLM(parsedResource, locale)` | 寫入 Chat 輸入框，依 active provider 送交 Anthropic 或 OpenAI API |
 
 `processFHIRContent` 成功時會一併回傳 **`resource`**（完整解析後的 `FHIRResource`），供 formatter 使用，避免僅依賴摘要欄位而遺失臨床細節（編碼系統、參考範圍、component、劑量等）。
 
@@ -552,7 +559,7 @@ flowchart TD
 
 ### 4.4 FHIR → LLM 臨床敘事規格
 
-本節描述 **`lib/fhir/formatter.ts`** 產出之文字規格，目標為提升 Claude 對結構化臨床資料的解析與推論品質；設計參考 [HL7 FHIR 文件](https://hl7.org/fhir/documentation.html) 與以 Markdown 組織科學／臨床脈絡之實務。
+本節描述 **`lib/fhir/formatter.ts`** 產出之文字規格，目標為提升 active provider 對結構化臨床資料的解析與推論品質；設計參考 [HL7 FHIR 文件](https://hl7.org/fhir/documentation.html) 與以 Markdown 組織科學／臨床脈絡之實務。
 
 #### 4.4.1 標頭與偵測標記
 
@@ -1177,6 +1184,24 @@ flowchart LR
 3. **傳輸加密**: 與 AI 服務通訊使用 HTTPS
 4. **會話隔離**: 對話結束後不保留敏感資料
 5. **稽核記錄**: 記錄資料存取行為（不含敏感內容）
+
+### 6.4 LLM Runtime、OpenAI 與 Ollama 安全邊界
+
+2026-05-07 Codex Security 驗證後，LLM provider 切換新增以下安全約束，避免醫療資料因設定錯誤或探測行為外流：
+
+1. **Provider fail closed**: `lib/llm/settings.ts` 只有在 `llm_runtime_settings` 尚未建立的 bootstrap 情境才使用預設設定；一般 Supabase/client 讀取錯誤會直接丟出，避免已切到 Ollama 或 OpenAI 的環境靜默 fallback 到其他 provider。
+2. **Provider 不自動回退**: Anthropic、OpenAI 或 Ollama timeout、連線失敗、key 錯誤或模型錯誤不會改走另一個 provider；`/api/chat` 會走既有模型錯誤處理與 credits refund 流程。
+3. **Runtime 狀態需登入**: `GET /api/llm-runtime` 必須通過 `session` cookie 與 `verifySession()`，且只回傳 `activeProvider` 與 `ollamaVisionEnabled`，不暴露 host、model、prompt、附件或 secret。
+4. **URL SSRF 防護**: `lib/llm/url-security.ts` 只允許 `localhost`、`127.0.0.1` 或 `LOCAL_LLM_ALLOWED_HOSTS` 明確允許的 host，並拒絕公網任意 URL、metadata IP、帶帳密 URL 與非預期 protocol。
+5. **附件仍視為 untrusted**: Ollama 模式下 PDF、文字與圖片在後端本機處理後送本機模型；解析流程需維持大小、頁數、timeout、輸出字數與 log redaction 限制。
+6. **稽核不含 PHI**: `llm_runtime_audit_logs` 只記錄 provider、host、成功/失敗、操作者與時間，不記錄 prompt、FHIR 原文、PDF 全文、圖片 base64 或病患資料。
+7. **Key 僅存在 server-side**: `OPENAI_API_KEY`、`ANTHROPIC_API_KEY` 只由後端 provider client 讀取，不寫入 runtime settings、不回傳 runtime API、不進 audit log。
+
+相關安全掃描報告暫存於：
+
+```text
+/tmp/codex-security-scans/Health-Care-Assistant-main/66f5b32_20260507T153408/report.md
+```
 
 ---
 

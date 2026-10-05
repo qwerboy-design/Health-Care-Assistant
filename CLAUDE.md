@@ -26,7 +26,7 @@ Repository：https://github.com/qwerboy-design/Health-Care-Assistant
 | 前端 | Next.js 14+ (App Router) / React 18 / TypeScript |
 | 後端 | Next.js API Routes / Node.js |
 | 資料庫 | Supabase (PostgreSQL) |
-| AI 整合 | Anthropic Claude API (直接整合) |
+| AI 整合 | Anthropic Claude API / OpenAI Chat Completions API / 本地 Ollama |
 | 測試 | Vitest / @testing-library/react |
 | CI/CD | Vercel (自動部署) |
 | 儲存 | Cloudflare R2 (物件儲存) |
@@ -344,11 +344,12 @@ chore/[task]                # 維護任務
 
 ## 🔌 MCP Servers
 
-### Anthropic Claude API（已設定）
+### Anthropic Claude API / OpenAI API（可切換）
 - **用途**：AI 對話、臨床分析（檢驗、放射、病歷、藥物）
-- **限制**：API Rate Limit（依 Anthropic 政策）
+- **限制**：API Rate Limit（依各 provider 政策）
 - **使用時機**：/api/chat 呼叫，依工作量級別（instant/basic/standard/professional）決定 Skills 數量
-- **配置**：環境變數 `ANTHROPIC_API_KEY`、`ANTHROPIC_MODEL`（預設 claude-3-haiku-20240307）
+- **配置**：server-side 環境變數 `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` 或 `OPENAI_API_KEY` / `OPENAI_MODEL`。兩組 key 可同時設定，後台 `/admin/llm-settings` 切換 active provider。
+- **安全邊界**：provider 失敗時不自動 fallback 到另一家，避免醫療資料未經明確切換便外送；OpenAI key 不寫入 Supabase 或回傳瀏覽器。
 
 ---
 
