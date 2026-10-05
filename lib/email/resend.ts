@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { getSafeErrorDetails } from '@/lib/errors';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -8,6 +9,39 @@ export interface SendOTPEmailParams {
   to: string;
   name: string;
   otp: string;
+}
+
+export class EmailDeliveryError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly status?: number
+  ) {
+    super('郵件服務暫時無法寄送');
+    this.name = 'EmailDeliveryError';
+  }
+}
+
+function toEmailDeliveryError(error: unknown): EmailDeliveryError {
+  const candidate = error as { name?: unknown; code?: unknown; status?: unknown; statusCode?: unknown } | null;
+  const details = getSafeErrorDetails(error);
+  const code =
+    typeof candidate?.code === 'string'
+      ? candidate.code
+      : typeof candidate?.name === 'string' && candidate.name !== 'Error'
+        ? candidate.name
+        : 'RESEND_REQUEST_FAILED';
+  const status =
+    typeof candidate?.status === 'number'
+      ? candidate.status
+      : typeof candidate?.statusCode === 'number'
+        ? candidate.statusCode
+        : details.status;
+
+  return new EmailDeliveryError(code, status);
+}
+
+function logResendFailure(kind: string, error: unknown): void {
+  console.error(`[Resend] ${kind} delivery failed`, getSafeErrorDetails(error));
 }
 
 /**
@@ -89,18 +123,16 @@ export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promi
     });
 
     if (data.error) {
-      console.error('Resend API error (OTP):', data.error);
-      throw new Error(`發送郵件失敗: ${data.error.message}`);
+      const deliveryError = toEmailDeliveryError(data.error);
+      logResendFailure('OTP', deliveryError);
+      throw deliveryError;
     }
 
-    console.log('Email sent successfully:', {
-      to,
-      messageId: data.data?.id,
-      timestamp: new Date().toISOString()
-    });
+    console.log('Email sent successfully', { messageId: data.data?.id });
   } catch (error) {
-    console.error('發送 OTP Email 失敗:', error);
-    throw new Error('發送驗證碼失敗');
+    if (error instanceof EmailDeliveryError) throw error;
+    logResendFailure('OTP', error);
+    throw toEmailDeliveryError(error);
   }
 }
 /**
@@ -147,13 +179,15 @@ export async function sendDefaultPasswordEmail({ to, name, password }: { to: str
     });
 
     if (data.error) {
-      console.error('Resend API error (Default Password):', data.error);
-      throw new Error(`發送郵件失敗: ${data.error.message}`);
+      const deliveryError = toEmailDeliveryError(data.error);
+      logResendFailure('default password', deliveryError);
+      throw deliveryError;
     }
 
-    console.log('Default password email sent successfully:', { to, messageId: data.data?.id });
+    console.log('Default password email sent successfully', { messageId: data.data?.id });
   } catch (error) {
-    console.error('發送預設密碼 Email 失敗:', error);
-    throw new Error('發送郵件失敗');
+    if (error instanceof EmailDeliveryError) throw error;
+    logResendFailure('default password', error);
+    throw toEmailDeliveryError(error);
   }
 }

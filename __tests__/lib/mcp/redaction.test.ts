@@ -3,6 +3,22 @@ import { MCPClient } from '@/lib/mcp/client';
 
 global.fetch = vi.fn();
 
+vi.mock('@/lib/llm/settings', () => ({
+  getLLMRuntimeSettings: vi.fn(async () => ({
+    id: 'default',
+    active_provider: 'anthropic',
+    ollama_base_url: 'http://127.0.0.1:11434/api',
+    ollama_model: 'llama3.1:8b',
+    ollama_vision_model: null,
+    timeout_ms: 30000,
+    keep_alive: '5m',
+    is_enabled: true,
+    updated_by: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  })),
+}));
+
 describe('MCP client redaction', () => {
   let client: MCPClient;
 

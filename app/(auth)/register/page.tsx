@@ -53,7 +53,9 @@ export default function RegisterPage() {
         if (registerMethod === 'otp') {
           // OTP 註冊：切換到驗證步驟
           setStep('verify');
-          setError('');
+          const otpDeliveryFailed = data.data?.otpDeliveryFailed === true;
+          setCanResend(otpDeliveryFailed);
+          setError(otpDeliveryFailed ? (data.message || '驗證碼寄送失敗，請使用重新寄送') : '');
         } else {
           // 密碼註冊：顯示成功訊息並導向登入
           setError('');

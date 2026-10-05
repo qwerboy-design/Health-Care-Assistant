@@ -11,7 +11,7 @@ process.env.RESEND_API_KEY = 'test-resend-api-key';
 process.env.RESEND_FROM_EMAIL = 'test-resend-from@example.com';
 
 // Mock fetch globally
-global.fetch = vi.fn(() => Promise.resolve({}));
+global.fetch = vi.fn(async () => new Response('{}', { status: 200 }));
 
 // Reset mocks after each test
 afterEach(() => {

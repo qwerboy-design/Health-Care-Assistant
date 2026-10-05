@@ -914,6 +914,7 @@ export function processFHIRContent(
   error?: string;
   summary?: FHIRSummary;
   resource?: FHIRResource;
+  privacyRedacted?: boolean;
   validationResult?: FHIRValidationResult;
 } {
   const { parseResult, validationResult } = parseAndValidateFHIR(content);
@@ -935,11 +936,13 @@ export function processFHIRContent(
 
   const redactedResource = redactFhirResource(parseResult.data);
   const summary = formatFHIRSummary(redactedResource, locale);
+  const privacyRedacted = JSON.stringify(redactedResource) !== JSON.stringify(parseResult.data);
 
   return {
     success: true,
     summary,
-    resource: parseResult.data,
+    resource: redactedResource,
+    privacyRedacted,
     validationResult,
   };
 }

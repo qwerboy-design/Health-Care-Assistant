@@ -18,6 +18,15 @@ export function generateMarkdownLog(conversation: Conversation, messages: Messag
     markdown += `**分析功能:** ${conversation.selected_function}\n`;
   }
 
+  const reportMetadata = messages.find((message) => message.analysis_metadata?.kind === 'health_report_analysis')?.analysis_metadata;
+  if (reportMetadata) {
+    markdown += `**報告分析狀態:** ${reportMetadata.reviewStatus}\n`;
+    markdown += `**指引版本:** ${reportMetadata.guidanceVersion}\n`;
+    markdown += `**Prompt 版本:** ${reportMetadata.promptVersion}\n`;
+    markdown += `**資料檢索:** ${reportMetadata.retrievalStatus}\n`;
+    markdown += `**產生時間:** ${reportMetadata.generatedAt}\n`;
+  }
+
   markdown += '\n---\n\n';
 
   for (const message of messages) {

@@ -10,6 +10,8 @@ import { useCustomerSettings } from '@/hooks/useCustomerSettings';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { Download, Camera, FileUp } from 'lucide-react';
 import { FHIRImportModal } from '@/components/fhir/FHIRImportModal';
+import { ReportImportModal } from '@/components/reports/ReportImportModal';
+import { REPORT_INPUT_MAX_BYTES, type ReportInput, type AnalysisMetadata } from '@/lib/reports/types';
 
 interface Message {
   id?: string;
@@ -18,6 +20,7 @@ interface Message {
   fileUrl?: string;
   fileName?: string;
   createdAt?: Date;
+  analysisMetadata?: AnalysisMetadata | null;
 }
 
 export default function ChatPage() {
@@ -31,6 +34,9 @@ export default function ChatPage() {
   const [showScreenshot, setShowScreenshot] = useState(false);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [showFHIRImport, setShowFHIRImport] = useState(false);
+  const [showReportImport, setShowReportImport] = useState(false);
+  const [healthReportEnabled, setHealthReportEnabled] = useState(false);
+  const [reportConversation, setReportConversation] = useState(false);
   const [fhirImportData, setFhirImportData] = useState<{ summary: string; rawJson: string } | null>(null);
   const { settings, loading: settingsLoading } = useCustomerSettings();
   const { isMobile } = useDeviceType();
@@ -50,6 +56,7 @@ export default function ChatPage() {
       setShowOnboarding(true);
     }
   }, []);
+  useEffect(() => { fetch('/api/reports/capabilities').then((res) => res.json()).then((data) => setHealthReportEnabled(data.enabled === true)).catch(() => setHealthReportEnabled(false)); }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('conversationId');
@@ -67,10 +74,12 @@ export default function ChatPage() {
         setMessages(
           data.data.messages.map((msg: any) => ({
             ...msg,
+            analysisMetadata: msg.analysis_metadata ?? null,
             createdAt: new Date(msg.created_at),
           }))
         );
         setConversationId(id);
+        setReportConversation(data.data.messages.some((message: any) => message.analysis_metadata?.kind === 'health_report_analysis'));
           autoUploadedRounds.current.clear();
         uploadSerialNumber.current = 1;
         conversationRoundCounter.current = 0;
@@ -78,6 +87,35 @@ export default function ChatPage() {
     } catch (error) {
       console.error('頛撠店?航炊:', error);
     }
+  };
+
+  const handleReportConfirm = async (reportInput: ReportInput) => {
+    setIsLoading(true); setReportConversation(true);
+    try {
+      const requestBody = { reportInput, conversationId, workloadLevel: 'standard' };
+      if (new TextEncoder().encode(JSON.stringify(reportInput)).byteLength > REPORT_INPUT_MAX_BYTES) {
+        throw new Error('報告內容超過 128 KB 上限');
+      }
+      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const message = typeof data.error === 'string' ? data.error : '報告分析失敗，請稍後再試';
+        throw new Error(/^\s*\[|Zod|too_big|maximum|path/i.test(message) ? '報告資料格式不正確，請檢查每列欄位。' : message);
+      }
+      const id = conversationId || data.data.conversationId; setConversationId(id);
+      setShowReportImport(false);
+      setMessages((prev) => [...prev,
+        { role: 'user', content: '已確認成人健檢報告資料，請產生待覆核整理。', createdAt: new Date() },
+        { role: 'assistant', content: data.data.message.content, analysisMetadata: data.data.message.analysisMetadata, createdAt: new Date() },
+      ]);
+      if (!conversationId) window.history.pushState({}, '', `/chat?conversationId=${id}`);
+      if (typeof data.data.creditsAfter === 'number') setUserCredits(data.data.creditsAfter);
+    } catch (error) {
+      // The modal catches this rejection and keeps all confirmed rows open for
+      // correction or retry. Report failures must never use a native alert.
+      throw new Error(error instanceof Error ? error.message : '報告分析失敗，請稍後再試');
+    }
+    finally { setIsLoading(false); }
   };
 
   const handleSend = async (
@@ -88,6 +126,7 @@ export default function ChatPage() {
       fileUrl?: string;
       fileName?: string;
       fileType?: string;
+      localFile?: File;
       modelName?: string;
     }
   ) => {
@@ -105,23 +144,41 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const requestBody = {
-        message,
-        workloadLevel: options.workloadLevel,
-        selectedFunction: options.selectedFunction,
-        conversationId: conversationId,
-        fileUrl: options.fileUrl,
-        fileName: options.fileName,
-        fileType: options.fileType,
-        modelName: options.modelName,
-      };
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      let res: Response;
+      if (options.localFile) {
+        const formData = new FormData();
+        formData.append('message', message);
+        formData.append('workloadLevel', options.workloadLevel);
+        if (options.selectedFunction) formData.append('selectedFunction', options.selectedFunction);
+        if (conversationId) formData.append('conversationId', conversationId);
+        if (options.fileName) formData.append('fileName', options.fileName);
+        if (options.fileType) formData.append('fileType', options.fileType);
+        if (options.modelName) formData.append('modelName', options.modelName);
+        formData.append('file', options.localFile);
+
+        res = await fetch('/api/chat', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        const requestBody = {
+          message,
+          workloadLevel: options.workloadLevel,
+          selectedFunction: options.selectedFunction,
+          conversationId: conversationId,
+          fileUrl: options.fileUrl,
+          fileName: options.fileName,
+          fileType: options.fileType,
+          modelName: options.modelName,
+        };
+        res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+      }
 
 
       const data = await res.json();
@@ -239,6 +296,13 @@ export default function ChatPage() {
 
     setIsSavingLog(true);
     try {
+      if (reportConversation) {
+        const exportResponse = await fetch(`/api/chat/export?conversationId=${encodeURIComponent(conversationId)}`);
+        if (!exportResponse.ok) throw new Error('報告下載失敗');
+        const blob = await exportResponse.blob();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `hca-${conversationId}.md`; link.click(); URL.revokeObjectURL(link.href);
+        return;
+      }
 
       const res = await fetch('/api/chat/save-log', {
         method: 'POST',
@@ -333,6 +397,7 @@ export default function ChatPage() {
         onClose={() => setShowFHIRImport(false)}
         onImport={handleFHIRImport}
       />
+      <ReportImportModal isOpen={showReportImport} onClose={() => setShowReportImport(false)} onConfirm={handleReportConfirm} />
       <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-7xl flex-col px-4">
         {/* Header with download button and credits */}
         <div className="flex justify-between items-center p-4 border-b border-paper-gray100">
@@ -356,6 +421,11 @@ export default function ChatPage() {
               <FileUp size={18} />
               {t('fhir.importButton')}
             </button>
+            {healthReportEnabled && (
+              <button onClick={() => setShowReportImport(true)} className="flex items-center gap-2 rounded-lg bg-medical-purple px-4 py-2 text-white hover:bg-medical-purple/90" title={t('chat.reportTitle')}>
+                <FileUp size={18} />{t('chat.reportImport')}
+              </button>
+            )}
             <CreditsDisplay
               initialCredits={userCredits}
               onCreditsUpdate={setUserCredits}
@@ -389,6 +459,3 @@ export default function ChatPage() {
     </>
   );
 }
-
-
-

@@ -61,3 +61,4 @@ test-api-key.*
 
 # Claude/Cursor 本地設定（包含敏感資訊）
 .claude/settings.local.json
+public/report-assets/

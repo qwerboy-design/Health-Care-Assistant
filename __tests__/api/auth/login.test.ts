@@ -175,4 +175,24 @@ describe('POST /api/auth/login - Credits Integration', () => {
     expect(verifyPassword).not.toHaveBeenCalled();
     expect(getCustomerCredits).not.toHaveBeenCalled();
   });
+
+  it('returns a retryable error when the customer lookup is unavailable', async () => {
+    vi.mocked(findCustomerByEmail).mockRejectedValue(
+      Object.assign(new Error('fetch failed'), {
+        name: 'SupabaseQueryError',
+        code: 'FETCH_FAILED',
+      })
+    );
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'user@example.com', password: 'password123' }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.error).toBe('系統暫時無法處理請求，請稍後再試');
+  });
 });

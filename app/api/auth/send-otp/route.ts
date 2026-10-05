@@ -5,7 +5,7 @@ import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
 import { createOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { getRateLimitByEmail, getRateLimitByIP } from '@/lib/rate-limit';
-import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import { errorResponse, successResponse, Errors, isNamedError, getSafeErrorDetails } from '@/lib/errors';
 
 const GENERIC_SUCCESS_MESSAGE = '如果此 Email 已註冊，驗證碼已寄出';
 
@@ -38,9 +38,17 @@ export async function POST(request: NextRequest) {
       await sendOTPEmail({ to: email, name: customer.name, otp });
     }
 
-    return successResponse({ email }, GENERIC_SUCCESS_MESSAGE);
+    return successResponse({ ok: true }, GENERIC_SUCCESS_MESSAGE);
   } catch (error) {
-    console.error('Send OTP error:', error);
+    if (isNamedError(error, 'SupabaseQueryError')) {
+      console.error('Send OTP failed: customer database unavailable', getSafeErrorDetails(error));
+      return errorResponse('系統暫時無法處理請求，請稍後再試', 503);
+    }
+    if (isNamedError(error, 'EmailDeliveryError')) {
+      console.error('Send OTP failed: email delivery unavailable', getSafeErrorDetails(error));
+      return errorResponse('驗證碼寄送失敗，請稍後再試', 503);
+    }
+    console.error('Send OTP failed', getSafeErrorDetails(error));
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

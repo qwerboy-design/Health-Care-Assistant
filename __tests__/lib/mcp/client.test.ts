@@ -1,8 +1,45 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MCPClient } from '@/lib/mcp/client';
+import { getLLMRuntimeSettings } from '@/lib/llm/settings';
+import { sendOllamaChat } from '@/lib/llm/ollama-client';
+import { sendOpenAIChat, streamOpenAIChat } from '@/lib/llm/openai-client';
 
 // Mock fetch globally
 global.fetch = vi.fn();
+
+vi.mock('@/lib/llm/settings', () => ({
+  getLLMRuntimeSettings: vi.fn(async () => ({
+    id: 'default',
+    active_provider: 'anthropic',
+    ollama_base_url: 'http://127.0.0.1:11434/api',
+    ollama_model: 'llama3.1:8b',
+    ollama_vision_model: null,
+    timeout_ms: 30000,
+    keep_alive: '5m',
+    is_enabled: true,
+    updated_by: null,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  })),
+}));
+
+vi.mock('@/lib/llm/ollama-client', () => ({
+  sendOllamaChat: vi.fn(async () => ({
+    content: 'Ollama response',
+    model: 'llama3.1:8b',
+    usage: { eval_count: 2 },
+  })),
+}));
+
+vi.mock('@/lib/llm/openai-client', () => ({
+  DEFAULT_OPENAI_MODEL: 'gpt-4o-mini',
+  sendOpenAIChat: vi.fn(async () => ({
+    content: 'OpenAI response',
+    model: 'gpt-4o-mini',
+    usage: { prompt_tokens: 2, completion_tokens: 3 },
+  })),
+  streamOpenAIChat: vi.fn(),
+}));
 
 describe('MCP Client - Model Selection', () => {
   let client: MCPClient;
@@ -11,12 +48,14 @@ describe('MCP Client - Model Selection', () => {
     vi.clearAllMocks();
 
     // Mock environment variables
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test-key';
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
+    process.env.OPENAI_API_KEY = 'sk-openai-test-key';
+    delete process.env.OPENAI_MODEL;
 
     // Create client instance
     client = new MCPClient({
       serverUrl: 'https://api.anthropic.com/v1/messages',
-      apiKey: 'sk-ant-test-key',
+      apiKey: 'sk-ant-test',
     });
   });
 
@@ -223,6 +262,170 @@ describe('MCP Client - Model Selection', () => {
 
       // 清理環境變數
       delete process.env.ANTHROPIC_MODEL;
+    });
+
+    it('Ollama 模式不應呼叫 Anthropic API', async () => {
+      vi.mocked(getLLMRuntimeSettings).mockResolvedValue({
+        id: 'default',
+        active_provider: 'ollama',
+        ollama_base_url: 'http://127.0.0.1:11434/api',
+        ollama_model: 'llama3.1:8b',
+        ollama_vision_model: null,
+        timeout_ms: 30000,
+        keep_alive: '5m',
+        is_enabled: true,
+        updated_by: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+
+      const response = await client.sendMessage({
+        message: 'Test message',
+        workloadLevel: 'standard',
+        modelName: 'claude-sonnet-4-20250514',
+      });
+
+      expect(response.content).toBe('Ollama response');
+      expect(sendOllamaChat).toHaveBeenCalledWith(
+        expect.objectContaining({ active_provider: 'ollama' }),
+        expect.objectContaining({ model: 'llama3.1:8b' })
+      );
+      expect(global.fetch).not.toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/messages',
+        expect.anything()
+      );
+    });
+
+    it('OpenAI 模式應呼叫 OpenAI provider 且不呼叫 Anthropic API', async () => {
+      vi.mocked(getLLMRuntimeSettings).mockResolvedValue({
+        id: 'default',
+        active_provider: 'openai',
+        ollama_base_url: 'http://127.0.0.1:11434/api',
+        ollama_model: 'llama3.1:8b',
+        ollama_vision_model: null,
+        timeout_ms: 30000,
+        keep_alive: '5m',
+        is_enabled: true,
+        updated_by: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+
+      const response = await client.sendMessage({
+        message: 'Test message',
+        workloadLevel: 'standard',
+        modelName: 'gpt-4o-mini',
+      });
+
+      expect(response.content).toBe('OpenAI response');
+      expect(response.metadata?.provider).toBe('openai');
+      expect(sendOpenAIChat).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'gpt-4o-mini' })
+      );
+      expect(global.fetch).not.toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/messages',
+        expect.anything()
+      );
+    });
+
+    it('OpenAI 模式選到舊 Claude model ID 時應改用 OpenAI 預設模型', async () => {
+      vi.mocked(getLLMRuntimeSettings).mockResolvedValue({
+        id: 'default',
+        active_provider: 'openai',
+        ollama_base_url: 'http://127.0.0.1:11434/api',
+        ollama_model: 'llama3.1:8b',
+        ollama_vision_model: null,
+        timeout_ms: 30000,
+        keep_alive: '5m',
+        is_enabled: true,
+        updated_by: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+
+      process.env.OPENAI_MODEL = 'gpt-4.1-mini';
+      await client.sendMessage({
+        message: 'Test message',
+        workloadLevel: 'standard',
+        modelName: 'claude-sonnet-4-5-20250929',
+      });
+
+      expect(sendOpenAIChat).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'gpt-4.1-mini' })
+      );
+    });
+
+    it('OpenAI provider 失敗時不會靜默切換到 Anthropic 或 Ollama', async () => {
+      vi.mocked(getLLMRuntimeSettings).mockResolvedValue({
+        id: 'default',
+        active_provider: 'openai',
+        ollama_base_url: 'http://127.0.0.1:11434/api',
+        ollama_model: 'llama3.1:8b',
+        ollama_vision_model: null,
+        timeout_ms: 30000,
+        keep_alive: '5m',
+        is_enabled: true,
+        updated_by: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+      vi.mocked(sendOpenAIChat).mockRejectedValue(new Error('OpenAI API 請求失敗'));
+
+      await expect(
+        client.sendMessage({ message: 'Test message', workloadLevel: 'standard' })
+      ).rejects.toThrow('OpenAI API 請求失敗');
+      expect(sendOllamaChat).not.toHaveBeenCalled();
+      expect(global.fetch).not.toHaveBeenCalledWith(
+        'https://api.anthropic.com/v1/messages',
+        expect.anything()
+      );
+    });
+
+    it('OpenAI streaming path preserves a remote image attachment', async () => {
+      vi.mocked(getLLMRuntimeSettings).mockResolvedValue({
+        id: 'default',
+        active_provider: 'openai',
+        ollama_base_url: 'http://127.0.0.1:11434/api',
+        ollama_model: 'llama3.1:8b',
+        ollama_vision_model: null,
+        timeout_ms: 30000,
+        keep_alive: '5m',
+        is_enabled: true,
+        updated_by: null,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      });
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        headers: new Headers({ 'content-type': 'image/png' }),
+        arrayBuffer: async () => Uint8Array.from([1, 2, 3]).buffer,
+      } as Response);
+      vi.mocked(streamOpenAIChat).mockImplementation(async function* () {
+        yield 'streamed';
+      });
+
+      const chunks: string[] = [];
+      for await (const chunk of client.sendMessageStream({
+        message: 'Describe this image',
+        workloadLevel: 'standard',
+        fileUrl: 'https://storage.example.com/image.png',
+      })) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual(['streamed']);
+      expect(streamOpenAIChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({
+              role: 'user',
+              content: expect.arrayContaining([
+                expect.objectContaining({ type: 'image_url' }),
+              ]),
+            }),
+          ]),
+        })
+      );
     });
   });
 });

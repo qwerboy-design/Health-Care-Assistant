@@ -11,6 +11,7 @@ interface FileUploaderProps {
   acceptedTypes?: string[];
   /** compact嚗移蝪∪?擃??拙?撠店?湔???璈?*/
   variant?: 'default' | 'compact';
+  uploadMode?: 'r2' | 'deferred';
 }
 
 export function FileUploader({
@@ -20,6 +21,7 @@ export function FileUploader({
   maxSize = 100 * 1024 * 1024, // 100MB (R2 銝?)
   acceptedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
   variant = 'default',
+  uploadMode = 'r2',
 }: FileUploaderProps) {
   const isCompact = variant === 'compact';
   const { t } = useLocale();
@@ -48,6 +50,11 @@ export function FileUploader({
 
     // 1. ??嗥?隞嗆?獢歇?詨?
     onFileSelect?.(file);
+
+    if (uploadMode === 'deferred') {
+      onUploadSuccess?.('');
+      return;
+    }
 
     // 2. ???瑁? R2 隞??銝嚗? API ?踹? CORS ??嚗?
     try {

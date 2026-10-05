@@ -92,8 +92,8 @@ describe('端到端：processFHIRContent → formatFHIRForLLM', () => {
     const llmText = formatFHIRForLLM(result.resource!, 'zh-TW');
 
     expect(llmText).toContain('[FHIR 臨床資料匯入]');
-    expect(llmText).toContain('王大明');
-    expect(llmText).toContain('1980-05-15');
+    expect(llmText).toContain('[REDACTED_NAME]');
+    expect(llmText).toContain('[REDACTED_DOB]');
     expect(llmText).toContain('FHIR R5 標準格式');
   });
 
@@ -155,7 +155,7 @@ describe('端到端：processFHIRContent → formatFHIRForLLM', () => {
     const result = processFHIRContent(content, 'zh-TW');
     const llmText = formatFHIRForLLM(result.resource!, 'zh-TW');
 
-    expect(llmText).toContain('李小華');
+    expect(llmText).toContain('[REDACTED_NAME]');
     expect(llmText).toContain('95 mg/dL');
     expect(llmText).toContain('14.5 g/dL');
     expect(llmText).toContain('3 筆資源');
@@ -245,7 +245,7 @@ describe('多檔 FHIR 匯入合併（fixtures）', () => {
     expect(llmText).toContain('## 檔案：patient-valid.json');
     expect(llmText).toContain('## 檔案：observation-vitals.json');
     expect(llmText).toContain('## 檔案：condition.json');
-    expect(llmText).toContain('王大明');
+    expect(llmText).toContain('[REDACTED_NAME]');
     expect(llmText).toMatch(/Blood Pressure|收縮壓|Systolic|mmHg/);
     expect(llmText).toContain('糖尿病');
 
@@ -285,8 +285,7 @@ describe('多檔 FHIR 匯入合併（fixtures）', () => {
     );
 
     expect(llmText).toContain('[FHIR 臨床資料匯入]');
-    expect(llmText).toContain('李小華');
-    expect(llmText).toContain('王大明');
+    expect(llmText).toContain('[REDACTED_NAME]');
   });
 });
 

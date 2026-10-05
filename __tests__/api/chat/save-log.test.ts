@@ -341,7 +341,7 @@ describe('POST /api/chat/save-log', () => {
       const largeMessages = Array.from({ length: 100 }, (_, i) => ({
         id: `msg-${i}`,
         conversation_id: 'conv-123',
-        role: (i % 2 === 0 ? 'user' : 'assistant') as const,
+        role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
         content: `訊息 ${i}`,
         created_at: '2024-01-01T00:00:00Z',
       }));

@@ -12,7 +12,14 @@ import {
 import { getCustomerCredits } from '@/lib/supabase/credits';
 import { createSession } from '@/lib/auth/session';
 import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
-import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import {
+  errorResponse,
+  successResponse,
+  Errors,
+  isNamedError,
+  getSafeErrorDetails,
+  RETRYABLE_DATABASE_ERROR_MESSAGE,
+} from '@/lib/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,7 +92,7 @@ export async function POST(request: NextRequest) {
     try {
       credits = await getCustomerCredits(customer.id);
     } catch (error) {
-      console.error('Failed to load credits during Google login:', error);
+      console.error('Failed to load credits during Google login', getSafeErrorDetails(error));
     }
 
     return successResponse(
@@ -99,7 +106,11 @@ export async function POST(request: NextRequest) {
       'Google 登入成功'
     );
   } catch (error) {
-    console.error('Google OAuth error:', error);
+    if (isNamedError(error, 'SupabaseQueryError')) {
+      console.error('Google OAuth failed: database unavailable', getSafeErrorDetails(error));
+      return errorResponse(RETRYABLE_DATABASE_ERROR_MESSAGE, 503);
+    }
+    console.error('Google OAuth failed', getSafeErrorDetails(error));
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

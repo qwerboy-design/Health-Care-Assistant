@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseFHIR, validateFHIR, formatFHIRSummary, processFHIRContent } from '@/lib/fhir/parser';
+import { redactFhirResource } from '@/lib/privacy/redaction';
 import fs from 'fs';
 import path from 'path';
 
@@ -171,24 +172,22 @@ describe('FHIR Integration Tests', () => {
   });
 
   describe('Data Integrity', () => {
-    it('should preserve all original data in rawJson', () => {
+    it('should preserve the sanitized FHIR structure in rawJson', () => {
       const fileContent = loadFixture('patient-valid.json');
       const originalData = JSON.parse(fileContent);
       
       const result = processFHIRContent(fileContent, 'zh-TW');
       const preservedData = JSON.parse(result.summary!.rawJson);
       
-      expect(preservedData).toEqual(originalData);
+      expect(preservedData).toEqual(redactFhirResource(originalData));
     });
 
     it('should handle Unicode characters correctly', () => {
       const fileContent = loadFixture('patient-valid.json');
       const result = processFHIRContent(fileContent, 'zh-TW');
       
-      expect(result.summary?.title).toBe('王大明');
-      expect(result.summary?.details.some(d => 
-        d.value.includes('台北市')
-      )).toBe(true);
+      expect(result.summary?.title).toBe('[REDACTED_NAME]');
+      expect(result.summary?.rawJson).toContain('[REDACTED_ADDRESS]');
     });
   });
 

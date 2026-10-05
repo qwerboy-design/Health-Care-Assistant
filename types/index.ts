@@ -58,6 +58,7 @@ export interface Message {
   file_name?: string;
   file_type?: string;
   created_at: string;
+  analysis_metadata?: import('@/lib/reports/types').AnalysisMetadata | null;
 }
 
 // 工作量級別類型
@@ -81,6 +82,7 @@ export interface ModelPricing {
   display_name: string;
   credits_cost: number;
   is_active: boolean;
+  supports_vision: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -125,3 +127,16 @@ export interface CustomerSettings {
   updated_at: string;
 }
 
+export interface LLMRuntimeSettings {
+  id: 'default';
+  active_provider: 'anthropic' | 'ollama';
+  ollama_base_url: string;
+  ollama_model: string;
+  ollama_vision_model: string | null;
+  timeout_ms: number;
+  keep_alive: string;
+  is_enabled: boolean;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}

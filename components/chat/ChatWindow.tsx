@@ -10,6 +10,7 @@ interface Message {
   fileUrl?: string;
   fileName?: string;
   createdAt?: Date;
+  analysisMetadata?: { reviewStatus?: string; retrievalStatus?: string } | null;
 }
 
 interface ChatWindowProps {
@@ -21,6 +22,7 @@ interface ChatWindowProps {
     fileUrl?: string;
     fileName?: string;
     fileType?: string;
+    localFile?: File;
     modelName?: string;
   }) => void;
   disabled?: boolean;

@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     }
 
     const messages = await getMessagesByConversationId(conversationId, 1000);
+    if (messages.some((message) => message.analysis_metadata?.kind === 'health_report_analysis')) {
+      return errorResponse('Health report conversations must use manual local download', 409);
+    }
     const markdownContent = generateMarkdownLog(conversation, messages);
     const filename = generateLogFilename(serialNumber);
     const storagePath = generateLogStoragePath(session.customerId, conversationId);

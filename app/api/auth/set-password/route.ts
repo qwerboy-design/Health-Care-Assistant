@@ -1,7 +1,14 @@
 import { NextRequest } from 'next/server';
 import { hashPassword } from '@/lib/auth/password';
 import { updatePassword, findCustomerByEmail, updateAuthProvider } from '@/lib/supabase/customers';
-import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import {
+    errorResponse,
+    successResponse,
+    Errors,
+    isNamedError,
+    getSafeErrorDetails,
+    RETRYABLE_DATABASE_ERROR_MESSAGE,
+} from '@/lib/errors';
 import { verifySession } from '@/lib/auth/session';
 import { cookies } from 'next/headers';
 
@@ -51,7 +58,11 @@ export async function POST(request: NextRequest) {
 
         return successResponse(null, '密碼設定成功');
     } catch (error) {
-        console.error('設定密碼錯誤:', error);
+        if (isNamedError(error, 'SupabaseQueryError')) {
+            console.error('Set password failed: database unavailable', getSafeErrorDetails(error));
+            return errorResponse(RETRYABLE_DATABASE_ERROR_MESSAGE, 503);
+        }
+        console.error('Set password failed', getSafeErrorDetails(error));
         return errorResponse(Errors.INTERNAL_ERROR.message, 500);
     }
 }

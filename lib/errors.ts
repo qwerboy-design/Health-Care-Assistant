@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ApiResponse } from '@/types';
 
+export const RETRYABLE_DATABASE_ERROR_MESSAGE = '系統暫時無法處理請求，請稍後再試';
+
 // 標準化錯誤回應
 export function errorResponse(error: string, status: number = 500): NextResponse {
   const response: ApiResponse = {
@@ -8,6 +10,40 @@ export function errorResponse(error: string, status: number = 500): NextResponse
     error,
   };
   return NextResponse.json(response, { status });
+}
+
+export interface SafeErrorDetails {
+  name: string;
+  code?: string;
+  status?: number;
+}
+
+/** Return only non-sensitive error metadata suitable for server logs. */
+export function getSafeErrorDetails(error: unknown): SafeErrorDetails {
+  const candidate = error as {
+    name?: unknown;
+    code?: unknown;
+    status?: unknown;
+    statusCode?: unknown;
+  } | null;
+  const details: SafeErrorDetails = {
+    name: typeof candidate?.name === 'string' ? candidate.name : 'UnknownError',
+  };
+
+  if (typeof candidate?.code === 'string' && candidate.code.length <= 100) {
+    details.code = candidate.code;
+  }
+
+  const status = candidate?.status ?? candidate?.statusCode;
+  if (typeof status === 'number' && Number.isInteger(status)) {
+    details.status = status;
+  }
+
+  return details;
+}
+
+export function isNamedError(error: unknown, name: string): boolean {
+  return error instanceof Error && error.name === name;
 }
 
 // 標準化成功回應

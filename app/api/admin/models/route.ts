@@ -1,37 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifySession } from '@/lib/auth/session';
 import { getAllModels, createModel, updateModelPricing, deactivateModel, activateModel } from '@/lib/supabase/model-pricing';
-import { findCustomerById } from '@/lib/supabase/customers';
 import { errorResponse, successResponse } from '@/lib/errors';
-import { cookies } from 'next/headers';
+import { requireAdmin } from '@/lib/auth/admin';
 
 // 此路由使用 cookies() 進行身份驗證，必須動態渲染
 export const dynamic = 'force-dynamic';
-
-/**
- * 驗證管理員權限
- */
-async function verifyAdmin(request: NextRequest) {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('session')?.value;
-
-  if (!sessionToken) {
-    return null;
-  }
-
-  const session = await verifySession(sessionToken);
-  if (!session) {
-    return null;
-  }
-
-  // 檢查是否為管理員
-  const customer = await findCustomerById(session.customerId);
-  if (!customer || customer.role !== 'admin') {
-    return null;
-  }
-
-  return session;
-}
 
 /**
  * GET /api/admin/models
@@ -39,10 +12,8 @@ async function verifyAdmin(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await verifyAdmin(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: '未授權或非管理員' }, { status: 403 });
-    }
+    const authorization = await requireAdmin(request);
+    if (authorization instanceof NextResponse) return authorization;
 
     const models = await getAllModels(false);
 
@@ -59,10 +30,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifyAdmin(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: '未授權或非管理員' }, { status: 403 });
-    }
+    const authorization = await requireAdmin(request);
+    if (authorization instanceof NextResponse) return authorization;
 
     const body = await request.json();
     const { model_name, display_name, credits_cost } = body;
@@ -90,10 +59,8 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await verifyAdmin(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: '未授權或非管理員' }, { status: 403 });
-    }
+    const authorization = await requireAdmin(request);
+    if (authorization instanceof NextResponse) return authorization;
 
     const body = await request.json();
     const { model_name, credits_cost, is_active } = body;
@@ -133,10 +100,8 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await verifyAdmin(request);
-    if (!session) {
-      return NextResponse.json({ success: false, error: '未授權或非管理員' }, { status: 403 });
-    }
+    const authorization = await requireAdmin(request);
+    if (authorization instanceof NextResponse) return authorization;
 
     const { searchParams } = new URL(request.url);
     const model_name = searchParams.get('model_name');

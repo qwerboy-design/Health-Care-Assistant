@@ -1,4 +1,5 @@
 'use client';
+import { useLocale } from '@/components/providers/LocaleProvider';
 
 interface MessageBubbleProps {
   role: 'user' | 'assistant';
@@ -6,10 +7,12 @@ interface MessageBubbleProps {
   fileName?: string;
   fileUrl?: string;
   timestamp?: Date;
+  analysisMetadata?: { reviewStatus?: string; retrievalStatus?: string } | null;
 }
 
-export function MessageBubble({ role, content, fileName, fileUrl, timestamp }: MessageBubbleProps) {
+export function MessageBubble({ role, content, fileName, fileUrl, timestamp, analysisMetadata }: MessageBubbleProps) {
   const isUser = role === 'user';
+  const { t } = useLocale();
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -32,6 +35,11 @@ export function MessageBubble({ role, content, fileName, fileUrl, timestamp }: M
             >
               📎 {fileName}
             </a>
+          </div>
+        )}
+        {analysisMetadata?.reviewStatus === 'pending_review' && (
+          <div className="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800" role="status">
+            {t('chat.reportPendingReview')}
           </div>
         )}
         <div className="whitespace-pre-wrap break-words leading-relaxed">{content}</div>

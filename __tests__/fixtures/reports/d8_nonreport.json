@@ -1,0 +1,190 @@
+{
+ "source": "d8_nonreport.pdf",
+ "note": "pdf.js getTextContent() items per page (pdfjs-dist legacy, node)",
+ "pages": [
+  [
+   {
+    "str": "Team meeting notes",
+    "transform": [
+     15,
+     0,
+     0,
+     15,
+     24,
+     805.38
+    ],
+    "width": 143.93,
+    "height": 15
+   },
+   {
+    "str": "",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     781.38
+    ],
+    "width": 0,
+    "height": 0
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     781.38
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     769.38
+    ],
+    "width": 371.8,
+    "height": 10.5
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     746.88
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     734.88
+    ],
+    "width": 371.8,
+    "height": 10.5
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     712.38
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     700.38
+    ],
+    "width": 371.8,
+    "height": 10.5
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     677.88
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     665.88
+    ],
+    "width": 371.8,
+    "height": 10.5
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     643.38
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     631.38
+    ],
+    "width": 371.8,
+    "height": 10.5
+   },
+   {
+    "str": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. The quarterly roadmap was discussed; action items were",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     608.88
+    ],
+    "width": 523.3,
+    "height": 10.5
+   },
+   {
+    "str": "assigned to the design team. No laboratory values are present in this document.",
+    "transform": [
+     10.5,
+     0,
+     0,
+     10.5,
+     24,
+     596.88
+    ],
+    "width": 371.8,
+    "height": 10.5
+   }
+  ]
+ ]
+}

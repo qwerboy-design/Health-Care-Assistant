@@ -7,7 +7,7 @@ import { createOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { hashPassword } from '@/lib/auth/password';
 import { getRateLimitByIP, getRateLimitByEmail } from '@/lib/rate-limit';
-import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import { errorResponse, successResponse, Errors, isNamedError, getSafeErrorDetails } from '@/lib/errors';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,7 +101,22 @@ export async function POST(request: NextRequest) {
     const expiresAt = getOTPExpiryTime();
 
     await createOTPToken(toEmail, otp, expiresAt);
-    await sendOTPEmail({ to: toEmail, name: customer.name, otp });
+    try {
+      await sendOTPEmail({ to: toEmail, name: customer.name, otp });
+    } catch (error) {
+      if (isNamedError(error, 'EmailDeliveryError')) {
+        console.error('Register created account but OTP delivery failed', getSafeErrorDetails(error));
+        return successResponse(
+          {
+            customerId: customer.id,
+            authProvider,
+            otpDeliveryFailed: true,
+          },
+          '註冊已建立，但驗證碼寄送失敗，請稍後重試寄送'
+        );
+      }
+      throw error;
+    }
 
     return successResponse(
       {
@@ -112,8 +127,11 @@ export async function POST(request: NextRequest) {
       '註冊成功，請檢查 Email 驗證碼並完成登入'
     );
   } catch (error) {
-    console.error('Register error:', error);
-    const errorMessage = error instanceof Error ? error.message : '未知錯誤';
-    return errorResponse(`${Errors.INTERNAL_ERROR.message}: ${errorMessage}`, 500);
+    if (isNamedError(error, 'SupabaseQueryError')) {
+      console.error('Register failed: database unavailable', getSafeErrorDetails(error));
+      return errorResponse('系統暫時無法處理請求，請稍後再試', 503);
+    }
+    console.error('Register failed', getSafeErrorDetails(error));
+    return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

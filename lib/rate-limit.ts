@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/client';
+import { getSafeErrorDetails } from '@/lib/errors';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -13,6 +14,16 @@ interface MemoryRateLimitEntry {
 }
 
 const memoryStore = new Map<string, MemoryRateLimitEntry>();
+const persistentFallbackWarnings = new Set<string>();
+
+function logPersistentFallback(error: unknown): void {
+  const details = getSafeErrorDetails(error);
+  const warningKey = details.code || details.name;
+  if (persistentFallbackWarnings.has(warningKey)) return;
+
+  persistentFallbackWarnings.add(warningKey);
+  console.warn('Persistent rate-limit store/RPC unavailable; using in-memory limiting', details);
+}
 
 function cleanupMemoryStore(now: number): void {
   for (const [key, entry] of memoryStore.entries()) {
@@ -77,7 +88,7 @@ async function consumeFromPersistentStore(
     });
 
     if (error) {
-      console.warn('Persistent rate limit fallback:', error.message);
+      logPersistentFallback(error);
       return null;
     }
 
@@ -92,7 +103,7 @@ async function consumeFromPersistentStore(
       resetAt: row.reset_at ? new Date(row.reset_at).getTime() : undefined,
     };
   } catch (error) {
-    console.warn('Persistent rate limit unavailable:', error);
+    logPersistentFallback(error);
     return null;
   }
 }

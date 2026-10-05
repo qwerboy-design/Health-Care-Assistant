@@ -6,7 +6,14 @@ import { getCustomerCredits } from '@/lib/supabase/credits';
 import { verifyOTPToken, markOTPTokenAsUsed } from '@/lib/supabase/otp';
 import { createSession } from '@/lib/auth/session';
 import { getClientIP, getRateLimitByIP } from '@/lib/rate-limit';
-import { errorResponse, successResponse, Errors } from '@/lib/errors';
+import {
+  errorResponse,
+  successResponse,
+  Errors,
+  isNamedError,
+  getSafeErrorDetails,
+  RETRYABLE_DATABASE_ERROR_MESSAGE,
+} from '@/lib/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +76,7 @@ export async function POST(request: NextRequest) {
     try {
       credits = await getCustomerCredits(customer.id);
     } catch (error) {
-      console.error('Failed to load credits during OTP login:', error);
+      console.error('Failed to load credits during OTP login', getSafeErrorDetails(error));
     }
 
     return successResponse(
@@ -82,7 +89,11 @@ export async function POST(request: NextRequest) {
       '驗證成功'
     );
   } catch (error) {
-    console.error('Verify OTP error:', error);
+    if (isNamedError(error, 'SupabaseQueryError')) {
+      console.error('Verify OTP failed: database unavailable', getSafeErrorDetails(error));
+      return errorResponse(RETRYABLE_DATABASE_ERROR_MESSAGE, 503);
+    }
+    console.error('Verify OTP failed', getSafeErrorDetails(error));
     return errorResponse(Errors.INTERNAL_ERROR.message, 500);
   }
 }

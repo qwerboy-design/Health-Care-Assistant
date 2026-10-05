@@ -41,8 +41,8 @@ vi.mock('@/components/chat/WorkloadSelector', () => ({
 }));
 
 vi.mock('@/components/chat/FileUploader', () => ({
-  FileUploader: ({ onFileSelect, onUploadSuccess, onUploadError }: any) => (
-    <div data-testid="file-uploader">
+  FileUploader: ({ onFileSelect, onUploadSuccess, onUploadError, uploadMode }: any) => (
+    <div data-testid="file-uploader" data-upload-mode={uploadMode}>
       FileUploader
       <button onClick={() => {
         const file = new File(['test'], 'test.txt', { type: 'text/plain' });
@@ -327,6 +327,44 @@ describe('ChatInput', () => {
         expect(screen.getByTestId('function-selector')).toBeInTheDocument();
         expect(screen.getByTestId('workload-selector')).toBeInTheDocument();
       });
+    });
+
+    it('OpenAI runtime should remain OpenAI in the attachment guidance and use remote upload mode', async () => {
+      (global.fetch as any).mockImplementation(async (input: string) => {
+        if (input.startsWith('/api/llm-runtime')) {
+          return {
+            json: async () => ({
+              success: true,
+              data: { activeProvider: 'openai', ollamaVisionEnabled: false },
+            }),
+          };
+        }
+
+        return {
+          json: async () => ({
+            success: true,
+            data: {
+              models: [
+                {
+                  model_name: 'claude-sonnet-4-5-20250929',
+                  display_name: 'Claude Sonnet 4.5',
+                  supports_vision: true,
+                },
+              ],
+            },
+          }),
+        };
+      });
+
+      const user = userEvent.setup();
+      render(<ChatInput onSend={mockOnSend} userCredits={100} />);
+
+      await user.click(screen.getByRole('button', { name: /顯示選項/ }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/OpenAI 推論/)).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('file-uploader')).toHaveAttribute('data-upload-mode', 'r2');
     });
   });
 

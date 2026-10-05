@@ -120,7 +120,7 @@ describe('POST /api/auth/verify-otp - Credits Integration', () => {
   });
 
   it('does not expose credits on invalid OTP', async () => {
-    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: false, otpToken: null });
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: false });
 
     const request = new NextRequest('http://localhost/api/auth/verify-otp', {
       method: 'POST',
@@ -158,5 +158,27 @@ describe('POST /api/auth/verify-otp - Credits Integration', () => {
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
     expect(getCustomerCredits).not.toHaveBeenCalled();
+  });
+
+  it('returns a retryable error when the customer lookup is unavailable', async () => {
+    vi.mocked(verifyOTPToken).mockResolvedValue({ valid: true, otpToken: mockOTPToken } as any);
+    vi.mocked(markOTPTokenAsUsed).mockResolvedValue(undefined);
+    vi.mocked(findCustomerByEmail).mockRejectedValue(
+      Object.assign(new Error('fetch failed'), {
+        name: 'SupabaseQueryError',
+        code: 'FETCH_FAILED',
+      })
+    );
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/auth/verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'user@example.com', token: '123456' }),
+      })
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.error).toBe('系統暫時無法處理請求，請稍後再試');
   });
 });

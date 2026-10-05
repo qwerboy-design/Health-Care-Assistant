@@ -5,7 +5,7 @@ import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-r
 import { useLocale } from '@/components/providers/LocaleProvider';
 import { processFHIRContent } from '@/lib/fhir/parser';
 import { mergeFhirImportsForLLM, type FhirParsedItem } from '@/lib/fhir/mergeFhirImport';
-import { redactFileName, redactFhirResource } from '@/lib/privacy/redaction';
+import { redactFileName } from '@/lib/privacy/redaction';
 
 interface FHIRImportModalProps {
   isOpen: boolean;
@@ -184,8 +184,7 @@ export function FHIRImportModal({ isOpen, onClose, onImport }: FHIRImportModalPr
         }
 
         if (result.success && result.summary && result.resource) {
-          const redactedResource = redactFhirResource(result.resource);
-          if (JSON.stringify(redactedResource) !== JSON.stringify(result.resource)) {
+          if (result.privacyRedacted) {
             detectedPrivacyRedactions = true;
           }
 

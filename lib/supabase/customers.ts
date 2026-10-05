@@ -1,6 +1,42 @@
 import { supabaseAdmin } from './client';
 import { Customer } from '@/types';
 
+interface SupabaseErrorLike {
+  code?: unknown;
+  message?: unknown;
+}
+
+export class SupabaseQueryError extends Error {
+  constructor(
+    public readonly operation: string,
+    public readonly code: string
+  ) {
+    super('資料庫服務暫時無法使用');
+    this.name = 'SupabaseQueryError';
+  }
+}
+
+function getSupabaseErrorCode(error: unknown): string {
+  const candidate = error as SupabaseErrorLike | null;
+  if (typeof candidate?.code === 'string' && candidate.code.trim()) {
+    return candidate.code;
+  }
+
+  if (error instanceof TypeError && error.message === 'fetch failed') {
+    return 'FETCH_FAILED';
+  }
+
+  return 'SUPABASE_QUERY_FAILED';
+}
+
+function isNoRowsError(error: unknown): boolean {
+  return (error as SupabaseErrorLike | null)?.code === 'PGRST116';
+}
+
+function throwQueryError(operation: string, error: unknown): never {
+  throw new SupabaseQueryError(operation, getSupabaseErrorCode(error));
+}
+
 export async function findCustomerByEmail(email: string): Promise<Customer | null> {
   try {
     const { data, error } = await supabaseAdmin
@@ -9,20 +45,12 @@ export async function findCustomerByEmail(email: string): Promise<Customer | nul
       .eq('email', email)
       .single();
 
-    if (error || !data) {
-      return null;
-    }
-
-    return data as Customer;
+    if (!error && data) return data as Customer;
+    if (isNoRowsError(error)) return null;
+    return throwQueryError('findCustomerByEmail', error || { code: 'EMPTY_RESULT' });
   } catch (error) {
-    if (
-      !process.env.SUPABASE_URL ||
-      (error instanceof Error &&
-        (error.message.includes('fetch failed') || error.message.includes('Invalid API key')))
-    ) {
-      return null;
-    }
-    throw error;
+    if (error instanceof SupabaseQueryError) throw error;
+    return throwQueryError('findCustomerByEmail', error);
   }
 }
 
@@ -34,35 +62,30 @@ export async function findCustomerById(id: string): Promise<Customer | null> {
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      return null;
-    }
-
-    return data as Customer;
+    if (!error && data) return data as Customer;
+    if (isNoRowsError(error)) return null;
+    return throwQueryError('findCustomerById', error || { code: 'EMPTY_RESULT' });
   } catch (error) {
-    if (
-      !process.env.SUPABASE_URL ||
-      (error instanceof Error &&
-        (error.message.includes('fetch failed') || error.message.includes('Invalid API key')))
-    ) {
-      return null;
-    }
-    throw error;
+    if (error instanceof SupabaseQueryError) throw error;
+    return throwQueryError('findCustomerById', error);
   }
 }
 
 export async function findCustomerByOAuthId(oauthId: string): Promise<Customer | null> {
-  const { data, error } = await supabaseAdmin
-    .from('customers')
-    .select('*')
-    .eq('oauth_id', oauthId)
-    .single();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .eq('oauth_id', oauthId)
+      .single();
 
-  if (error || !data) {
-    return null;
+    if (!error && data) return data as Customer;
+    if (isNoRowsError(error)) return null;
+    return throwQueryError('findCustomerByOAuthId', error || { code: 'EMPTY_RESULT' });
+  } catch (error) {
+    if (error instanceof SupabaseQueryError) throw error;
+    return throwQueryError('findCustomerByOAuthId', error);
   }
-
-  return data as Customer;
 }
 
 export async function createCustomer(customer: {
@@ -75,112 +98,97 @@ export async function createCustomer(customer: {
   approval_status?: 'pending' | 'approved' | 'rejected';
   role?: 'user' | 'admin';
 }): Promise<Customer> {
-  let { data, error } = await supabaseAdmin
-    .from('customers')
-    .insert({
-      ...customer,
-      approval_status: customer.approval_status || 'pending',
-      role: customer.role || 'user',
-      requires_password_reset: false,
-    })
-    .select()
-    .single();
-
-  if (
-    error &&
-    error.message?.includes('column "requires_password_reset" of relation "customers" does not exist')
-  ) {
-    const retry = await supabaseAdmin
+  try {
+    let { data, error } = await supabaseAdmin
       .from('customers')
       .insert({
         ...customer,
         approval_status: customer.approval_status || 'pending',
         role: customer.role || 'user',
+        requires_password_reset: false,
       })
       .select()
       .single();
-    data = retry.data;
-    error = retry.error;
-  }
 
-  if (error) {
     if (
-      error.message?.includes('Invalid API key') ||
-      error.message?.includes('fetch failed') ||
-      !process.env.SUPABASE_URL
+      error &&
+      error.message?.includes('column "requires_password_reset" of relation "customers" does not exist')
     ) {
-      return {
-        id: `mock-${Date.now()}`,
-        email: customer.email,
-        name: customer.name,
-        phone: customer.phone,
-        password_hash: customer.password_hash,
-        auth_provider: customer.auth_provider,
-        oauth_id: customer.oauth_id,
-        approval_status: customer.approval_status || 'pending',
-        role: customer.role || 'user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        last_login_at: undefined,
-        requires_password_reset: false,
-      } as Customer;
+      const retry = await supabaseAdmin
+        .from('customers')
+        .insert({
+          ...customer,
+          approval_status: customer.approval_status || 'pending',
+          role: customer.role || 'user',
+        })
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
     }
-    throw new Error(`建立客戶失敗: ${error.message}`);
-  }
 
-  return data as Customer;
+    if (error) {
+      return throwQueryError('createCustomer', error);
+    }
+
+    if (!data) return throwQueryError('createCustomer', { code: 'EMPTY_RESULT' });
+    return data as Customer;
+  } catch (error) {
+    if (error instanceof SupabaseQueryError) throw error;
+    return throwQueryError('createCustomer', error);
+  }
 }
 
 export async function updateLastLogin(customerId: string): Promise<void> {
   try {
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('customers')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', customerId);
-  } catch (error) {
-    if (
-      !process.env.SUPABASE_URL ||
-      (error instanceof Error &&
-        (error.message.includes('fetch failed') || error.message.includes('Invalid API key')))
-    ) {
-      return;
+    if (error) {
+      console.warn('Supabase last_login_at update unavailable', {
+        operation: 'updateLastLogin',
+        code: getSupabaseErrorCode(error),
+      });
     }
-    throw error;
+  } catch (error) {
+    console.warn('Supabase last_login_at update unavailable', {
+      operation: 'updateLastLogin',
+      code: getSupabaseErrorCode(error),
+    });
   }
 }
 
 export async function linkOAuthId(customerId: string, oauthId: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('customers')
     .update({ oauth_id: oauthId })
     .eq('id', customerId);
+  if (error) return throwQueryError('linkOAuthId', error);
 }
 
 export async function unlinkOAuthId(customerId: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('customers')
     .update({ oauth_id: null })
     .eq('id', customerId);
+  if (error) return throwQueryError('unlinkOAuthId', error);
 }
 
 export async function checkPhoneExists(phone: string): Promise<boolean> {
   try {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('customers')
       .select('id')
       .eq('phone', phone)
       .single();
 
-    return !!data;
+    if (!error) return !!data;
+    if (isNoRowsError(error)) return false;
+    return throwQueryError('checkPhoneExists', error);
   } catch (error) {
-    if (
-      !process.env.SUPABASE_URL ||
-      (error instanceof Error &&
-        (error.message.includes('fetch failed') || error.message.includes('Invalid API key')))
-    ) {
-      return false;
-    }
-    throw error;
+    if (error instanceof SupabaseQueryError) throw error;
+    return throwQueryError('checkPhoneExists', error);
   }
 }
 
@@ -194,7 +202,7 @@ export async function updateApprovalStatus(
     .eq('id', customerId);
 
   if (error) {
-    throw new Error(`更新審核狀態失敗: ${error.message}`);
+    return throwQueryError('updateApprovalStatus', error);
   }
 }
 
@@ -206,7 +214,7 @@ export async function getPendingCustomers(): Promise<Customer[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw new Error(`取得待審核客戶失敗: ${error.message}`);
+    return throwQueryError('getPendingCustomers', error);
   }
 
   return (data || []) as Customer[];
@@ -231,7 +239,7 @@ export async function getAllCustomers(
   const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
-    throw new Error(`取得客戶列表失敗: ${error.message}`);
+    return throwQueryError('getAllCustomers', error);
   }
 
   return (data || []) as Customer[];
@@ -247,7 +255,7 @@ export async function setAdminRole(customerId: string, isAdmin: boolean = true):
     .eq('id', customerId);
 
   if (error) {
-    throw new Error(`設定管理員角色失敗: ${error.message}`);
+    return throwQueryError('setAdminRole', error);
   }
 }
 
@@ -262,7 +270,7 @@ export async function updatePassword(customerId: string, passwordHash: string): 
     .eq('id', customerId);
 
   if (error) {
-    throw new Error(`更新密碼失敗: ${error.message}`);
+    return throwQueryError('updatePassword', error);
   }
 }
 
@@ -279,7 +287,7 @@ export async function updateAuthProvider(
     .eq('id', customerId);
 
   if (error) {
-    throw new Error(`更新認證方式失敗: ${error.message}`);
+    return throwQueryError('updateAuthProvider', error);
   }
 }
 
@@ -296,6 +304,6 @@ export async function setInitialPassword(customerId: string, passwordHash: strin
     .eq('id', customerId);
 
   if (error) {
-    throw new Error(`設定初始密碼失敗: ${error.message}`);
+    return throwQueryError('setInitialPassword', error);
   }
 }

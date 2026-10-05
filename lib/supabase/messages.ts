@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './client';
 import { Message } from '@/types';
+import type { AnalysisMetadata } from '@/lib/reports/types';
 
 /**
  * 建立訊息
@@ -10,18 +11,22 @@ export async function createMessage(
   content: string,
   fileUrl?: string,
   fileName?: string,
-  fileType?: string
+  fileType?: string,
+  analysisMetadata?: AnalysisMetadata | null
 ): Promise<Message> {
+  const payload: Record<string, unknown> = {
+    conversation_id: conversationId,
+    role,
+    content,
+    file_url: fileUrl,
+    file_name: fileName,
+    file_type: fileType,
+  };
+  if (analysisMetadata !== undefined) payload.analysis_metadata = analysisMetadata;
+
   const { data, error } = await supabaseAdmin
     .from('chat_messages')
-    .insert({
-      conversation_id: conversationId,
-      role,
-      content,
-      file_url: fileUrl,
-      file_name: fileName,
-      file_type: fileType,
-    })
+    .insert(payload)
     .select()
     .single();
   

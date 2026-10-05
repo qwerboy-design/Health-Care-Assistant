@@ -80,7 +80,7 @@ describe('POST /api/auth/google - Credits Integration', () => {
     vi.mocked(getClientIP).mockReturnValue('127.0.0.1');
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
     vi.mocked(createSession).mockResolvedValue({
-      token: 'session-token',
+      token: 'sess-token',
       expiresAt: new Date(Date.now() + 86400000),
     } as any);
   });
@@ -105,7 +105,7 @@ describe('POST /api/auth/google - Credits Integration', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.credits).toBe(200);
-      expect(data.data.token).toBe('session-token'); // 驗證 token 有被返回
+      expect(data.data.token).toBe('sess-token'); // 驗證 token 有被返回
       expect(getCustomerCredits).toHaveBeenCalledWith(mockCustomer.id);
     });
 
@@ -197,6 +197,27 @@ describe('POST /api/auth/google - Credits Integration', () => {
       expect(data.success).toBe(false);
       expect(data.data?.credits).toBeUndefined();
       expect(getCustomerCredits).not.toHaveBeenCalled();
+    });
+
+    it('應該在 Google customer lookup infrastructure failure 時回傳可重試錯誤', async () => {
+      vi.mocked(verifyGoogleToken).mockResolvedValue(mockGoogleUser);
+      vi.mocked(findCustomerByOAuthId).mockRejectedValue(
+        Object.assign(new Error('fetch failed'), {
+          name: 'SupabaseQueryError',
+          code: 'FETCH_FAILED',
+        })
+      );
+
+      const response = await POST(
+        new NextRequest('http://localhost/api/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({ idToken: 'google-id-token' }),
+        })
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(data.error).toBe('系統暫時無法處理請求，請稍後再試');
     });
   });
 });

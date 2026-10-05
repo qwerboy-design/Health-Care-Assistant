@@ -11,6 +11,7 @@ interface Message {
   fileUrl?: string;
   fileName?: string;
   createdAt?: Date;
+  analysisMetadata?: { reviewStatus?: string; retrievalStatus?: string } | null;
 }
 
 interface MessageListProps {
@@ -45,6 +46,7 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
           fileName={message.fileName}
           fileUrl={message.fileUrl}
           timestamp={message.createdAt}
+          analysisMetadata={message.analysisMetadata}
         />
       ))}
       

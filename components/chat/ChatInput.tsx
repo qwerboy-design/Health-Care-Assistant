@@ -9,6 +9,7 @@ import { ModelSelector } from './ModelSelector';
 import { redactFileName, redactFreeText } from '@/lib/privacy/redaction';
 
 type WorkloadLevel = 'instant' | 'basic' | 'standard' | 'professional';
+type RuntimeProvider = 'anthropic' | 'openai' | 'ollama';
 
 interface ChatInputProps {
   onSend: (
@@ -19,6 +20,7 @@ interface ChatInputProps {
       fileUrl?: string;
       fileName?: string;
       fileType?: string;
+      localFile?: File;
       modelName?: string;
     }
   ) => void;
@@ -56,6 +58,8 @@ export function ChatInput({
   const [showOptions, setShowOptions] = useState(false);
   const [modelVisionWarning, setModelVisionWarning] = useState<string | null>(null);
   const [privacyAppliedNotice, setPrivacyAppliedNotice] = useState<string | null>(null);
+  const [runtimeProvider, setRuntimeProvider] = useState<RuntimeProvider>('anthropic');
+  const [ollamaVisionEnabled, setOllamaVisionEnabled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [allModels, setAllModels] = useState<
     Array<{ model_name: string; display_name: string; supports_vision: boolean }>
@@ -96,6 +100,29 @@ export function ChatInput({
     };
 
     void fetchModels();
+  }, []);
+
+  useEffect(() => {
+    const fetchRuntime = async () => {
+      try {
+        const res = await fetch('/api/llm-runtime', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.success) {
+          if (
+            data.data.activeProvider === 'anthropic' ||
+            data.data.activeProvider === 'openai' ||
+            data.data.activeProvider === 'ollama'
+          ) {
+            setRuntimeProvider(data.data.activeProvider);
+          }
+          setOllamaVisionEnabled(Boolean(data.data.ollamaVisionEnabled));
+        }
+      } catch (err) {
+        console.error('Failed to fetch LLM runtime:', err);
+      }
+    };
+
+    void fetchRuntime();
   }, []);
 
   useEffect(() => {
@@ -147,11 +174,13 @@ export function ChatInput({
   };
 
   useEffect(() => {
-    if (uploadedFileUrl && uploadedFileType) {
+    if ((uploadedFileUrl || (runtimeProvider === 'ollama' && selectedFile)) && uploadedFileType) {
       const needsVision = checkVisionRequirement(uploadedFileType);
       if (needsVision) {
         const currentModel = allModels.find((model) => model.model_name === selectedModel);
-        if (currentModel && !currentModel.supports_vision) {
+        if (runtimeProvider === 'ollama' && !ollamaVisionEnabled) {
+          setModelVisionWarning('Ollama 圖片或掃描文件分析需要先在後台設定 Vision 模型。');
+        } else if (currentModel && !currentModel.supports_vision) {
           setModelVisionWarning(t('chat.modelVisionWarning'));
         } else {
           setModelVisionWarning(null);
@@ -162,7 +191,7 @@ export function ChatInput({
     } else {
       setModelVisionWarning(null);
     }
-  }, [uploadedFileType, uploadedFileUrl, selectedModel, allModels, t]);
+  }, [uploadedFileType, uploadedFileUrl, selectedFile, selectedModel, allModels, t, runtimeProvider, ollamaVisionEnabled]);
 
   const clearFileState = () => {
     setSelectedFile(null);
@@ -176,7 +205,9 @@ export function ChatInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!message.trim() && !uploadedFileUrl) {
+    const useLocalAttachment = runtimeProvider === 'ollama' && selectedFile;
+
+    if (!message.trim() && !uploadedFileUrl && !useLocalAttachment) {
       return;
     }
 
@@ -192,6 +223,7 @@ export function ChatInput({
       fileUrl: uploadedFileUrl || undefined,
       fileName: safeFileName || undefined,
       fileType: uploadedFileType || undefined,
+      localFile: useLocalAttachment ? selectedFile : undefined,
       modelName: selectedModel || undefined,
     });
 
@@ -247,6 +279,13 @@ export function ChatInput({
                   onChange={setSelectedModel}
                   userCredits={userCredits}
                 />
+                <div className="rounded-md border border-paper-gray100 bg-white px-3 py-2 text-xs text-paper-gray700">
+                  {runtimeProvider === 'ollama'
+                    ? '本機 Ollama 推論：附件將直接送到後端本機處理，不會先上傳 R2。'
+                    : runtimeProvider === 'openai'
+                      ? 'OpenAI 推論：附件沿用安全 R2 上傳流程。'
+                      : 'Anthropic 推論：附件沿用安全 R2 上傳流程。'}
+                </div>
                 {showFunctionSelector && (
                   <FunctionSelector value={selectedFunction} onChange={setSelectedFunction} />
                 )}
@@ -262,6 +301,7 @@ export function ChatInput({
           {!selectedFile && !uploadedFileUrl && (
             <FileUploader
               variant="compact"
+              uploadMode={runtimeProvider === 'ollama' ? 'deferred' : 'r2'}
               onFileSelect={(file) => {
                 setSelectedFile(file);
                 if (file) {
@@ -274,7 +314,9 @@ export function ChatInput({
               }}
               onUploadSuccess={(url) => {
                 try {
-                  setUploadedFileUrl(url);
+                  if (url) {
+                    setUploadedFileUrl(url);
+                  }
                   setUploadError(null);
                 } catch (err: any) {
                   console.error('Error in onUploadSuccess:', err);
@@ -348,7 +390,7 @@ export function ChatInput({
             />
             <button
               type="submit"
-              disabled={disabled || (!message.trim() && !uploadedFileUrl)}
+              disabled={disabled || (!message.trim() && !uploadedFileUrl && !(runtimeProvider === 'ollama' && selectedFile))}
               className="btn-primary shrink-0 sm:self-end lg:w-full lg:self-stretch"
             >
               {t('chat.send')}
