@@ -12,6 +12,7 @@ vi.mock('@/lib/auth/otp-generator', () => ({
 
 vi.mock('@/lib/supabase/otp', () => ({
   createOTPToken: vi.fn(),
+  invalidateOTPToken: vi.fn(),
 }));
 
 vi.mock('@/lib/email/resend', () => ({
@@ -26,7 +27,7 @@ vi.mock('@/lib/rate-limit', () => ({
 import { POST } from '@/app/api/auth/send-otp/route';
 import { findCustomerByEmail } from '@/lib/supabase/customers';
 import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
-import { createOTPToken } from '@/lib/supabase/otp';
+import { createOTPToken, invalidateOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { getRateLimitByIP, getRateLimitByEmail } from '@/lib/rate-limit';
 import type { OTPToken } from '@/types';
@@ -36,6 +37,7 @@ describe('POST /api/auth/send-otp', () => {
     vi.clearAllMocks();
     vi.mocked(getRateLimitByIP).mockReturnValue({ allowed: true } as any);
     vi.mocked(getRateLimitByEmail).mockReturnValue({ allowed: true } as any);
+    vi.mocked(invalidateOTPToken).mockResolvedValue(undefined);
     vi.mocked(generateOTP).mockReturnValue('123456');
     vi.mocked(getOTPExpiryTime).mockReturnValue(new Date(Date.now() + 300000));
   });
@@ -114,7 +116,7 @@ describe('POST /api/auth/send-otp', () => {
       email: 'user@example.com',
       name: 'Test User',
     } as any);
-    vi.mocked(createOTPToken).mockResolvedValue({} as OTPToken);
+    vi.mocked(createOTPToken).mockResolvedValue({ id: 'otp-send-failure' } as OTPToken);
     vi.mocked(sendOTPEmail).mockRejectedValue(
       Object.assign(new Error('Resend rejected the request'), {
         name: 'EmailDeliveryError',
@@ -134,5 +136,6 @@ describe('POST /api/auth/send-otp', () => {
     expect(response.status).toBe(503);
     expect(data.error).toBe('驗證碼寄送失敗，請稍後再試');
     expect(data.error).not.toContain('user@example.com');
+    expect(invalidateOTPToken).toHaveBeenCalledWith(expect.any(String));
   });
 });

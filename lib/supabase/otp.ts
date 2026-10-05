@@ -61,6 +61,18 @@ export async function markOTPTokenAsUsed(tokenId: string): Promise<void> {
     .eq('id', tokenId);
 }
 
+/** Invalidate an OTP that was persisted before an email delivery failure. */
+export async function invalidateOTPToken(tokenId: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('otp_tokens')
+    .update({ used: true })
+    .eq('id', tokenId);
+
+  if (error) {
+    throw new Error(`使 OTP token 失效失敗: ${error.message}`);
+  }
+}
+
 /**
  * 刪除過期的 OTP tokens
  */

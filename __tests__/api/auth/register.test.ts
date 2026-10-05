@@ -1,7 +1,7 @@
 import { POST } from '@/app/api/auth/register/route';
 import { findCustomerByEmail, createCustomer, checkPhoneExists } from '@/lib/supabase/customers';
 import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
-import { createOTPToken } from '@/lib/supabase/otp';
+import { createOTPToken, invalidateOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { hashPassword } from '@/lib/auth/password';
 import { getRateLimitByEmail } from '@/lib/rate-limit';
@@ -23,6 +23,7 @@ vi.mock('@/lib/auth/otp-generator', () => ({
 
 vi.mock('@/lib/supabase/otp', () => ({
   createOTPToken: vi.fn(),
+  invalidateOTPToken: vi.fn(),
 }));
 
 vi.mock('@/lib/email/resend', () => ({
@@ -42,6 +43,7 @@ vi.mock('@/lib/rate-limit', () => ({
 describe('POST /api/auth/register', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(invalidateOTPToken).mockResolvedValue(undefined);
     // Mock console.error to avoid noise in test output
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -296,7 +298,7 @@ describe('POST /api/auth/register', () => {
     vi.mocked(findCustomerByEmail).mockResolvedValue(null);
     vi.mocked(checkPhoneExists).mockResolvedValue(false);
     vi.mocked(createCustomer).mockResolvedValue(mockCustomer);
-    vi.mocked(createOTPToken).mockResolvedValue({} as OTPToken);
+    vi.mocked(createOTPToken).mockResolvedValue({ id: 'otp-delivery-failure' } as OTPToken);
     vi.mocked(sendOTPEmail).mockRejectedValue(
       Object.assign(new Error('Resend rejected the request'), {
         name: 'EmailDeliveryError',
@@ -317,6 +319,7 @@ describe('POST /api/auth/register', () => {
     expect(data.success).toBe(true);
     expect(data.data.otpDeliveryFailed).toBe(true);
     expect(data.message).toBe('註冊已建立，但驗證碼寄送失敗，請稍後重試寄送');
+    expect(invalidateOTPToken).toHaveBeenCalledWith('otp-delivery-failure');
     expect(JSON.stringify(data)).not.toContain('user@example.com');
     expect(createCustomer).toHaveBeenCalledOnce();
   });

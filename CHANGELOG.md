@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-10-05 - OTP email delivery
+- Fail closed when `RESEND_API_KEY` / `RESEND_FROM_EMAIL` are missing or invalid (no silent `onboarding@resend.dev` fallback).
+- Invalidate persisted OTP tokens if Resend delivery fails; `send-otp` returns zh-TW 503 instead of fake success.
+- Registration still returns `otpDeliveryFailed` so the UI can open 重新寄送 after account creation.
+- Safer Resend success logs (no message ids that could correlate PII); login OTP email wording no longer says 「註冊」 only.
+
 ### Fixed - 2026-10-04
 - **Auth / OTP infrastructure errors** - Supabase lookup failures are no longer treated as missing customers; auth routes return retryable 503 responses, and registration reports OTP delivery failure without exposing PII.
 - **Registration OTP recovery** - A created account with failed OTP delivery now enters verification with an immediate safe resend action instead of becoming a duplicate-email dead end.

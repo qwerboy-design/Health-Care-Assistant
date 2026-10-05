@@ -1,10 +1,6 @@
 import { Resend } from 'resend';
 import { getSafeErrorDetails } from '@/lib/errors';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-
 export interface SendOTPEmailParams {
   to: string;
   name: string;
@@ -44,13 +40,32 @@ function logResendFailure(kind: string, error: unknown): void {
   console.error(`[Resend] ${kind} delivery failed`, getSafeErrorDetails(error));
 }
 
+function getResendClient(): { resend: Resend; fromEmail: string } {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    throw new EmailDeliveryError('RESEND_API_KEY_MISSING', 500);
+  }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+  if (!fromEmail) {
+    throw new EmailDeliveryError('RESEND_FROM_EMAIL_MISSING', 500);
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromEmail)) {
+    throw new EmailDeliveryError('RESEND_FROM_EMAIL_INVALID', 500);
+  }
+
+  return { resend: new Resend(apiKey), fromEmail };
+}
+
 /**
  * 發送 OTP 驗證碼 Email
  */
 export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promise<void> {
   try {
+    const { resend, fromEmail } = getResendClient();
     const data = await resend.emails.send({
-      from: `Clinical Assistant <${FROM_EMAIL}>`,
+      from: `Clinical Assistant <${fromEmail}>`,
       to,
       subject: '您的驗證碼 - 臨床助手 AI',
       html: `
@@ -107,7 +122,7 @@ export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promi
               </div>
               <div class="content">
                 <p>親愛的 ${name}，</p>
-                <p>感謝您註冊臨床助手 AI。請使用以下驗證碼完成註冊：</p>
+                <p>請使用以下驗證碼完成登入或帳號驗證：</p>
                 <div class="otp-code">${otp}</div>
                 <p><strong>此驗證碼將在 10 分鐘後過期。</strong></p>
                 <p>如果您沒有請求此驗證碼，請忽略此郵件。</p>
@@ -128,7 +143,7 @@ export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promi
       throw deliveryError;
     }
 
-    console.log('Email sent successfully', { messageId: data.data?.id });
+    console.log('[Resend] OTP delivery completed', { name: 'Resend', code: 'EMAIL_SENT' });
   } catch (error) {
     if (error instanceof EmailDeliveryError) throw error;
     logResendFailure('OTP', error);
@@ -140,8 +155,9 @@ export async function sendOTPEmail({ to, name, otp }: SendOTPEmailParams): Promi
  */
 export async function sendDefaultPasswordEmail({ to, name, password }: { to: string; name: string; password: string }): Promise<void> {
   try {
+    const { resend, fromEmail } = getResendClient();
     const data = await resend.emails.send({
-      from: `Clinical Assistant <${FROM_EMAIL}>`,
+      from: `Clinical Assistant <${fromEmail}>`,
       to,
       subject: '您的帳號已啟用 - 臨床助手 AI',
       html: `
@@ -184,7 +200,7 @@ export async function sendDefaultPasswordEmail({ to, name, password }: { to: str
       throw deliveryError;
     }
 
-    console.log('Default password email sent successfully', { messageId: data.data?.id });
+    console.log('[Resend] default password delivery completed', { name: 'Resend', code: 'EMAIL_SENT' });
   } catch (error) {
     if (error instanceof EmailDeliveryError) throw error;
     logResendFailure('default password', error);

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { sendOTPSchema } from '@/lib/validation/schemas';
 import { findCustomerByEmail } from '@/lib/supabase/customers';
 import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
-import { createOTPToken } from '@/lib/supabase/otp';
+import { createOTPToken, invalidateOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { getRateLimitByEmail, getRateLimitByIP } from '@/lib/rate-limit';
 import { errorResponse, successResponse, Errors, isNamedError, getSafeErrorDetails } from '@/lib/errors';
@@ -34,8 +34,15 @@ export async function POST(request: NextRequest) {
       const otp = generateOTP();
       const expiresAt = getOTPExpiryTime();
 
-      await createOTPToken(email, otp, expiresAt);
-      await sendOTPEmail({ to: email, name: customer.name, otp });
+      const otpToken = await createOTPToken(email, otp, expiresAt);
+      try {
+        await sendOTPEmail({ to: email, name: customer.name, otp });
+      } catch (error) {
+        await invalidateOTPToken(otpToken.id).catch((cleanupError) => {
+          console.error('Send OTP failed: could not invalidate token', getSafeErrorDetails(cleanupError));
+        });
+        throw error;
+      }
     }
 
     return successResponse({ ok: true }, GENERIC_SUCCESS_MESSAGE);

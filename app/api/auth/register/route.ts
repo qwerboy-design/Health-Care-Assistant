@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { registerSchema } from '@/lib/validation/schemas';
 import { findCustomerByEmail, createCustomer, checkPhoneExists } from '@/lib/supabase/customers';
 import { generateOTP, getOTPExpiryTime } from '@/lib/auth/otp-generator';
-import { createOTPToken } from '@/lib/supabase/otp';
+import { createOTPToken, invalidateOTPToken } from '@/lib/supabase/otp';
 import { sendOTPEmail } from '@/lib/email/resend';
 import { hashPassword } from '@/lib/auth/password';
 import { getRateLimitByIP, getRateLimitByEmail } from '@/lib/rate-limit';
@@ -100,12 +100,17 @@ export async function POST(request: NextRequest) {
     const otp = generateOTP();
     const expiresAt = getOTPExpiryTime();
 
-    await createOTPToken(toEmail, otp, expiresAt);
+    const otpToken = await createOTPToken(toEmail, otp, expiresAt);
     try {
       await sendOTPEmail({ to: toEmail, name: customer.name, otp });
     } catch (error) {
       if (isNamedError(error, 'EmailDeliveryError')) {
+        await invalidateOTPToken(otpToken.id).catch((cleanupError) => {
+          console.error('Register failed: could not invalidate OTP token', getSafeErrorDetails(cleanupError));
+        });
         console.error('Register created account but OTP delivery failed', getSafeErrorDetails(error));
+        // Account already created — keep anti-dead-end UX: let the client enter the
+        // verify step and use 重新寄送 (send-otp) rather than returning 503.
         return successResponse(
           {
             customerId: customer.id,

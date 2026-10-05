@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resendMocks = vi.hoisted(() => ({
   send: vi.fn(),
@@ -15,6 +15,48 @@ import { sendOTPEmail } from '@/lib/email/resend';
 describe('Resend email adapter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('RESEND_API_KEY', 're_test_key');
+    vi.stubEnv('RESEND_FROM_EMAIL', 'noreply@example.com');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('fails closed when the Resend API key is missing', async () => {
+    vi.stubEnv('RESEND_API_KEY', '');
+
+    await expect(
+      sendOTPEmail({ to: 'user@example.com', name: 'Test User', otp: '123456' })
+    ).rejects.toMatchObject({
+      name: 'EmailDeliveryError',
+      code: 'RESEND_API_KEY_MISSING',
+    });
+    expect(resendMocks.send).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the sender address is invalid', async () => {
+    vi.stubEnv('RESEND_FROM_EMAIL', 'not-an-email');
+
+    await expect(
+      sendOTPEmail({ to: 'user@example.com', name: 'Test User', otp: '123456' })
+    ).rejects.toMatchObject({
+      name: 'EmailDeliveryError',
+      code: 'RESEND_FROM_EMAIL_INVALID',
+    });
+    expect(resendMocks.send).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the sender address is missing', async () => {
+    vi.stubEnv('RESEND_FROM_EMAIL', '');
+
+    await expect(
+      sendOTPEmail({ to: 'user@example.com', name: 'Test User', otp: '123456' })
+    ).rejects.toMatchObject({
+      name: 'EmailDeliveryError',
+      code: 'RESEND_FROM_EMAIL_MISSING',
+    });
+    expect(resendMocks.send).not.toHaveBeenCalled();
   });
 
   it('exposes safe delivery metadata and never logs OTP or full recipient details', async () => {
