@@ -1,0 +1,62 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - name: Reach Supabase through PostgREST
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_ANON_KEY:-}" ]]; then
+            echo '::error::Set both required GitHub secrets: SUPABASE_URL and SUPABASE_ANON_KEY.'
+            exit 1
+          fi
+
+          # No safe anon-readable table exists in the migrations. model_pricing has
+          # no patient data; migration 010 denies anon (expected HTTP 401 / 42501).
+          # Keep the response in memory and silence diagnostics to avoid data leaks.
+          curl_exit=0
+          response="$(curl --silent \
+            --request GET \
+            --retry 3 \
+            --retry-max-time 120 \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --write-out '\n%{http_code}' \
+            "${SUPABASE_URL%/}/rest/v1/model_pricing?select=*&limit=1" \
+            2>/dev/null)" || curl_exit=$?
+
+          http_status="${response##*$'\n'}"
+          [[ "$http_status" =~ ^[0-9]{3}$ ]] || http_status=000
+          printf 'HTTP status: %s\n' "$http_status" | tee -a "$GITHUB_STEP_SUMMARY"
+
+          # Log only a validated SQLSTATE/PostgREST code, never messages or rows.
+          if [[ "$http_status" == [45][0-9][0-9] ]]; then
+            response_body="${response%$'\n'*}"
+            postgrest_code="$(printf '%s' "$response_body" | jq -rse '
+              last | .code? // empty | select(type == "string")
+              | select(test("^(PGRST[0-9]{3}|[0-9A-Z]{5})$"))
+            ' 2>/dev/null)" || postgrest_code=''
+            if [[ -n "$postgrest_code" ]]; then
+              printf 'PostgREST error code: %s\n' "$postgrest_code" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          # Omit --fail: 2xx/4xx prove reachability, including permission denials.
+          if (( curl_exit != 0 )) || [[ "$http_status" == 000 || "$http_status" == 5[0-9][0-9] ]]; then
+            echo "::error::Supabase keepalive failed (curl exit code: ${curl_exit})."
+            exit 1
+          fi
