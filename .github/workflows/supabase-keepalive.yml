@@ -23,20 +23,21 @@ jobs:
             exit 1
           fi
 
-          # No safe anon-readable table exists in the migrations. model_pricing has
-          # no patient data; migration 010 denies anon (expected HTTP 401 / 42501).
+          # The keepalive RPC returns only server time and accesses no tables.
           # Keep the response in memory and silence diagnostics to avoid data leaks.
           curl_exit=0
           response="$(curl --silent \
-            --request GET \
+            --request POST \
             --retry 3 \
             --retry-max-time 120 \
             --connect-timeout 10 \
             --max-time 30 \
             --header "apikey: ${SUPABASE_ANON_KEY}" \
             --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
             --write-out '\n%{http_code}' \
-            "${SUPABASE_URL%/}/rest/v1/model_pricing?select=*&limit=1" \
+            "${SUPABASE_URL%/}/rest/v1/rpc/keepalive" \
             2>/dev/null)" || curl_exit=$?
 
           http_status="${response##*$'\n'}"
@@ -55,8 +56,9 @@ jobs:
             fi
           fi
 
-          # Omit --fail: 2xx/4xx prove reachability, including permission denials.
-          if (( curl_exit != 0 )) || [[ "$http_status" == 000 || "$http_status" == 5[0-9][0-9] ]]; then
-            echo "::error::Supabase keepalive failed (curl exit code: ${curl_exit})."
+          # Omit --fail so error codes can be parsed safely; only 2xx is success.
+          # A 4xx indicates misconfiguration of the keepalive RPC or credentials.
+          if (( curl_exit != 0 )) || [[ "$http_status" != 2[0-9][0-9] ]]; then
+            echo "::error::Supabase keepalive failed (HTTP ${http_status}, curl exit ${curl_exit})."
             exit 1
           fi
