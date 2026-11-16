@@ -49,7 +49,7 @@ export function ChatInput({
   const [message, setMessage] = useState('');
   const [selectedFunction, setSelectedFunction] = useState('');
   const [workloadLevel, setWorkloadLevel] = useState<WorkloadLevel>('standard');
-  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-5-20250929');
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-5-5');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);

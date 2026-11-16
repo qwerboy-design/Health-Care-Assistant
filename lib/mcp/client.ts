@@ -19,8 +19,29 @@ import {
   type OpenAIMessage,
 } from '@/lib/llm/openai-client';
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+const DEFAULT_MODEL = 'claude-haiku-5-5';
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+
+// Claude 5.5 models think by default, and thinking counts toward max_tokens. The same text is
+// also about 30% more tokens than on the 4.5 models, so the previous 4096 cap would truncate
+// answers. Kept moderate because app/api/chat/route.ts has a 60 second function limit.
+const ANTHROPIC_MAX_TOKENS = 8192;
+
+// Effort is set explicitly so thinking stays inside the 60 second limit. Keyed by whole model
+// ID: Claude Sonnet 4.5 and Haiku 4.5 reject output_config.effort, so any model that is not
+// listed here is sent without it.
+const ANTHROPIC_EFFORT_BY_MODEL: Record<string, 'low' | 'medium'> = {
+  'claude-sonnet-5-5': 'low',
+  'claude-haiku-5-5': 'medium',
+};
+
+function anthropicOutputConfig(model: string): { output_config?: { effort: 'low' | 'medium' } } {
+  const effort = ANTHROPIC_EFFORT_BY_MODEL[model];
+  return effort ? { output_config: { effort } } : {};
+}
+
+// Claude 5.5 safety classifiers can decline a request with HTTP 200 and stop_reason "refusal".
+const ANTHROPIC_REFUSAL_MESSAGE = 'The model declined to answer this request';
 
 function toOpenAIContent(content: string | Array<any>): string | OpenAIContentPart[] {
   if (typeof content === 'string') {
@@ -300,7 +321,8 @@ export class MCPClient {
         },
         body: JSON.stringify({
           model: modelToUse,
-          max_tokens: 4096,
+          max_tokens: ANTHROPIC_MAX_TOKENS,
+          ...anthropicOutputConfig(modelToUse),
           system: systemPrompt,
           messages,
         }),
@@ -317,10 +339,20 @@ export class MCPClient {
       }
 
       const data = await response.json();
+      if (data.stop_reason === 'refusal') {
+        // Throwing lets the chat route refund the credits it already deducted.
+        throw new Error(ANTHROPIC_REFUSAL_MESSAGE);
+      }
+
       const content = data.content
         .filter((block: any) => block.type === 'text')
         .map((block: any) => block.text)
         .join('\n');
+
+      if (!content) {
+        // The whole budget went to thinking, so there is no answer to store or charge for.
+        throw new Error(`The model returned no answer text (stop_reason: ${data.stop_reason})`);
+      }
 
       this.conversationHistory = [
         ...messages.map((message) => ({
@@ -395,6 +427,7 @@ export class MCPClient {
         throw new Error('ANTHROPIC_API_KEY must be configured');
       }
 
+      const streamModel = request.modelName || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
       const response = await fetch(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: {
@@ -403,8 +436,9 @@ export class MCPClient {
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: request.modelName || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-          max_tokens: 4096,
+          model: streamModel,
+          max_tokens: ANTHROPIC_MAX_TOKENS,
+          ...anthropicOutputConfig(streamModel),
           system: systemPrompt,
           messages: [
             ...safeConversationHistory,
@@ -425,6 +459,7 @@ export class MCPClient {
         throw new Error('Unable to read response stream');
       }
 
+      let refused = false;
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -450,10 +485,17 @@ export class MCPClient {
               if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                 yield parsed.delta.text;
               }
+              if (parsed.type === 'message_delta' && parsed.delta?.stop_reason === 'refusal') {
+                refused = true;
+              }
             } catch {
               // Ignore malformed stream chunks.
             }
           }
+        }
+
+        if (refused) {
+          throw new Error(ANTHROPIC_REFUSAL_MESSAGE);
         }
       } finally {
         reader.releaseLock();

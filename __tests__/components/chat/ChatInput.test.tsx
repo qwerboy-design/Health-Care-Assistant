@@ -82,7 +82,7 @@ describe('ChatInput', () => {
         success: true,
         data: {
           models: [
-            { model_name: 'claude-sonnet-4-5-20250929', display_name: 'Claude Sonnet 4.5', supports_vision: true },
+            { model_name: 'claude-sonnet-5-5', display_name: 'Claude Sonnet 5.5', supports_vision: true },
             { model_name: 'claude-opus-4', display_name: 'Claude Opus 4', supports_vision: false },
           ],
         },
@@ -197,7 +197,7 @@ describe('ChatInput', () => {
 
       expect(mockOnSend).toHaveBeenCalledWith('Hello World', expect.objectContaining({
         workloadLevel: 'standard',
-        modelName: 'claude-sonnet-4-5-20250929',
+        modelName: 'claude-sonnet-5-5',
       }));
     });
 
@@ -346,8 +346,8 @@ describe('ChatInput', () => {
             data: {
               models: [
                 {
-                  model_name: 'claude-sonnet-4-5-20250929',
-                  display_name: 'Claude Sonnet 4.5',
+                  model_name: 'claude-sonnet-5-5',
+                  display_name: 'Claude Sonnet 5.5',
                   supports_vision: true,
                 },
               ],
@@ -409,7 +409,7 @@ describe('ChatInput', () => {
       await user.click(sendButton);
 
       expect(mockOnSend).toHaveBeenCalledWith('Test message', expect.objectContaining({
-        modelName: 'claude-sonnet-4-5-20250929',
+        modelName: 'claude-sonnet-5-5',
       }));
     });
   });

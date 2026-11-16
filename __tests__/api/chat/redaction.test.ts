@@ -69,8 +69,8 @@ describe('POST /api/chat redaction', () => {
     vi.mocked(createMCPClient).mockReturnValue(mockMCPClient as any);
     vi.mocked(getModelPricing).mockResolvedValue({
       id: 'model-1',
-      model_name: 'claude-sonnet-4-5-20250929',
-      display_name: 'Claude Sonnet 4.5',
+      model_name: 'claude-sonnet-5-5',
+      display_name: 'Claude Sonnet 5.5',
       credits_cost: 10,
       is_active: true,
       created_at: '2026-01-01T00:00:00Z',
@@ -129,7 +129,7 @@ describe('POST /api/chat redaction', () => {
       expect.stringContaining('[REDACTED_NAME]'),
       'standard',
       undefined,
-      'claude-sonnet-4-5-20250929'
+      'claude-sonnet-5-5'
     );
 
     expect(createMessage).toHaveBeenNthCalledWith(

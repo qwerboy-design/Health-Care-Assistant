@@ -27,8 +27,10 @@ export async function GET(request: NextRequest) {
 
     // 測試請求 - 使用最簡單的配置
     const requestBody = {
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-5-5',
       max_tokens: 50,
+      // Claude Haiku 5.5 thinks by default, which could use up this small budget before any text.
+      thinking: { type: 'disabled' },
       messages: [{
         role: 'user',
         content: 'Hello, respond with just "API works"'
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
       success: true,
       response: {
         model: data.model,
-        content: data.content[0]?.text,
+        content: data.content.find((block: any) => block.type === 'text')?.text,
         usage: data.usage,
       },
       environment: {
