@@ -95,9 +95,95 @@ describe('MCP Client - Model Selection', () => {
       expect(requestBody.model).toBe(modelName);
     });
 
+    it('應該只對 Claude 5.5 模型送出 effort，並放寬 max_tokens', async () => {
+      const sentBodies: Record<string, any> = {};
+
+      for (const modelName of ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-haiku-4-5-20251001']) {
+        vi.mocked(global.fetch).mockClear();
+        vi.mocked(global.fetch).mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            content: [{ type: 'text', text: 'Test response' }],
+            model: modelName,
+            stop_reason: 'end_turn',
+            usage: { input_tokens: 10, output_tokens: 20 },
+          }),
+        } as any);
+
+        await client.sendMessage({ message: 'Test message', workloadLevel: 'standard', modelName });
+
+        const anthropicCall = vi.mocked(global.fetch).mock.calls.find(
+          (call) => call[0] === 'https://api.anthropic.com/v1/messages'
+        );
+        sentBodies[modelName] = JSON.parse(anthropicCall![1]?.body as string);
+      }
+
+      expect(sentBodies['claude-sonnet-5-5'].output_config).toEqual({ effort: 'low' });
+      expect(sentBodies['claude-haiku-5-5'].output_config).toEqual({ effort: 'medium' });
+      // Claude Haiku 4.5 rejects output_config.effort with a 400.
+      expect(sentBodies['claude-haiku-4-5-20251001']).not.toHaveProperty('output_config');
+      expect(sentBodies['claude-sonnet-5-5'].max_tokens).toBe(8192);
+    });
+
+    it('應該略過 thinking 區塊，只回傳文字內容', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          content: [
+            { type: 'thinking', thinking: '', signature: 'sig' },
+            { type: 'text', text: 'Answer text' },
+          ],
+          model: 'claude-sonnet-5-5',
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        }),
+      } as any);
+
+      const response = await client.sendMessage({
+        message: 'Test message',
+        workloadLevel: 'standard',
+        modelName: 'claude-sonnet-5-5',
+      });
+
+      expect(response.content).toBe('Answer text');
+    });
+
+    it('應該在模型拒答時拋出錯誤，讓呼叫端退還 Credits', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          content: [],
+          model: 'claude-sonnet-5-5',
+          stop_reason: 'refusal',
+          stop_details: { type: 'refusal', category: 'general_harms' },
+          usage: { input_tokens: 10, output_tokens: 0 },
+        }),
+      } as any);
+
+      await expect(
+        client.sendMessage({ message: 'Test message', workloadLevel: 'standard', modelName: 'claude-sonnet-5-5' })
+      ).rejects.toThrow('The model declined to answer this request');
+    });
+
+    it('應該在只有 thinking、沒有文字時拋出錯誤', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          content: [{ type: 'thinking', thinking: '', signature: 'sig' }],
+          model: 'claude-sonnet-5-5',
+          stop_reason: 'max_tokens',
+          usage: { input_tokens: 10, output_tokens: 8192 },
+        }),
+      } as any);
+
+      await expect(
+        client.sendMessage({ message: 'Test message', workloadLevel: 'standard', modelName: 'claude-sonnet-5-5' })
+      ).rejects.toThrow('The model returned no answer text (stop_reason: max_tokens)');
+    });
+
     it('應該在未提供 modelName 時使用預設模型', async () => {
-      // 修復：更新預設模型為 Claude 4.5 Haiku (與 lib/mcp/client.ts 一致)
-      const defaultModel = 'claude-haiku-4-5-20251001';
+      // 修復：更新預設模型為 Claude Haiku 5.5 (與 lib/mcp/client.ts 一致)
+      const defaultModel = 'claude-haiku-5-5';
 
       // Mock successful API response
       vi.mocked(global.fetch).mockResolvedValue({

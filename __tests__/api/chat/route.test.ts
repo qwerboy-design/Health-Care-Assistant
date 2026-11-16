@@ -212,8 +212,8 @@ describe('POST /api/chat - Credits Integration', () => {
     });
 
     it('應該在未提供 modelName 時使用預設模型', async () => {
-      // 修復：更新預設模型為 Claude Sonnet 4.5 (與 route.ts 一致)
-      const defaultModelName = 'claude-sonnet-4-5-20250929';
+      // 修復：更新預設模型為 Claude Sonnet 5.5 (與 route.ts 一致)
+      const defaultModelName = 'claude-sonnet-5-5';
       const conversationId = 'conv-123';
 
       const mockModelPricing = {
@@ -373,7 +373,7 @@ describe('POST /api/chat - Credits Integration', () => {
     });
 
     it('reports the actual OpenAI model while billing the selected pricing model', async () => {
-      const selectedPricingModel = 'claude-sonnet-4-5-20250929';
+      const selectedPricingModel = 'claude-sonnet-5-5';
       const conversationId = 'conv-openai';
       vi.mocked(getModelPricing).mockResolvedValue({
         id: 'model-1',
@@ -417,7 +417,7 @@ describe('POST /api/chat - Credits Integration', () => {
     });
 
     it('surfaces an OpenAI failure and refunds the selected pricing credits without fallback', async () => {
-      const selectedPricingModel = 'claude-sonnet-4-5-20250929';
+      const selectedPricingModel = 'claude-sonnet-5-5';
       const conversationId = 'conv-openai-failure';
       vi.mocked(getModelPricing).mockResolvedValue({
         model_name: selectedPricingModel,

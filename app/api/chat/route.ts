@@ -123,7 +123,7 @@ async function handleChatMessage(request: NextRequest) {
           ? redactFileName(localAttachment.fileName)
           : undefined;
 
-    const selectedModel = modelName || 'claude-sonnet-4-5-20250929';
+    const selectedModel = modelName || 'claude-sonnet-5-5';
     const modelPricing = await getModelPricing(selectedModel);
     if (!modelPricing) {
       return errorResponse('Model is not available', 400);
@@ -266,7 +266,7 @@ async function handleReportMessage(customerId: string, body: Record<string, any>
   }
 
   const workloadLevel = body.workloadLevel as 'instant' | 'basic' | 'standard' | 'professional' || 'standard';
-  const selectedModel = typeof body.modelName === 'string' ? body.modelName : 'claude-sonnet-4-5-20250929';
+  const selectedModel = typeof body.modelName === 'string' ? body.modelName : 'claude-sonnet-5-5';
   const modelPricing = await getModelPricing(selectedModel);
   if (!modelPricing) return errorResponse('Model is not available', 400);
   const currentCredits = await getCustomerCredits(customerId);
